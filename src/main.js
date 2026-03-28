@@ -12,7 +12,7 @@ var user = null;
 // Read config from URL params (set by native when loading the WebView URL)
 var params = new URLSearchParams(window.location.search);
 
-var baseUrl = params.get('baseUrl') || 'https://api.gethomecrowd.com';
+var baseUrl = params.has('baseUrl') ? params.get('baseUrl') : 'https://api.gethomecrowd.com';
 api.configure(baseUrl);
 
 var primaryColor = params.get('primaryColor');
