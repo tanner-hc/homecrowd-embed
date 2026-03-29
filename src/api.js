@@ -154,3 +154,32 @@ export async function deactivateCard(cardId) {
     method: 'POST',
   });
 }
+
+// --- Offers ---
+
+export async function getOffers(page, pageSize) {
+  var params = 'page=' + (page || 1) + '&pageSize=' + (pageSize || 50);
+  return request('/api/olive/offers/?' + params);
+}
+
+export async function getOfferDetails(offerId) {
+  return request('/api/olive/offers/' + encodeURIComponent(offerId) + '/');
+}
+
+export async function trackOfferClick(offerId) {
+  return request('/api/olive/track-click/?offer_id=' + encodeURIComponent(offerId));
+}
+
+export async function getWildfireOffers(page, pageSize) {
+  var params = 'page=' + (page || 1) + '&pageSize=' + (pageSize || 50);
+  return request('/api/wildfire/offers/?' + params);
+}
+
+export async function trackWildfireClick(merchantId) {
+  return request('/api/wildfire/track-click/?merchant_id=' + encodeURIComponent(merchantId));
+}
+
+export async function getFeaturedOffers(offerType) {
+  var params = offerType ? '?offer_type=' + offerType : '';
+  return request('/api/merchant/featured-offers/' + params);
+}

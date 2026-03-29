@@ -2,7 +2,6 @@ import * as api from '../api.js';
 
 export function renderRewards(container) {
   container.innerHTML = '<div class="hc-spinner"></div>';
-
   loadRewards(container);
 }
 
@@ -11,11 +10,9 @@ async function loadRewards(container) {
     var results = await Promise.all([
       api.getRewardsSummary(),
       api.getRewardsCatalog(),
-      api.getRewardsActivity(),
     ]);
     var summary = results[0];
     var catalog = results[1];
-    var activity = results[2];
 
     var html = '';
 
@@ -34,9 +31,7 @@ async function loadRewards(container) {
     } else {
       html += '<div class="hc-rewards-list">';
       catalog.forEach(function (reward) {
-        var canRedeem = reward.enabled !== false && summary.availablePoints >= reward.pointsCost;
-
-        html += '<div class="hc-reward-card" data-redeem-id="' + escapeAttr(reward.id) + '" data-redeem-title="' + escapeAttr(reward.title) + '" data-redeem-cost="' + reward.pointsCost + '"' + (canRedeem ? '' : ' style="opacity:0.6;pointer-events:none"') + '>';
+        html += '<div class="hc-reward-card" data-reward-id="' + escapeAttr(reward.id) + '">';
 
         // Image section (left)
         if (reward.imageUrl) {
@@ -57,100 +52,24 @@ async function loadRewards(container) {
       html += '</div>';
     }
 
-    // Activity section
-    if (activity && activity.length > 0) {
-      html += '<div class="hc-screen-title" style="margin-top:24px">';
-      html += '<div class="hc-section-title-text">Recent Activity</div>';
-      html += '</div>';
-      html += '<div class="hc-activity-card"><ul class="hc-activity-list">';
-      activity.slice(0, 10).forEach(function (item) {
-        var isEarn = item.type === 'earn';
-        var pointsClass = item.pointsDelta > 0 ? 'positive' : 'negative';
-        var prefix = item.pointsDelta > 0 ? '+' : '';
-
-        html += '<li class="hc-activity-item">';
-        html += '<div class="hc-activity-icon ' + (isEarn ? 'earn' : 'redeem') + '">' + (isEarn ? '+' : '-') + '</div>';
-        html += '<div class="hc-activity-details">';
-        html += '<div class="hc-activity-title">' + escapeHtml(item.description || (isEarn ? 'Points earned' : 'Points redeemed')) + '</div>';
-        html += '<div class="hc-activity-date">' + new Date(item.createdAt).toLocaleDateString() + '</div>';
-        html += '</div>';
-        html += '<div class="hc-activity-points ' + pointsClass + '">' + prefix + item.pointsDelta.toLocaleString() + '</div>';
-        html += '</li>';
-      });
-      html += '</ul></div>';
-    }
-
     // Points overlay (floating at bottom, matches PointsOverlay component)
     html += '<div class="hc-points-overlay">';
     html += '<div class="hc-points-overlay-value">' + (summary.availablePoints || 0).toLocaleString() + '</div>';
     html += '<div class="hc-points-overlay-label">Available points</div>';
     html += '</div>';
 
-    // Confirm modal
-    html += '<div id="hc-redeem-modal" class="hc-modal-overlay" style="display:none"><div class="hc-modal"><div class="hc-modal-title">Redeem Reward</div><div id="hc-redeem-modal-text" class="hc-modal-text"></div><div class="hc-modal-actions"><button id="hc-redeem-cancel" class="hc-btn hc-btn-secondary">Cancel</button><button id="hc-redeem-confirm" class="hc-btn hc-btn-primary">Confirm</button></div></div></div>';
-
-    // Toast
-    html += '<div id="hc-toast" class="hc-toast" style="display:none"></div>';
-
     container.innerHTML = html;
 
-    // Bind redeem cards
-    var redeemTarget = null;
+    // Bind reward card clicks — navigate to detail
     container.addEventListener('click', function (e) {
-      var btn = e.target.closest('[data-redeem-id]');
-      if (btn && !btn.style.opacity) {
-        redeemTarget = {
-          id: btn.getAttribute('data-redeem-id'),
-          title: btn.getAttribute('data-redeem-title'),
-          cost: btn.getAttribute('data-redeem-cost'),
-        };
-        document.getElementById('hc-redeem-modal-text').innerHTML =
-          'Are you sure you want to redeem <strong>' + escapeHtml(redeemTarget.title) + '</strong> for <strong>' + Number(redeemTarget.cost).toLocaleString() + ' points</strong>?';
-        document.getElementById('hc-redeem-modal').style.display = 'flex';
-      }
-    });
-
-    document.getElementById('hc-redeem-cancel').addEventListener('click', function () {
-      document.getElementById('hc-redeem-modal').style.display = 'none';
-      redeemTarget = null;
-    });
-
-    document.getElementById('hc-redeem-modal').addEventListener('click', function (e) {
-      if (e.target === e.currentTarget) {
-        e.currentTarget.style.display = 'none';
-        redeemTarget = null;
-      }
-    });
-
-    document.getElementById('hc-redeem-confirm').addEventListener('click', async function () {
-      if (!redeemTarget) return;
-      var confirmBtn = this;
-      confirmBtn.disabled = true;
-      confirmBtn.textContent = 'Redeeming...';
-
-      try {
-        await api.redeemReward(redeemTarget.id);
-        document.getElementById('hc-redeem-modal').style.display = 'none';
-        showToast('Redeemed "' + redeemTarget.title + '" successfully!');
-        redeemTarget = null;
-        loadRewards(container);
-      } catch (err) {
-        showToast('Failed to redeem: ' + (err.message || 'Unknown error'));
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Confirm';
-      }
+      var card = e.target.closest('[data-reward-id]');
+      if (!card) return;
+      var rewardId = card.getAttribute('data-reward-id');
+      window.location.hash = '#/rewards/' + rewardId;
     });
   } catch (err) {
     container.innerHTML = '<div class="hc-alert-error">Failed to load rewards: ' + escapeHtml(err.message) + '</div>';
   }
-}
-
-function showToast(msg) {
-  var el = document.getElementById('hc-toast');
-  if (!el) return;
-  el.textContent = msg;
-  el.style.display = 'block';
-  setTimeout(function () { el.style.display = 'none'; }, 3000);
 }
 
 function escapeHtml(str) {

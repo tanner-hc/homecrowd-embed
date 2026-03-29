@@ -5,6 +5,9 @@ import { renderLogin } from './views/login.js';
 import { renderRewards } from './views/rewards.js';
 import logoUrl from './assets/header.png';
 import { renderCards } from './views/cards.js';
+import { renderRewardDetail } from './views/reward-detail.js';
+import { renderOffers } from './views/offers.js';
+import { renderOfferDetail } from './views/offer-detail.js';
 
 var appEl = document.getElementById('app');
 var user = null;
@@ -110,41 +113,61 @@ function render(route) {
     return;
   }
 
+  // Reward detail route: /rewards/:id
+  var detailMatch = route.match(/^\/rewards\/(.+)$/);
+  if (detailMatch) {
+    var rewardId = detailMatch[1];
+    var contentEl = renderLayout(route);
+    contentEl.innerHTML = '<div class="hc-spinner"></div>';
+    Promise.all([api.getRewardsSummary(), api.getRewardsCatalog()]).then(function (results) {
+      var summary = results[0];
+      var catalog = results[1];
+      var reward = catalog.find(function (r) { return String(r.id) === rewardId; });
+      if (reward) {
+        renderRewardDetail(contentEl, reward, summary);
+      } else {
+        contentEl.innerHTML = '<div class="hc-alert-error">Reward not found</div>';
+      }
+    }).catch(function (err) {
+      contentEl.innerHTML = '<div class="hc-alert-error">Failed to load: ' + (err.message || 'Unknown error') + '</div>';
+    });
+    return;
+  }
+
+  // Offer detail route: /offers/:id
+  var offerMatch = route.match(/^\/offers\/(.+)$/);
+  if (offerMatch) {
+    var offerIdParam = offerMatch[1];
+    var contentEl = renderLayout(route);
+    renderOfferDetail(contentEl, offerIdParam);
+    return;
+  }
+
   // Authenticated layout
   var contentEl = renderLayout(route);
 
   if (route === '/cards') {
     renderCards(contentEl);
+  } else if (route === '/offers') {
+    renderOffers(contentEl);
   } else {
     renderRewards(contentEl);
   }
 }
 
 function renderLayout(route) {
-  var initials = '?';
-  var displayName = '';
-  if (user) {
-    initials = ((user.firstName || user.name || user.email || '?')[0] || '?').toUpperCase();
-    displayName = (user.firstName && user.lastName)
-      ? user.firstName + ' ' + user.lastName
-      : (user.name || user.email || '');
-  }
-
   appEl.innerHTML = '\
     <div class="hc-embed">\
       <div class="hc-header">\
         <img src="' + logoUrl + '" alt="Homecrowd" class="hc-header-logo" />\
       </div>\
       <nav class="hc-nav">\
-        <a href="#/rewards" class="hc-nav-link' + (route === '/rewards' ? ' active' : '') + '">Rewards</a>\
+        <a href="#/rewards" class="hc-nav-link' + (route.indexOf('/rewards') === 0 ? ' active' : '') + '">Rewards</a>\
+        <a href="#/offers" class="hc-nav-link' + (route.indexOf('/offers') === 0 ? ' active' : '') + '">Offers</a>\
         <a href="#/cards" class="hc-nav-link' + (route === '/cards' ? ' active' : '') + '">Cards</a>\
-        <div class="hc-nav-user">\
-          <div class="hc-nav-avatar">' + escapeHtml(initials) + '</div>\
-          <span>' + escapeHtml(displayName) + '</span>\
-        </div>\
-        <button id="hc-logout-btn" class="hc-nav-logout">Log out</button>\
       </nav>\
       <main id="hc-content" class="hc-content"></main>\
+      <button id="hc-logout-btn" class="hc-logout-fixed">Log out</button>\
     </div>';
 
   document.getElementById('hc-logout-btn').addEventListener('click', async function () {
@@ -155,11 +178,6 @@ function renderLayout(route) {
   });
 
   return document.getElementById('hc-content');
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 init();

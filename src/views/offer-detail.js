@@ -1,0 +1,211 @@
+import * as api from '../api.js';
+import { postToNative } from '../bridge.js';
+import { showWebviewOverlay } from '../webview-overlay.js';
+
+export function renderOfferDetail(container, offerId) {
+  container.innerHTML = '<div class="hc-spinner"></div>';
+  loadOfferDetail(container, offerId);
+}
+
+async function loadOfferDetail(container, offerId) {
+  try {
+    var offer = await api.getOfferDetails(offerId);
+
+    var html = '';
+
+    // Back button
+    html += '<div class="hc-detail-nav">';
+    html += '<button id="hc-back-btn" class="hc-back-btn">\u2190 Offers</button>';
+    html += '</div>';
+
+    // Brand section — logo + name
+    var logoUrl = offer.logoUrl || offer.logo || '';
+    var name = offer.name || offer.merchantName || 'Unknown';
+
+    html += '<div class="hc-offer-brand">';
+    if (logoUrl) {
+      html += '<div class="hc-offer-logo-wrap"><img class="hc-offer-logo" src="' + escapeAttr(logoUrl) + '" alt="' + escapeAttr(name) + '" /></div>';
+    } else {
+      var initials = name.split(' ').map(function (w) { return w[0] || ''; }).join('').slice(0, 2).toUpperCase();
+      html += '<div class="hc-offer-logo-wrap"><div class="hc-offer-logo-initials">' + escapeHtml(initials) + '</div></div>';
+    }
+    html += '<div class="hc-offer-brand-name">' + escapeHtml(name) + '</div>';
+    html += '</div>';
+
+    // Cashback section
+    var cashback = getCashbackDisplay(offer);
+    if (cashback) {
+      html += '<div class="hc-offer-cashback-section">';
+      html += '<div class="hc-offer-cashback-value">' + escapeHtml(cashback) + '</div>';
+      html += '<div class="hc-offer-cashback-note">Points contributed by Homecrowd and the merchant</div>';
+      html += '</div>';
+    }
+
+    // Where to shop
+    var locationText = getLocationText(offer);
+    if (locationText) {
+      html += '<div class="hc-offer-info-section">';
+      html += '<div class="hc-offer-info-title">Where to shop</div>';
+      html += '<div class="hc-offer-info-value">' + escapeHtml(locationText) + '</div>';
+      html += '</div>';
+    }
+
+    // Important terms
+    html += '<div class="hc-offer-info-section">';
+    html += '<div class="hc-offer-info-title">Important terms</div>';
+
+    // Validity days
+    if (offer.daysAvailability && offer.daysAvailability.length > 0 && offer.daysAvailability.length < 7) {
+      html += '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Valid on</span><span class="hc-offer-term-value">' + escapeHtml(getDaysOfWeek(offer.daysAvailability)) + '</span></div>';
+    }
+
+    // Redemption limit
+    if (offer.redeemLimitPerUser) {
+      var limitText = offer.redeemLimitPerUser + 'x';
+      if (offer.redeemLimitPerUserInterval) {
+        limitText += ' per ' + offer.redeemLimitPerUserInterval;
+      }
+      html += '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Redemption limit</span><span class="hc-offer-term-value">' + escapeHtml(limitText) + '</span></div>';
+    }
+
+    // Minimum purchase
+    if (offer.purchaseAmount) {
+      html += '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Minimum purchase</span><span class="hc-offer-term-value">$' + Number(offer.purchaseAmount).toFixed(2) + '</span></div>';
+    }
+
+    // Expiry
+    if (offer.endDate) {
+      html += '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Expires</span><span class="hc-offer-term-value">' + new Date(offer.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + '</span></div>';
+    }
+
+    // Payment methods
+    var schemes = getPaymentMethods(offer);
+    if (schemes) {
+      html += '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Payment</span><span class="hc-offer-term-value">' + escapeHtml(schemes) + '</span></div>';
+    }
+
+    html += '</div>';
+
+    // Description
+    var description = offer.description || offer.qualifier || offer.tile || '';
+    if (description) {
+      html += '<div class="hc-offer-info-section">';
+      html += '<div class="hc-offer-info-title">Details</div>';
+      html += '<div class="hc-offer-desc-text">' + escapeHtml(description) + '</div>';
+      html += '</div>';
+    }
+
+    // Shop button
+    var shopUrl = offer.website || offer.offerPublisherAffiliateLinkUrl || '';
+    if (shopUrl || offer.offerType === 'click' || offer.offerType === 'click_sso') {
+      html += '<div style="height:80px"></div>';
+      html += '<div class="hc-offer-bottom">';
+      html += '<button id="hc-shop-btn" class="hc-btn hc-btn-primary hc-btn-large">Shop Now</button>';
+      html += '</div>';
+    }
+
+    // Toast
+    html += '<div id="hc-toast" class="hc-toast" style="display:none"></div>';
+
+    container.innerHTML = html;
+
+    // Back button
+    document.getElementById('hc-back-btn').addEventListener('click', function () {
+      window.location.hash = '#/offers';
+    });
+
+    // Shop button
+    var shopBtn = document.getElementById('hc-shop-btn');
+    if (shopBtn) {
+      shopBtn.addEventListener('click', async function () {
+        shopBtn.disabled = true;
+        shopBtn.textContent = 'Opening...';
+        try {
+          // Try to get tracking URL first
+          var trackResult = await api.trackOfferClick(offer.offerId || offer.id).catch(function () { return null; });
+          var url = (trackResult && trackResult.tracking_url) || shopUrl;
+          if (url) {
+            if (url.indexOf('http') !== 0) url = 'https://' + url;
+            openExternalUrl(url);
+          }
+        } catch (err) {
+          if (shopUrl) openExternalUrl(shopUrl);
+        }
+        shopBtn.disabled = false;
+        shopBtn.textContent = 'Shop Now';
+      });
+    }
+  } catch (err) {
+    container.innerHTML = '<div class="hc-detail-nav"><button id="hc-back-btn" class="hc-back-btn">\u2190 Offers</button></div><div class="hc-alert-error">Failed to load offer: ' + escapeHtml(err.message) + '</div>';
+    var backBtn = document.getElementById('hc-back-btn');
+    if (backBtn) backBtn.addEventListener('click', function () { window.location.hash = '#/offers'; });
+  }
+}
+
+function openExternalUrl(url) {
+  postToNative('homecrowd:open-url', { url: url });
+  showWebviewOverlay(url);
+}
+
+function getCashbackDisplay(offer) {
+  if (offer.reward) {
+    if (offer.reward.type === 'percentage' && offer.reward.value) {
+      var text = offer.reward.value + '% back';
+      if (offer.reward.maxValue) text += ' (up to $' + offer.reward.maxValue + ')';
+      return text;
+    }
+    if (offer.reward.type === 'fixed' && offer.reward.value) {
+      return '$' + offer.reward.value + ' back';
+    }
+  }
+  if (offer.cashback) {
+    return offer.cashback + '% back';
+  }
+  return null;
+}
+
+function getLocationText(offer) {
+  if (offer.isOnline || offer.reach === 'online_only') return 'Online only';
+  if (offer.stores && offer.stores.length > 0) {
+    var s = offer.stores[0];
+    var parts = [s.address, s.city, s.state].filter(Boolean);
+    if (offer.stores.length > 1) return parts.join(', ') + ' + ' + (offer.stores.length - 1) + ' more';
+    return parts.join(', ');
+  }
+  if (offer.address || offer.city) {
+    return [offer.address, offer.city, offer.state].filter(Boolean).join(', ');
+  }
+  return null;
+}
+
+function getPaymentMethods(offer) {
+  var schemes = offer.supportedSchemes;
+  if (!schemes && offer.stores && offer.stores.length > 0) {
+    schemes = offer.stores[0].supportedSchemes;
+  }
+  if (schemes && schemes.length > 0) {
+    return schemes.join(', ');
+  }
+  return null;
+}
+
+function getDaysOfWeek(days) {
+  var names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  if (!days || days.length === 0) return 'Every day';
+  if (days.length === 7) return 'Every day';
+  var weekdays = [1, 2, 3, 4, 5];
+  var weekend = [0, 6];
+  if (days.length === 5 && weekdays.every(function (d) { return days.indexOf(d) >= 0; })) return 'Weekdays';
+  if (days.length === 2 && weekend.every(function (d) { return days.indexOf(d) >= 0; })) return 'Weekends';
+  return days.map(function (d) { return names[d]; }).join(', ');
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function escapeAttr(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
