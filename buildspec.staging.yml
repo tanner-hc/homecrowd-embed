@@ -1,0 +1,26 @@
+version: 0.2
+
+env:
+  variables:
+    NODE_ENV: "production"
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      - npm ci
+  build:
+    commands:
+      - echo "Building Vite app for staging"
+      - npm run build
+  post_build:
+    commands:
+      - echo "Syncing dist/ to s3://staging-embed.gethomecrowd.com"
+      - aws s3 sync dist/ s3://staging-embed.gethomecrowd.com --delete
+      - echo "Invalidating CloudFront cache"
+      - aws cloudfront create-invalidation --distribution-id E2SQYDSOBLCMEI --paths "/*"
+
+cache:
+  paths:
+    - '/root/.npm/**/*'

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:prod": "aws codebuild start-build --project-name homecrowd-embed-prod"
   },
   "devDependencies": {
     "vite": "^6.0.0"
