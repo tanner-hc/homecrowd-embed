@@ -9,7 +9,7 @@ phases:
     runtime-versions:
       nodejs: 18
     commands:
-      - npm ci
+      - npm ci --include=dev
   build:
     commands:
       - echo "Building Vite app for staging"
