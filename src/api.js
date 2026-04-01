@@ -1,11 +1,11 @@
 var EMBED_BASE = '/api/embed/v1';
-var baseUrl = '';
+var hostname = window.location.hostname;
+var baseUrl =
+  hostname === 'localhost' || hostname === '127.0.0.1'
+    ? 'http://localhost:8000'
+    : 'https://api.gethomecrowd.com';
 var accessToken = null;
 var refreshToken = null;
-
-export function configure(url) {
-  baseUrl = url.replace(/\/$/, '');
-}
 
 export function setTokens(access, refresh) {
   accessToken = access;

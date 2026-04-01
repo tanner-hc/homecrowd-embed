@@ -14,7 +14,7 @@
  *   or via postMessage with { type: 'homecrowd:configure', payload: {...} }
  *
  * Commands:
- *   homecrowd:configure  — { baseUrl, token, primaryColor, view }
+ *   homecrowd:configure  — { token, primaryColor, view }
  *   homecrowd:navigate   — { view: 'rewards' | 'cards' | 'login' }
  *
  * --- WebView → Native ---

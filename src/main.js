@@ -15,9 +15,6 @@ var user = null;
 // Read config from URL params (set by native when loading the WebView URL)
 var params = new URLSearchParams(window.location.search);
 
-var baseUrl = params.has('baseUrl') ? params.get('baseUrl') : 'https://api.gethomecrowd.com';
-api.configure(baseUrl);
-
 var primaryColor = params.get('primaryColor');
 if (primaryColor) {
   document.documentElement.style.setProperty('--hc-primary', '#' + primaryColor);
@@ -28,10 +25,6 @@ var initialView = params.get('view') || 'rewards';
 
 // Listen for runtime config from native layer
 onNativeMessage('homecrowd:configure', function (config) {
-  if (config.baseUrl) {
-    baseUrl = config.baseUrl;
-    api.configure(baseUrl);
-  }
   if (config.primaryColor) {
     document.documentElement.style.setProperty('--hc-primary', '#' + config.primaryColor);
   }
