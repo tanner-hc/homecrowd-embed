@@ -23,6 +23,28 @@ if (primaryColor) {
 var partnerToken = params.get('token') || '';
 var initialView = params.get('view') || 'rewards';
 
+async function applyAutologinToken(token, view) {
+  if (!token) {
+    return false;
+  }
+
+  api.clearTokens();
+  user = null;
+
+  try {
+    await api.loginWithPartnerToken(token);
+    user = await api.fetchCurrentUser();
+    postToNative('homecrowd:login', { user: user });
+    navigate('/' + (view || initialView));
+    return true;
+  } catch (e) {
+    api.clearTokens();
+    user = null;
+    postToNative('homecrowd:error', { message: 'Auto-login failed' });
+    return false;
+  }
+}
+
 // Listen for runtime config from native layer
 onNativeMessage('homecrowd:configure', function (config) {
   if (config.primaryColor) {
@@ -30,14 +52,10 @@ onNativeMessage('homecrowd:configure', function (config) {
   }
   if (config.token) {
     partnerToken = config.token;
-    api.loginWithPartnerToken(partnerToken).then(function () {
-      return api.fetchCurrentUser();
-    }).then(function (u) {
-      user = u;
-      postToNative('homecrowd:login', { user: u });
-      navigate('/' + (config.view || 'rewards'));
-    }).catch(function () {
-      postToNative('homecrowd:error', { message: 'Auto-login failed' });
+    applyAutologinToken(partnerToken, config.view || 'rewards').then(function (didLogin) {
+      if (!didLogin && config.view) {
+        navigate('/login');
+      }
     });
   }
   if (config.view) {
@@ -53,12 +71,8 @@ onNativeMessage('homecrowd:navigate', function (data) {
 });
 
 async function init() {
-  if (partnerToken && !api.isAuthenticated()) {
-    try {
-      await api.loginWithPartnerToken(partnerToken);
-    } catch (e) {
-      postToNative('homecrowd:error', { message: 'Auto-login failed' });
-    }
+  if (partnerToken) {
+    await applyAutologinToken(partnerToken, initialView);
   }
 
   if (api.isAuthenticated()) {
