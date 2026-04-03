@@ -14,7 +14,7 @@
  *   or via postMessage with { type: 'homecrowd:configure', payload: {...} }
  *
  * Commands:
- *   homecrowd:configure  — { token, primaryColor, view }
+ *   homecrowd:configure  — { schoolId, token, view }
  *   homecrowd:navigate   — { view: 'rewards' | 'cards' | 'login' }
  *
  * --- WebView → Native ---
@@ -23,7 +23,8 @@
  *   homecrowd:login           — User authenticated, payload: { user }
  *   homecrowd:logout          — User logged out
  *   homecrowd:route-change    — Navigation occurred, payload: { route }
- *   homecrowd:card-link-session — Card link session created, payload: { session }
+ *   homecrowd:card-link        — Card link flow started, payload: { type }
+ *   homecrowd:open-url         — External URL requested, payload: { url }
  *   homecrowd:error           — Something went wrong, payload: { message }
  */
 

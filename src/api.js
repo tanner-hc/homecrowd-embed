@@ -97,12 +97,24 @@ export async function login(email, password) {
 }
 
 export async function loginWithPartnerToken(token) {
+  return loginWithPartnerTokenAndSchool(token);
+}
+
+export async function loginWithPartnerTokenAndSchool(token, schoolId) {
   var data = await request(EMBED_BASE + '/auth/login/', {
     method: 'POST',
-    body: JSON.stringify({ token: token }),
+    body: JSON.stringify(
+      schoolId
+        ? { token: token, schoolId: schoolId }
+        : { token: token }
+    ),
   });
   setTokens(data.access, data.refresh);
   return data;
+}
+
+export async function fetchSchoolConfig(schoolId) {
+  return request('/api/school/merchants-page-config/' + encodeURIComponent(schoolId) + '/');
 }
 
 export async function fetchCurrentUser() {

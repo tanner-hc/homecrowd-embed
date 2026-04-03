@@ -14,16 +14,29 @@ var user = null;
 
 // Read config from URL params (set by native when loading the WebView URL)
 var params = new URLSearchParams(window.location.search);
-
-var primaryColor = params.get('primaryColor');
-if (primaryColor) {
-  document.documentElement.style.setProperty('--hc-primary', '#' + primaryColor);
-}
-
+var schoolId = params.get('schoolId') || '';
 var partnerToken = params.get('token') || '';
 var initialView = params.get('view') || 'rewards';
 
-async function applyAutologinToken(token, view) {
+async function applySchoolConfig(nextSchoolId) {
+  schoolId = nextSchoolId || '';
+  if (!schoolId) {
+    document.documentElement.style.removeProperty('--hc-primary');
+    return;
+  }
+
+  try {
+    var config = await api.fetchSchoolConfig(schoolId);
+    if (config && config.primaryColor) {
+      document.documentElement.style.setProperty('--hc-primary', config.primaryColor);
+      return;
+    }
+  } catch (e) {}
+
+  document.documentElement.style.removeProperty('--hc-primary');
+}
+
+async function applyAutologinToken(token, view, nextSchoolId) {
   if (!token) {
     return false;
   }
@@ -32,7 +45,7 @@ async function applyAutologinToken(token, view) {
   user = null;
 
   try {
-    await api.loginWithPartnerToken(token);
+    await api.loginWithPartnerTokenAndSchool(token, nextSchoolId || schoolId);
     user = await api.fetchCurrentUser();
     postToNative('homecrowd:login', { user: user });
     navigate('/' + (view || initialView));
@@ -47,12 +60,12 @@ async function applyAutologinToken(token, view) {
 
 // Listen for runtime config from native layer
 onNativeMessage('homecrowd:configure', function (config) {
-  if (config.primaryColor) {
-    document.documentElement.style.setProperty('--hc-primary', '#' + config.primaryColor);
+  if (config.schoolId) {
+    applySchoolConfig(config.schoolId);
   }
   if (config.token) {
     partnerToken = config.token;
-    applyAutologinToken(partnerToken, config.view || 'rewards').then(function (didLogin) {
+    applyAutologinToken(partnerToken, config.view || 'rewards', config.schoolId || schoolId).then(function (didLogin) {
       if (!didLogin && config.view) {
         navigate('/login');
       }
@@ -71,8 +84,9 @@ onNativeMessage('homecrowd:navigate', function (data) {
 });
 
 async function init() {
+  await applySchoolConfig(schoolId);
   if (partnerToken) {
-    await applyAutologinToken(partnerToken, initialView);
+    await applyAutologinToken(partnerToken, initialView, schoolId);
   }
 
   if (api.isAuthenticated()) {
