@@ -45,7 +45,7 @@ async function loadOffers(container, activeTab) {
     // Title
     html += '<div class="hc-screen-title">';
     html += '<div class="hc-screen-title-text">Partner stores</div>';
-    html += '<div class="hc-screen-title-subtitle">Explore our marketplace of exclusive earnings</div>';
+    html += '<div class="hc-screen-title-subtitle">Earn on every purchase at these stores</div>';
     html += '</div>';
 
     // Featured top slider
@@ -79,7 +79,7 @@ async function loadOffers(container, activeTab) {
     // Title
     html += '<div class="hc-screen-title">';
     html += '<div class="hc-screen-title-text">Online offers</div>';
-    html += '<div class="hc-screen-title-subtitle">Explore our marketplace of exclusive earnings</div>';
+    html += '<div class="hc-screen-title-subtitle">Shop online and earn rewards</div>';
     html += '</div>';
 
     // Featured top slider

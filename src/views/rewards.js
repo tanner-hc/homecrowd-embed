@@ -19,7 +19,7 @@ async function loadRewards(container) {
     // Screen title (matches ScreenTitle component)
     html += '<div class="hc-screen-title">';
     html += '<div class="hc-screen-title-text">Rewards</div>';
-    html += '<div class="hc-screen-title-subtitle">Browse and redeem your rewards</div>';
+    html += '<div class="hc-screen-title-subtitle">Auctions and raffles for exclusive perks</div>';
     html += '</div>';
 
     // Reward cards list
