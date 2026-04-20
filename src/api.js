@@ -77,7 +77,7 @@ async function request(path, options) {
     try {
       var parsed = JSON.parse(body);
       message = parsed.detail || message;
-    } catch (e) {}
+    } catch (e) { }
     throw new Error(message);
   }
 
@@ -138,6 +138,10 @@ export async function getRewardsSummary() {
 
 export async function getRewardsCatalog() {
   return request(EMBED_BASE + '/rewards/catalog/');
+}
+
+export async function getWeeklyLeaderboard() {
+  return request(EMBED_BASE + '/rewards/leaderboard/');
 }
 
 export async function getRewardsActivity() {
