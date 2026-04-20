@@ -11,12 +11,16 @@ import { renderOfferDetail } from './views/offer-detail.js';
 
 var appEl = document.getElementById('app');
 var user = null;
+var lastAutologinTokenApplied = '';
 
-// Read config from URL params (set by native when loading the WebView URL)
+var hostConfig =
+  typeof window.__HC_EMBED_HOST_CONFIG__ === 'object' && window.__HC_EMBED_HOST_CONFIG__ !== null
+    ? window.__HC_EMBED_HOST_CONFIG__
+    : null;
 var params = new URLSearchParams(window.location.search);
-var schoolId = params.get('schoolId') || '';
-var partnerToken = params.get('token') || '';
-var initialView = params.get('view') || 'rewards';
+var schoolId = (hostConfig && hostConfig.schoolId) || params.get('schoolId') || '';
+var partnerToken = (hostConfig && hostConfig.token) || params.get('token') || '';
+var initialView = (hostConfig && hostConfig.view) || params.get('view') || 'rewards';
 
 async function applySchoolConfig(nextSchoolId) {
   schoolId = nextSchoolId || '';
@@ -31,7 +35,7 @@ async function applySchoolConfig(nextSchoolId) {
       document.documentElement.style.setProperty('--hc-primary', config.primaryColor);
       return;
     }
-  } catch (e) {}
+  } catch (e) { }
 
   document.documentElement.style.removeProperty('--hc-primary');
 }
@@ -41,18 +45,30 @@ async function applyAutologinToken(token, view, nextSchoolId) {
     return false;
   }
 
+  if (
+    user &&
+    api.isAuthenticated() &&
+    lastAutologinTokenApplied &&
+    lastAutologinTokenApplied === token
+  ) {
+    return true;
+  }
+
   api.clearTokens();
   user = null;
+  lastAutologinTokenApplied = '';
 
   try {
     await api.loginWithPartnerTokenAndSchool(token, nextSchoolId || schoolId);
     user = await api.fetchCurrentUser();
+    lastAutologinTokenApplied = token;
     postToNative('homecrowd:login', { user: user });
     navigate('/' + (view || initialView));
     return true;
   } catch (e) {
     api.clearTokens();
     user = null;
+    lastAutologinTokenApplied = '';
     postToNative('homecrowd:error', { message: 'Auto-login failed' });
     return false;
   }
@@ -65,11 +81,15 @@ onNativeMessage('homecrowd:configure', function (config) {
   }
   if (config.token) {
     partnerToken = config.token;
+    if (config.schoolId) {
+      schoolId = String(config.schoolId);
+    }
     applyAutologinToken(partnerToken, config.view || 'rewards', config.schoolId || schoolId).then(function (didLogin) {
-      if (!didLogin && config.view) {
+      if (!didLogin) {
         navigate('/login');
       }
     });
+    return;
   }
   if (config.view) {
     navigate('/' + config.view);
@@ -83,18 +103,50 @@ onNativeMessage('homecrowd:navigate', function (data) {
   }
 });
 
+function handleStripeReturnQuery() {
+  var sp = new URLSearchParams(window.location.search);
+  if (sp.get('stripe_success') === '1') {
+    window.alert(
+      'Purchase successful! Thank you for your purchase. Your reward is being processed.',
+    );
+    sp.delete('stripe_success');
+    sp.delete('session_id');
+    var qs = sp.toString();
+    var clean = window.location.pathname + (qs ? '?' + qs : '') + window.location.hash;
+    window.history.replaceState(null, '', clean);
+  } else if (sp.get('stripe_cancel') === '1') {
+    window.alert('Checkout was canceled.');
+    sp.delete('stripe_cancel');
+    var qs2 = sp.toString();
+    var clean2 = window.location.pathname + (qs2 ? '?' + qs2 : '') + window.location.hash;
+    window.history.replaceState(null, '', clean2);
+  }
+}
+
 async function init() {
+  handleStripeReturnQuery();
+  var injected = window.__HC_EMBED_HOST_CONFIG__;
+  if (injected && typeof injected === 'object') {
+    if (injected.schoolId) {
+      schoolId = String(injected.schoolId);
+    }
+    if (injected.token) {
+      partnerToken = injected.token;
+    }
+    if (injected.view) {
+      initialView = injected.view;
+    }
+  }
   await applySchoolConfig(schoolId);
   if (partnerToken) {
     await applyAutologinToken(partnerToken, initialView, schoolId);
-  }
-
-  if (api.isAuthenticated()) {
+  } else if (api.isAuthenticated()) {
     try {
       user = await api.fetchCurrentUser();
       postToNative('homecrowd:login', { user: user });
     } catch (e) {
       api.clearTokens();
+      user = null;
     }
   }
 
@@ -194,6 +246,7 @@ function renderLayout(route) {
   document.getElementById('hc-logout-btn').addEventListener('click', async function () {
     await api.logout();
     user = null;
+    lastAutologinTokenApplied = '';
     postToNative('homecrowd:logout');
     navigate('/login');
   });

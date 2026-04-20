@@ -1,9 +1,28 @@
 var EMBED_BASE = '/api/embed/v1';
-var hostname = window.location.hostname;
-var baseUrl =
-  hostname === 'localhost' || hostname === '127.0.0.1'
-    ? 'http://localhost:8000'
-    : 'https://api.gethomecrowd.com';
+
+function resolveApiBaseUrl() {
+  var env =
+    typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL;
+  if (env) {
+    return String(env).replace(/\/$/, '');
+  }
+  var h = window.location.hostname || '';
+  if (h === 'embed.gethomecrowd.com') {
+    return 'https://api.gethomecrowd.com';
+  }
+  var isDevHost =
+    h === 'localhost' ||
+    h === '127.0.0.1' ||
+    /^192\.168\.\d{1,3}\.\d{1,3}$/.test(h) ||
+    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(h);
+  if (isDevHost) {
+    return '';
+  }
+  return 'https://api.gethomecrowd.com';
+}
+
+var baseUrl = resolveApiBaseUrl();
 var accessToken = null;
 var refreshToken = null;
 
@@ -101,13 +120,15 @@ export async function loginWithPartnerToken(token) {
 }
 
 export async function loginWithPartnerTokenAndSchool(token, schoolId) {
+  var payload =
+    token && String(token).indexOf('autologin:') === 0
+      ? { token: token }
+      : schoolId
+        ? { token: token, schoolId: schoolId }
+        : { token: token };
   var data = await request(EMBED_BASE + '/auth/login/', {
     method: 'POST',
-    body: JSON.stringify(
-      schoolId
-        ? { token: token, schoolId: schoolId }
-        : { token: token }
-    ),
+    body: JSON.stringify(payload),
   });
   setTokens(data.access, data.refresh);
   return data;
@@ -148,6 +169,29 @@ export async function redeemReward(rewardId, quantity) {
   return request(EMBED_BASE + '/rewards/redeem/', {
     method: 'POST',
     body: JSON.stringify({ rewardId: rewardId, quantity: quantity || 1 }),
+  });
+}
+
+export function buildStripeReturnUrls() {
+  var loc = window.location;
+  var base = loc.origin + loc.pathname + loc.search;
+  var sep = base.indexOf('?') >= 0 ? '&' : '?';
+  var h = loc.hash || '#/rewards';
+  return {
+    success_url: base + sep + 'stripe_success=1&session_id={CHECKOUT_SESSION_ID}' + h,
+    cancel_url: base + sep + 'stripe_cancel=1' + h,
+  };
+}
+
+export async function createStripeRewardCheckoutSession(rewardId) {
+  var urls = buildStripeReturnUrls();
+  return request(EMBED_BASE + '/rewards/stripe-checkout/', {
+    method: 'POST',
+    body: JSON.stringify({
+      reward_id: rewardId,
+      success_url: urls.success_url,
+      cancel_url: urls.cancel_url,
+    }),
   });
 }
 

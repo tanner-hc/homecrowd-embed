@@ -261,6 +261,12 @@ body {
   color: white;
 }
 
+.hc-detail-bottom-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .hc-btn-large {
   padding: var(--hc-spacing-base) var(--hc-spacing-xl);
   font-size: 16px;
