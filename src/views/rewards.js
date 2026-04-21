@@ -1,4 +1,5 @@
 import * as api from '../api.js';
+import { formatRewardListPriceText } from '../rewardPricing.js';
 
 export function renderRewards(container) {
   container.innerHTML = '<div class="hc-spinner"></div>';
@@ -43,7 +44,10 @@ async function loadRewards(container) {
         // Info section (right)
         html += '<div class="hc-reward-info">';
         html += '<div class="hc-reward-title">' + escapeHtml(reward.title) + '</div>';
-        html += '<div class="hc-reward-points"><span class="hc-reward-points-value">' + (reward.pointsCost || 0).toLocaleString() + '</span> <span class="hc-reward-points-label">points</span></div>';
+        html +=
+          '<div class="hc-reward-points"><span class="hc-reward-points-value">' +
+          escapeHtml(formatRewardListPriceText(reward)) +
+          '</span></div>';
         html += '<div class="hc-reward-spacer"></div>';
         html += '</div>';
 

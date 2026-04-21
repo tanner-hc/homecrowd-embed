@@ -1,22 +1,19 @@
 import * as api from '../api.js';
-
-var STRIPE_MIN_CENTS = 50;
+import { canPayWithStripeEmbed } from '../rewardPricing.js';
 
 export function renderRewardDetail(container, reward, summary) {
   var html = '';
 
   var redemptionType = reward.redemptionType || '';
   var stripeCents = Number(reward.cashPriceCents);
-  var canPayWithStripe =
-    reward.enabled !== false &&
-    Number.isFinite(stripeCents) &&
-    stripeCents >= STRIPE_MIN_CENTS &&
-    (redemptionType === 'first' || redemptionType === 'card');
+  var canPayWithStripe = canPayWithStripeEmbed(reward);
   var isCardOnly = redemptionType === 'card';
+  var pointsCost = reward.pointsCost || 0;
   var canRedeemPoints =
     !isCardOnly &&
     reward.enabled !== false &&
-    (summary.availablePoints || 0) >= (reward.pointsCost || 0);
+    pointsCost > 0 &&
+    (summary.availablePoints || 0) >= pointsCost;
 
   html += '<div class="hc-detail-nav">';
   html += '<button id="hc-back-btn" class="hc-back-btn">← Rewards</button>';
@@ -45,15 +42,17 @@ export function renderRewardDetail(container, reward, summary) {
   }
 
   html += '<div class="hc-detail-cost-section">';
-  if (!isCardOnly) {
+  if (!isCardOnly && pointsCost > 0) {
     html +=
       '<div class="hc-detail-cost-row"><span class="hc-detail-cost-label">Cost</span><span class="hc-detail-cost-value">' +
-      (reward.pointsCost || 0).toLocaleString() +
+      pointsCost.toLocaleString() +
       ' points</span></div>';
   }
   if (canPayWithStripe) {
     html +=
-      '<div class="hc-detail-cost-row"><span class="hc-detail-cost-label">Card price</span><span class="hc-detail-cost-value">$' +
+      '<div class="hc-detail-cost-row"><span class="hc-detail-cost-label">' +
+      (isCardOnly || pointsCost <= 0 ? 'Price' : 'Or pay with card') +
+      '</span><span class="hc-detail-cost-value">$' +
       (stripeCents / 100).toFixed(2) +
       ' USD</span></div>';
   }
@@ -68,24 +67,26 @@ export function renderRewardDetail(container, reward, summary) {
   html += '<div class="hc-detail-bottom hc-detail-bottom-actions">';
 
   if (canPayWithStripe) {
-    var stripePrimary = isCardOnly ? ' hc-btn-primary' : ' hc-btn-secondary';
+    var usdOnly =
+      isCardOnly || (redemptionType === 'first' && pointsCost <= 0);
+    var stripePrimary = usdOnly ? ' hc-btn-primary' : ' hc-btn-secondary';
     html +=
       '<button type="button" id="hc-detail-stripe" class="hc-btn' +
       stripePrimary +
       ' hc-btn-large">' +
-      (isCardOnly ? 'Pay ' : 'Pay with card — ') +
+      (usdOnly ? 'Pay ' : 'Pay with card — ') +
       '$' +
       (stripeCents / 100).toFixed(2) +
       '</button>';
   }
 
-  if (!isCardOnly) {
+  if (!isCardOnly && pointsCost > 0) {
     html +=
       '<button id="hc-detail-redeem" class="hc-btn hc-btn-primary hc-btn-large"' +
       (canRedeemPoints ? '' : ' disabled') +
       '>' +
       (canRedeemPoints
-        ? 'Redeem — ' + (reward.pointsCost || 0).toLocaleString() + ' pts'
+        ? 'Redeem — ' + pointsCost.toLocaleString() + ' pts'
         : 'Not enough points') +
       '</button>';
   }
@@ -135,13 +136,13 @@ export function renderRewardDetail(container, reward, summary) {
   }
 
   var redeemBtn = document.getElementById('hc-detail-redeem');
-  if (redeemBtn && canRedeemPoints) {
+  if (redeemBtn && canRedeemPoints && pointsCost > 0) {
     redeemBtn.addEventListener('click', function () {
       document.getElementById('hc-redeem-modal-text').innerHTML =
         'Are you sure you want to redeem <strong>' +
         escapeHtml(reward.title) +
         '</strong> for <strong>' +
-        (reward.pointsCost || 0).toLocaleString() +
+        pointsCost.toLocaleString() +
         ' points</strong>?';
       document.getElementById('hc-redeem-modal').style.display = 'flex';
     });

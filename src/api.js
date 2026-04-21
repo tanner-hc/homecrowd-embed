@@ -75,6 +75,9 @@ async function request(path, options) {
   var token = getAccessToken();
   var headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
   if (token) headers['Authorization'] = 'Bearer ' + token;
+  if (typeof window !== 'undefined' && window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+    headers['X-Homecrowd-Client'] = 'mobile';
+  }
 
   var res = await fetch(baseUrl + path, Object.assign({}, options, { headers: headers }));
 
