@@ -164,6 +164,32 @@ export async function getRewardsCatalog() {
   return request(EMBED_BASE + '/rewards/catalog/');
 }
 
+export async function getRewardDetail(rewardId) {
+  return request('/api/rewards/rewards/' + encodeURIComponent(rewardId) + '/');
+}
+
+export async function createRedemptionMain(payload) {
+  return request('/api/rewards/redemptions/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function placeAuctionBid(auctionId, bidAmount) {
+  return request('/api/rewards/auctions/' + encodeURIComponent(auctionId) + '/bid/', {
+    method: 'POST',
+    body: JSON.stringify({ bid_amount: bidAmount }),
+  });
+}
+
+export async function getRaffleTickets() {
+  return request(EMBED_BASE + '/rewards/raffle-tickets/?available=true');
+}
+
+export async function getRaffleTicketsList() {
+  return request('/api/rewards/raffle-tickets/?available=true');
+}
+
 export async function getRewardsActivity() {
   return request(EMBED_BASE + '/rewards/activity/');
 }

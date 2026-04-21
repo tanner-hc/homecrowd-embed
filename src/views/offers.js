@@ -1,9 +1,14 @@
 import * as api from '../api.js';
 import { postToNative } from '../bridge.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
+import LoadingSpinner from '../base-components/LoadingSpinner.js';
+import ScreenTitle from '../base-components/ScreenTitle.js';
+import SearchBar from '../base-components/SearchBar.js';
+import EmptyState from '../base-components/EmptyState.js';
+import { escapeHtml, escapeAttr } from '../base-components/html.js';
 
 export function renderOffers(container) {
-  container.innerHTML = '<div class="hc-spinner"></div>';
+  container.innerHTML = LoadingSpinner({ text: 'Loading offers...' });
   loadOffers(container, 'stores');
 }
 
@@ -42,10 +47,11 @@ async function loadOffers(container, activeTab) {
     // === STORES TAB ===
     html += '<div id="hc-tab-stores" class="hc-tab-content"' + (activeTab !== 'stores' ? ' style="display:none"' : '') + '>';
 
-    // Title
     html += '<div class="hc-screen-title">';
-    html += '<div class="hc-screen-title-text">Partner stores</div>';
-    html += '<div class="hc-screen-title-subtitle">Explore our marketplace of exclusive earnings</div>';
+    html += ScreenTitle({
+      title: 'Partner stores',
+      subtitle: 'Explore our marketplace of exclusive earnings',
+    });
     html += '</div>';
 
     // Featured top slider
@@ -58,8 +64,7 @@ async function loadOffers(container, activeTab) {
       html += renderFeaturedGrid(featuredStoresBottom);
     }
 
-    // Search bar
-    html += '<div class="hc-search-wrap"><input id="hc-search-stores" class="hc-search-input" type="text" placeholder="Search" /></div>';
+    html += '<div class="hc-search-wrap">' + SearchBar({ id: 'hc-search-stores', placeholder: 'Search', value: '' }) + '</div>';
 
     // Merchant grid
     html += '<div id="hc-stores-grid" class="hc-merchant-grid">';
@@ -67,7 +72,11 @@ async function loadOffers(container, activeTab) {
     html += '</div>';
 
     if (cardlinked.length === 0 && featuredStoresTop.length === 0 && featuredStoresBottom.length === 0) {
-      html += '<div class="hc-empty"><div class="hc-empty-title">No Store Offers</div><div class="hc-empty-text">No in-store offers available right now.</div></div>';
+      html += EmptyState({
+        title: 'No Store Offers',
+        subtitle: 'No in-store offers available right now.',
+        iconChar: '🏪',
+      });
     }
 
     html += '<div style="height:80px"></div>';
@@ -76,10 +85,11 @@ async function loadOffers(container, activeTab) {
     // === ONLINE TAB ===
     html += '<div id="hc-tab-online" class="hc-tab-content"' + (activeTab !== 'online' ? ' style="display:none"' : '') + '>';
 
-    // Title
     html += '<div class="hc-screen-title">';
-    html += '<div class="hc-screen-title-text">Online offers</div>';
-    html += '<div class="hc-screen-title-subtitle">Explore our marketplace of exclusive earnings</div>';
+    html += ScreenTitle({
+      title: 'Online offers',
+      subtitle: 'Explore our marketplace of exclusive earnings',
+    });
     html += '</div>';
 
     // Featured top slider
@@ -92,8 +102,7 @@ async function loadOffers(container, activeTab) {
       html += renderFeaturedSliderSmall(featuredOnlineBottom);
     }
 
-    // Search bar
-    html += '<div class="hc-search-wrap"><input id="hc-search-online" class="hc-search-input" type="text" placeholder="Search" /></div>';
+    html += '<div class="hc-search-wrap">' + SearchBar({ id: 'hc-search-online', placeholder: 'Search', value: '' }) + '</div>';
 
     // Merchant grid
     html += '<div id="hc-online-grid" class="hc-merchant-grid">';
@@ -101,14 +110,15 @@ async function loadOffers(container, activeTab) {
     html += '</div>';
 
     if (click.length === 0 && featuredOnlineTop.length === 0 && featuredOnlineBottom.length === 0) {
-      html += '<div class="hc-empty"><div class="hc-empty-title">No Online Offers</div><div class="hc-empty-text">No online offers available right now.</div></div>';
+      html += EmptyState({
+        title: 'No Online Offers',
+        subtitle: 'No online offers available right now.',
+        iconChar: '🌐',
+      });
     }
 
     html += '<div style="height:80px"></div>';
     html += '</div>';
-
-    // Toast
-    html += '<div id="hc-toast" class="hc-toast" style="display:none"></div>';
 
     container.innerHTML = html;
 
@@ -292,12 +302,3 @@ function openExternalUrl(url) {
   showWebviewOverlay(url);
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function escapeAttr(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}

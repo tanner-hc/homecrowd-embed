@@ -1,9 +1,12 @@
 import * as api from '../api.js';
 import { postToNative } from '../bridge.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
+import LoadingSpinner from '../base-components/LoadingSpinner.js';
+import Button from '../base-components/Button.js';
+import { escapeHtml, escapeAttr } from '../base-components/html.js';
 
 export function renderOfferDetail(container, offerId) {
-  container.innerHTML = '<div class="hc-spinner"></div>';
+  container.innerHTML = LoadingSpinner({ text: 'Loading offer...' });
   loadOfferDetail(container, offerId);
 }
 
@@ -100,12 +103,14 @@ async function loadOfferDetail(container, offerId) {
     if (shopUrl || offer.offerType === 'click' || offer.offerType === 'click_sso') {
       html += '<div style="height:80px"></div>';
       html += '<div class="hc-offer-bottom">';
-      html += '<button id="hc-shop-btn" class="hc-btn hc-btn-primary hc-btn-large">Shop Now</button>';
+      html += Button({
+        id: 'hc-shop-btn',
+        title: 'Shop Now',
+        variant: 'primary',
+        className: 'hc-btn-large',
+      });
       html += '</div>';
     }
-
-    // Toast
-    html += '<div id="hc-toast" class="hc-toast" style="display:none"></div>';
 
     container.innerHTML = html;
 
@@ -200,12 +205,3 @@ function getDaysOfWeek(days) {
   return days.map(function (d) { return names[d]; }).join(', ');
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function escapeAttr(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}

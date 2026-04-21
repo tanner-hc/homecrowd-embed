@@ -6,12 +6,17 @@ import { renderRewards } from './views/rewards.js';
 import logoUrl from './assets/header.png';
 import { renderCards } from './views/cards.js';
 import { renderRewardDetail } from './views/reward-detail.js';
+import { resolveCardLinkStatus } from './cardLinkStatus.js';
 import { renderOffers } from './views/offers.js';
 import { renderOfferDetail } from './views/offer-detail.js';
+import { renderRedemptionConfirmation } from './views/redemption-confirmation.js';
+import { renderRedemptionThanks, finalizeStripeThanksReturn } from './views/redemption-thanks.js';
+import LoadingSpinner from './base-components/LoadingSpinner.js';
 
 var appEl = document.getElementById('app');
 var user = null;
 var lastAutologinTokenApplied = '';
+var suppressPartnerAutologinAfterLogout = false;
 
 var hostConfig =
   typeof window.__HC_EMBED_HOST_CONFIG__ === 'object' && window.__HC_EMBED_HOST_CONFIG__ !== null
@@ -21,6 +26,8 @@ var params = new URLSearchParams(window.location.search);
 var schoolId = (hostConfig && hostConfig.schoolId) || params.get('schoolId') || '';
 var partnerToken = (hostConfig && hostConfig.token) || params.get('token') || '';
 var initialView = (hostConfig && hostConfig.view) || params.get('view') || 'rewards';
+
+var postLoginStripeThanksId = null;
 
 async function applySchoolConfig(nextSchoolId) {
   schoolId = nextSchoolId || '';
@@ -42,6 +49,9 @@ async function applySchoolConfig(nextSchoolId) {
 
 async function applyAutologinToken(token, view, nextSchoolId) {
   if (!token) {
+    return false;
+  }
+  if (suppressPartnerAutologinAfterLogout) {
     return false;
   }
 
@@ -80,6 +90,9 @@ onNativeMessage('homecrowd:configure', function (config) {
     applySchoolConfig(config.schoolId);
   }
   if (config.token) {
+    if (suppressPartnerAutologinAfterLogout) {
+      return;
+    }
     partnerToken = config.token;
     if (config.schoolId) {
       schoolId = String(config.schoolId);
@@ -92,6 +105,12 @@ onNativeMessage('homecrowd:configure', function (config) {
     return;
   }
   if (config.view) {
+    if (
+      suppressPartnerAutologinAfterLogout &&
+      config.view !== 'login'
+    ) {
+      return;
+    }
     navigate('/' + config.view);
   }
 });
@@ -99,6 +118,9 @@ onNativeMessage('homecrowd:configure', function (config) {
 // Listen for navigation commands from native layer
 onNativeMessage('homecrowd:navigate', function (data) {
   if (data && data.view) {
+    if (suppressPartnerAutologinAfterLogout && data.view !== 'login') {
+      return;
+    }
     navigate('/' + data.view);
   }
 });
@@ -106,14 +128,17 @@ onNativeMessage('homecrowd:navigate', function (data) {
 function handleStripeReturnQuery() {
   var sp = new URLSearchParams(window.location.search);
   if (sp.get('stripe_success') === '1') {
-    window.alert(
-      'Purchase successful! Thank you for your purchase. Your reward is being processed.',
-    );
+    postLoginStripeThanksId = finalizeStripeThanksReturn();
     sp.delete('stripe_success');
     sp.delete('session_id');
     var qs = sp.toString();
     var clean = window.location.pathname + (qs ? '?' + qs : '') + window.location.hash;
     window.history.replaceState(null, '', clean);
+    if (!postLoginStripeThanksId) {
+      window.alert(
+        'Purchase successful! Thank you for your purchase. Your reward is being processed.',
+      );
+    }
   } else if (sp.get('stripe_cancel') === '1') {
     window.alert('Checkout was canceled.');
     sp.delete('stripe_cancel');
@@ -150,6 +175,11 @@ async function init() {
     }
   }
 
+  if (postLoginStripeThanksId) {
+    window.location.hash = '#/rewards/' + encodeURIComponent(postLoginStripeThanksId) + '/thanks';
+    postLoginStripeThanksId = null;
+  }
+
   onRouteChange(function (route) {
     postToNative('homecrowd:route-change', { route: route });
     render(route);
@@ -166,6 +196,11 @@ async function init() {
   postToNative('homecrowd:ready');
 }
 
+function routePathOnly(route) {
+  var q = route.indexOf('?');
+  return q >= 0 ? route.slice(0, q) : route;
+}
+
 function render(route) {
   if (!user && route !== '/login') {
     navigate('/login');
@@ -180,30 +215,92 @@ function render(route) {
     appEl.innerHTML = '';
     renderLogin(appEl, function (u) {
       user = u;
+      suppressPartnerAutologinAfterLogout = false;
       postToNative('homecrowd:login', { user: u });
       navigate('/rewards');
     });
     return;
   }
 
-  // Reward detail route: /rewards/:id
-  var detailMatch = route.match(/^\/rewards\/(.+)$/);
+  var pathOnly = routePathOnly(route);
+
+  var thanksMatch = pathOnly.match(/^\/rewards\/([^/]+)\/thanks$/);
+  if (thanksMatch) {
+    var thanksRewardId = thanksMatch[1];
+    var thanksContentEl = renderLayout(route);
+    renderRedemptionThanks(thanksContentEl, thanksRewardId);
+    return;
+  }
+
+  var confirmMatch = pathOnly.match(/^\/rewards\/([^/]+)\/confirm$/);
+  if (confirmMatch) {
+    var confirmRewardId = confirmMatch[1];
+    var confirmContentEl = renderLayout(route);
+    renderRedemptionConfirmation(confirmContentEl, confirmRewardId);
+    return;
+  }
+
+  var detailMatch = pathOnly.match(/^\/rewards\/([^/]+)$/);
   if (detailMatch) {
     var rewardId = detailMatch[1];
     var contentEl = renderLayout(route);
-    contentEl.innerHTML = '<div class="hc-spinner"></div>';
-    Promise.all([api.getRewardsSummary(), api.getRewardsCatalog()]).then(function (results) {
-      var summary = results[0];
-      var catalog = results[1];
-      var reward = catalog.find(function (r) { return String(r.id) === rewardId; });
-      if (reward) {
-        renderRewardDetail(contentEl, reward, summary);
-      } else {
-        contentEl.innerHTML = '<div class="hc-alert-error">Reward not found</div>';
-      }
-    }).catch(function (err) {
-      contentEl.innerHTML = '<div class="hc-alert-error">Failed to load: ' + (err.message || 'Unknown error') + '</div>';
-    });
+    contentEl.innerHTML = LoadingSpinner({ text: 'Loading reward...' });
+    Promise.all([
+      api.getRewardsSummary(),
+      api.fetchCurrentUser(),
+      api.getCards().catch(function () {
+        return null;
+      }),
+      api.getRaffleTicketsList().catch(function () {
+        return null;
+      }),
+    ])
+      .then(function (parts) {
+        var summary = parts[0];
+        var currentUser = parts[1];
+        var paymentCards = parts[2];
+        var ticketsResponse = parts[3];
+        return api
+          .getRewardDetail(rewardId)
+          .catch(function () {
+            return null;
+          })
+          .then(function (product) {
+            if (product && product.id) {
+              return { summary: summary, product: product, currentUser: currentUser, paymentCards: paymentCards, ticketsResponse: ticketsResponse };
+            }
+            return api.getRewardsCatalog().then(function (catalogRaw) {
+              var list = Array.isArray(catalogRaw) ? catalogRaw : (catalogRaw && catalogRaw.results) || [];
+              var found = list.find(function (r) {
+                return String(r.id) === rewardId;
+              });
+              return {
+                summary: summary,
+                product: found,
+                currentUser: currentUser,
+                paymentCards: paymentCards,
+                ticketsResponse: ticketsResponse,
+              };
+            });
+          });
+      })
+      .then(function (ctx) {
+        if (!ctx || !ctx.product || !ctx.product.id) {
+          contentEl.innerHTML = '<div class="hc-alert-error">Reward not found</div>';
+          return;
+        }
+        renderRewardDetail(contentEl, {
+          product: ctx.product,
+          summary: ctx.summary,
+          currentUser: ctx.currentUser,
+          cardLinkStatus: resolveCardLinkStatus(ctx.currentUser, ctx.paymentCards) || 'unknown',
+          ticketsResponse: ctx.ticketsResponse,
+        });
+      })
+      .catch(function (err) {
+        contentEl.innerHTML =
+          '<div class="hc-alert-error">Failed to load: ' + (err.message || 'Unknown error') + '</div>';
+      });
     return;
   }
 
@@ -229,26 +326,59 @@ function render(route) {
 }
 
 function renderLayout(route) {
-  appEl.innerHTML = '\
-    <div class="hc-embed">\
-      <div class="hc-header">\
-        <img src="' + logoUrl + '" alt="Homecrowd" class="hc-header-logo" />\
+  var pathOnly = routePathOnly(route);
+  var isRewardDetailPage =
+    /^\/rewards\/[^/]+$/.test(pathOnly) ||
+    /^\/rewards\/[^/]+\/confirm$/.test(pathOnly) ||
+    /^\/rewards\/[^/]+\/thanks$/.test(pathOnly);
+  var rewardsTabActive = route === '/rewards' ? ' active' : '';
+  var offersTabActive =
+    route === '/offers' || /^\/offers\/[^/]+$/.test(route) ? ' active' : '';
+  var cardsTabActive = route === '/cards' ? ' active' : '';
+
+  var tabsHtml = '';
+  if (!isRewardDetailPage) {
+    tabsHtml =
+      '<nav class="hc-nav">\
+        <a href="#/rewards" class="hc-nav-link' +
+      rewardsTabActive +
+      '">Rewards</a>\
+        <a href="#/offers" class="hc-nav-link' +
+      offersTabActive +
+      '">Offers</a>\
+        <a href="#/cards" class="hc-nav-link' +
+      cardsTabActive +
+      '">Cards</a>\
+      </nav>';
+  }
+
+  appEl.innerHTML =
+    '<div class="hc-embed">\
+      <div class="hc-sticky-top' +
+    (isRewardDetailPage ? ' hc-sticky-top--reward-detail' : '') +
+    '">\
+        <div class="hc-header">\
+          <img src="' +
+    logoUrl +
+    '" alt="Homecrowd" class="hc-header-logo" />\
+        </div>' +
+    tabsHtml +
+    '\
       </div>\
-      <nav class="hc-nav">\
-        <a href="#/rewards" class="hc-nav-link' + (route.indexOf('/rewards') === 0 ? ' active' : '') + '">Rewards</a>\
-        <a href="#/offers" class="hc-nav-link' + (route.indexOf('/offers') === 0 ? ' active' : '') + '">Offers</a>\
-        <a href="#/cards" class="hc-nav-link' + (route === '/cards' ? ' active' : '') + '">Cards</a>\
-      </nav>\
-      <main id="hc-content" class="hc-content"></main>\
+      <main id="hc-content" class="hc-content' +
+    (isRewardDetailPage ? ' hc-content--reward-detail' : '') +
+    '"></main>\
       <button id="hc-logout-btn" class="hc-logout-fixed">Log out</button>\
     </div>';
 
-  document.getElementById('hc-logout-btn').addEventListener('click', async function () {
-    await api.logout();
+  document.getElementById('hc-logout-btn').addEventListener('click', function () {
+    suppressPartnerAutologinAfterLogout = true;
     user = null;
     lastAutologinTokenApplied = '';
+    api.clearTokens();
     postToNative('homecrowd:logout');
     navigate('/login');
+    api.logout().catch(function () {});
   });
 
   return document.getElementById('hc-content');

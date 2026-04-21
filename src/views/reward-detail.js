@@ -1,199 +1,755 @@
 import * as api from '../api.js';
 import { canPayWithStripeEmbed } from '../rewardPricing.js';
+import { resolveCardLinkStatus } from '../cardLinkStatus.js';
+import { formatDisplayNumber } from '../formatNumber.js';
+import RafflePill, { attachRafflePillAuction } from '../base-components/RafflePill.js';
+import MainButton from '../base-components/MainButton.js';
+import NavHeader from '../base-components/NavHeader.js';
+import { escapeHtml, escapeAttr } from '../base-components/html.js';
+import { showSuccess, showError } from '../base-components/toastApi.js';
+import { writeRedemptionConfirmAndNavigate } from './redemption-confirmation.js';
 
-export function renderRewardDetail(container, reward, summary) {
+export function renderRewardDetail(container, ctx) {
+  var product = normalizeProduct(ctx.product);
+  var summary = ctx.summary;
+  var currentUser = ctx.currentUser || null;
+  var cardLinkStatus = ctx.cardLinkStatus || 'unknown';
+  var ticketsResponse = ctx.ticketsResponse;
+
+  var html = buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsResponse);
+  container.innerHTML = html;
+  bindDetailEvents(container, product, summary, currentUser, cardLinkStatus, ticketsResponse);
+}
+
+function normalizeProduct(p) {
+  if (!p) return null;
+  var ri = p.raffle_info || p.raffleInfo;
+  var ai = p.auction_info || p.auctionInfo;
+  var rt = (p.redemption_type || p.redemptionType || '').toLowerCase();
+  var pts = p.points_cost != null ? p.points_cost : p.pointsCost;
+  var cents = p.cash_price_cents != null ? p.cash_price_cents : p.cashPriceCents;
+  var enabled =
+    p.enabled !== false &&
+    p.is_active !== false &&
+    (!p.has_inventory || p.inventory_count == null || p.inventory_count > 0);
+
+  return {
+    id: p.id,
+    title: p.title,
+    description: p.description,
+    points_cost: pts,
+    pointsCost: pts,
+    cash_price_cents: cents,
+    cashPriceCents: cents,
+    reward_type: p.reward_type || p.rewardType,
+    redemption_type: rt,
+    redemptionType: rt,
+    is_active: p.is_active !== false,
+    is_locked: !!(p.is_locked || p.isLocked),
+    images: p.images || [],
+    image_url: p.image_url || p.imageUrl,
+    imageUrl: p.image_url || p.imageUrl,
+    raffle_info: ri,
+    raffleInfo: ri,
+    auction_info: ai,
+    auctionInfo: ai,
+    enabled: enabled,
+    has_inventory: p.has_inventory,
+    inventory_count: p.inventory_count,
+  };
+}
+
+function getAvailablePoints(summary) {
+  if (!summary) return 0;
+  return summary.availablePoints != null ? summary.availablePoints : summary.available_points || 0;
+}
+
+function isEarlyReleaseUser(u) {
+  return !!(u && u.activeSchool && u.activeSchool.earlyRelease);
+}
+
+function countUniversalTickets(ticketsResponse) {
+  var t = ticketsResponse && (ticketsResponse.results || ticketsResponse);
+  if (!Array.isArray(t)) return 0;
+  return t.filter(function (x) {
+    return !x.raffle;
+  }).length;
+}
+
+function isPastEvent(product) {
+  var now = new Date();
+  if (product.redemption_type === 'raffle' && product.raffle_info && product.raffle_info.drawing_date) {
+    return new Date(product.raffle_info.drawing_date) < now;
+  }
+  if (product.redemption_type === 'auction' && product.auction_info && product.auction_info.end_date) {
+    return new Date(product.auction_info.end_date) < now;
+  }
+  return false;
+}
+
+function isMoreThanWeekAway(product) {
+  if (product.redemption_type !== 'raffle' || !product.raffle_info || !product.raffle_info.drawing_date) {
+    return false;
+  }
+  var date = new Date(product.raffle_info.drawing_date);
+  var weekFromNow = new Date();
+  weekFromNow.setDate(weekFromNow.getDate() + 7);
+  return date > weekFromNow;
+}
+
+function formatLongDate(dateStr) {
+  if (!dateStr) return '';
+  var d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function collectImageUrls(product, getUrl) {
+  if (product.images && product.images.length > 0) {
+    var sorted = product.images.slice().sort(function (a, b) {
+      return (a.order || 0) - (b.order || 0);
+    });
+    var out = [];
+    sorted.forEach(function (img) {
+      var path = img.image_path || img.imagePath;
+      if (path) out.push(getUrl(path));
+    });
+    return out.filter(Boolean);
+  }
+  if (product.image_url || product.imageUrl) {
+    return [getUrl(product.image_url || product.imageUrl)];
+  }
+  return [];
+}
+
+function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsResponse) {
+  var getUrl = function (path) {
+    if (!path) return null;
+    if (typeof path === 'string' && path.indexOf('s3://') === 0) {
+      return path.replace('s3://', 'https://');
+    }
+    if (typeof path === 'string' && path.indexOf('s3://app.gethomecrowd.com/') === 0) {
+      return path.replace('s3://app.gethomecrowd.com/', 'https://app.gethomecrowd.com/');
+    }
+    return path;
+  };
+
+  var isEarlyRelease = isEarlyReleaseUser(currentUser);
+  var showLockedBanner = !isEarlyRelease && cardLinkStatus === 'unlinked';
+  var availablePts = getAvailablePoints(summary);
+  var ticketCount = countUniversalTickets(ticketsResponse);
+
+  var isPast = isPastEvent(product);
+  var completed = !product.is_active || isPast;
+  var timeLocked = isMoreThanWeekAway(product);
+  var cardLockedActive = !isEarlyRelease && cardLinkStatus === 'unlinked';
+  var isLocked = product.is_locked || timeLocked;
+
+  var redemptionType = product.redemption_type || '';
+  var stripeCents = Number(product.cash_price_cents);
+  var canPayWithStripe = canPayWithStripeEmbed({
+    enabled: product.enabled,
+    cashPriceCents: product.cash_price_cents,
+    redemptionType: redemptionType,
+  });
+  var isCardOnly = redemptionType === 'card';
+  var detailCashOk =
+    Number.isFinite(stripeCents) &&
+    stripeCents >= 50 &&
+    (redemptionType === 'first' || redemptionType === 'card');
+
+  var userId = currentUser && currentUser.id ? String(currentUser.id) : '';
+  var raffleInfo = product.raffle_info;
+  var auctionInfo = product.auction_info;
+
+  var userWonAuction =
+    redemptionType === 'auction' &&
+    auctionInfo &&
+    auctionInfo.status === 'ended' &&
+    auctionInfo.final_winner &&
+    String(auctionInfo.final_winner) === userId;
+
+  var userWonRaffle =
+    redemptionType === 'raffle' &&
+    raffleInfo &&
+    raffleInfo.status === 'completed' &&
+    raffleInfo.winner &&
+    String(raffleInfo.winner) === userId;
+
+  var raffleCompletedByStatus = redemptionType === 'raffle' && raffleInfo && raffleInfo.status === 'completed';
+  var raffleDrawingPassed =
+    redemptionType === 'raffle' &&
+    raffleInfo &&
+    raffleInfo.drawing_date &&
+    new Date() >= new Date(raffleInfo.drawing_date);
+  var raffleCompleteButNotDrawn = raffleDrawingPassed && !raffleCompletedByStatus;
+
+  var userEntries = (raffleInfo && raffleInfo.user_entries) || 0;
+  var participated = userEntries > 0;
+  var userLostRaffle = raffleCompletedByStatus && participated && !userWonRaffle;
+  var userDidntParticipate = raffleCompletedByStatus && !participated;
+
+  var canRedeemPts = availablePts >= (product.points_cost || 0);
+  var canEnterRaffle =
+    redemptionType === 'raffle' &&
+    (ticketCount > 0 || canRedeemPts) &&
+    !isLocked &&
+    !raffleDrawingPassed &&
+    !raffleCompletedByStatus;
+
+  var hideMainProductBlock =
+    redemptionType === 'raffle' && raffleInfo && raffleInfo.status === 'completed' && userWonRaffle;
+
+  var images = collectImageUrls(product, getUrl);
+
   var html = '';
 
-  var redemptionType = reward.redemptionType || '';
-  var stripeCents = Number(reward.cashPriceCents);
-  var canPayWithStripe = canPayWithStripeEmbed(reward);
-  var isCardOnly = redemptionType === 'card';
-  var pointsCost = reward.pointsCost || 0;
-  var canRedeemPoints =
-    !isCardOnly &&
-    reward.enabled !== false &&
-    pointsCost > 0 &&
-    (summary.availablePoints || 0) >= pointsCost;
+  html += '<div class="hc-product-detail' + (completed ? ' hc-product-detail--completed' : '') + '">';
 
-  html += '<div class="hc-detail-nav">';
-  html += '<button id="hc-back-btn" class="hc-back-btn">← Rewards</button>';
+  html += '<div class="hc-product-detail-nav-sticky">';
+  html += NavHeader({
+    title: 'Rewards',
+    backButtonId: 'hc-back-btn',
+  });
   html += '</div>';
 
-  if (reward.imageUrl) {
+  html += '<div class="hc-product-detail-scroll">';
+
+  if (showLockedBanner) {
+    html += '<div class="hc-rewards-locked-banner hc-rewards-locked-banner--detail">';
+    html += '<div class="hc-rewards-locked-banner-text">';
+    html += '<div class="hc-rewards-locked-banner-title">Link a card to unlock rewards</div>';
     html +=
-      '<div class="hc-detail-image-wrap"><img class="hc-detail-image" src="' +
-      escapeAttr(reward.imageUrl) +
-      '" alt="' +
-      escapeAttr(reward.title) +
-      '" /></div>';
-  } else {
-    html += '<div class="hc-detail-image-wrap"><div class="hc-detail-image-placeholder">No Image</div></div>';
-  }
-
-  html += '<div class="hc-detail-header">';
-  html += '<div class="hc-detail-title">' + escapeHtml(reward.title) + '</div>';
-  html += '<div class="hc-detail-category">Merchandise</div>';
-  html += '</div>';
-
-  if (reward.description) {
-    html += '<div class="hc-detail-description">';
-    html += '<div class="hc-detail-desc-text">' + escapeHtml(reward.description) + '</div>';
+      '<div class="hc-rewards-locked-banner-subtitle">You can browse, but you won\'t be able to redeem rewards until a card is linked.</div>';
+    html += '</div>';
+    html += MainButton({
+      text: 'Link card',
+      large: false,
+      className: 'hc-rewards-link-card-btn',
+    });
     html += '</div>';
   }
 
-  html += '<div class="hc-detail-cost-section">';
-  if (!isCardOnly && pointsCost > 0) {
-    html +=
-      '<div class="hc-detail-cost-row"><span class="hc-detail-cost-label">Cost</span><span class="hc-detail-cost-value">' +
-      pointsCost.toLocaleString() +
-      ' points</span></div>';
-  }
-  if (canPayWithStripe) {
-    html +=
-      '<div class="hc-detail-cost-row"><span class="hc-detail-cost-label">' +
-      (isCardOnly || pointsCost <= 0 ? 'Price' : 'Or pay with card') +
-      '</span><span class="hc-detail-cost-value">$' +
-      (stripeCents / 100).toFixed(2) +
-      ' USD</span></div>';
-  }
-  html +=
-    '<div class="hc-detail-cost-row"><span class="hc-detail-cost-label">Your balance</span><span class="hc-detail-cost-value">' +
-    (summary.availablePoints || 0).toLocaleString() +
-    ' points</span></div>';
+  html += '<div class="' + (completed ? 'hc-product-completed-wrap' : '') + '">';
+  html += buildCarouselHtml(images);
   html += '</div>';
 
-  html += '<div style="height:100px"></div>';
+  html += '<div class="hc-detail-header' + (completed ? ' hc-product-completed-wrap' : '') + '">';
+  html += '<div class="hc-detail-title">' + escapeHtml(product.title) + '</div>';
+  html +=
+    '<div class="hc-detail-category">' +
+    escapeHtml(capitalize(product.reward_type || 'merchandise')) +
+    '</div>';
 
-  html += '<div class="hc-detail-bottom hc-detail-bottom-actions">';
-
-  if (canPayWithStripe) {
-    var usdOnly =
-      isCardOnly || (redemptionType === 'first' && pointsCost <= 0);
-    var stripePrimary = usdOnly ? ' hc-btn-primary' : ' hc-btn-secondary';
-    html +=
-      '<button type="button" id="hc-detail-stripe" class="hc-btn' +
-      stripePrimary +
-      ' hc-btn-large">' +
-      (usdOnly ? 'Pay ' : 'Pay with card — ') +
-      '$' +
-      (stripeCents / 100).toFixed(2) +
-      '</button>';
+  if (!isEarlyRelease) {
+    html += '<div class="hc-product-points-row">';
+    if (redemptionType === 'card') {
+      if (detailCashOk) {
+        html +=
+          '<span class="hc-product-cash">' + escapeHtml('$' + (stripeCents / 100).toFixed(2)) + '</span>';
+      } else {
+        html += '<span class="hc-product-points-muted">Card price not set</span>';
+      }
+    } else {
+      html +=
+        '<span class="hc-product-points">' +
+        formatDisplayNumber(product.points_cost || 0) +
+        ' points</span>';
+      if (detailCashOk) {
+        html += '<span class="hc-product-or"> or </span>';
+        html +=
+          '<span class="hc-product-cash">' +
+          escapeHtml('$' + (stripeCents / 100).toFixed(2)) +
+          '</span>';
+      }
+    }
+    html += '</div>';
   }
-
-  if (!isCardOnly && pointsCost > 0) {
-    html +=
-      '<button id="hc-detail-redeem" class="hc-btn hc-btn-primary hc-btn-large"' +
-      (canRedeemPoints ? '' : ' disabled') +
-      '>' +
-      (canRedeemPoints
-        ? 'Redeem — ' + pointsCost.toLocaleString() + ' pts'
-        : 'Not enough points') +
-      '</button>';
-  }
-
   html += '</div>';
 
-  html +=
-    '<div id="hc-redeem-modal" class="hc-modal-overlay" style="display:none"><div class="hc-modal"><div class="hc-modal-title">Redeem Reward</div><div id="hc-redeem-modal-text" class="hc-modal-text"></div><div class="hc-modal-actions"><button id="hc-redeem-cancel" class="hc-btn hc-btn-secondary">Cancel</button><button id="hc-redeem-confirm" class="hc-btn hc-btn-primary">Confirm</button></div></div></div>';
+  if (redemptionType === 'raffle' && raffleInfo && raffleInfo.drawing_date) {
+    html += '<div class="hc-product-drawing-date">';
+    html += '<div class="hc-product-drawing-label">Drawing Date</div>';
+    html += '<div class="hc-product-drawing-value">' + escapeHtml(formatLongDate(raffleInfo.drawing_date)) + '</div>';
+    html += '</div>';
+  }
 
-  html += '<div id="hc-toast" class="hc-toast" style="display:none"></div>';
+  if (
+    redemptionType === 'raffle' &&
+    raffleInfo &&
+    !(raffleInfo.status === 'completed' && raffleInfo.winner && String(raffleInfo.winner) === userId)
+  ) {
+    html += '<div class="hc-product-raffle-entries">';
+    html +=
+      '<span class="hc-product-raffle-entries-text">' +
+      (isPast ? 'You had' : 'You have') +
+      ' <strong class="hc-product-raffle-count">' +
+      formatDisplayNumber(userEntries) +
+      '</strong> ' +
+      (userEntries === 1 ? 'entry' : 'entries') +
+      ' in this raffle</span>';
+    html += '</div>';
+  }
 
-  container.innerHTML = html;
+  if (redemptionType === 'auction' && auctionInfo && userWonAuction) {
+    html += '<div class="hc-product-winner-auction">';
+    html += '<div class="hc-product-winner-emoji">🏆</div>';
+    html += '<div class="hc-product-winner-title">Congratulations, You Won!</div>';
+    html +=
+      '<div class="hc-product-winner-sub">You won this auction with a bid of <strong>' +
+      formatDisplayNumber(auctionInfo.current_highest_bid || 0) +
+      '</strong> points</div>';
+    html += '<div class="hc-product-winner-contact">You will be contacted with more details</div>';
+    html += '</div>';
+  }
 
-  document.getElementById('hc-back-btn').addEventListener('click', function () {
-    window.location.hash = '#/rewards';
+  if (redemptionType === 'raffle' && raffleInfo && raffleInfo.status === 'completed' && userWonRaffle) {
+    html += '<div class="hc-product-winner-raffle">';
+    html += '<div class="hc-product-winner-emoji">🎉</div>';
+    html += '<div class="hc-product-winner-title">Congratulations, You Won!</div>';
+    html += '<div class="hc-product-winner-sub">You won the raffle drawing for this prize!</div>';
+    html += '<div class="hc-product-winner-contact">You will be contacted with more details</div>';
+    html += '</div>';
+    html += '<div class="hc-product-raffle-entries">';
+    html +=
+      '<span class="hc-product-raffle-entries-text">You had <strong class="hc-product-raffle-count">' +
+      formatDisplayNumber(userEntries) +
+      '</strong> ' +
+      (userEntries === 1 ? 'entry' : 'entries') +
+      ' in this raffle</span>';
+    html += '</div>';
+  }
+
+  if (!hideMainProductBlock) {
+    html += '<div class="' + (completed ? 'hc-product-completed-wrap' : '') + '">';
+    if (redemptionType === 'auction' && auctionInfo) {
+      html += buildAuctionBidStatusHtml(auctionInfo);
+      html += buildAuctionPillHtml(auctionInfo);
+    }
+    if (product.description) {
+      html += '<div class="hc-product-desc-wrap">';
+      html += '<div class="hc-detail-desc-text">' + nlToBr(escapeHtml(product.description)) + '</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  if (completed) {
+    html += '<div class="hc-product-ended-banner">';
+    html += '<div class="hc-product-ended-title">This Event Has Ended</div>';
+    if (redemptionType === 'raffle' && raffleInfo && raffleInfo.drawing_date) {
+      html +=
+        '<div class="hc-product-ended-date">Drawing was on ' +
+        escapeHtml(formatLongDate(raffleInfo.drawing_date)) +
+        '</div>';
+    }
+    if (redemptionType === 'auction' && auctionInfo && auctionInfo.end_date) {
+      html +=
+        '<div class="hc-product-ended-date">Auction ended on ' +
+        escapeHtml(formatLongDate(auctionInfo.end_date)) +
+        '</div>';
+    }
+    if (auctionInfo && auctionInfo.final_winner) {
+      html += '<div class="hc-product-ended-note">Winner will be notified via email</div>';
+    }
+    html += '</div>';
+  }
+
+  html += '<div class="hc-product-detail-spacer"></div>';
+  html += '</div>';
+
+  html += buildBottomBarHtml({
+    product: product,
+    summary: summary,
+    canPayWithStripe: canPayWithStripe && !cardLockedActive && !isLocked,
+    isCardOnly: isCardOnly,
+    stripeCents: stripeCents,
+    redemptionType: redemptionType,
+    cardLockedActive: cardLockedActive,
+    isLocked: isLocked,
+    isEarlyRelease: isEarlyRelease,
+    ticketCount: ticketCount,
+    availablePts: availablePts,
+    completed: completed,
+    userWonAuction: userWonAuction,
+    userWonRaffle: userWonRaffle,
+    raffleCompleteButNotDrawn: raffleCompleteButNotDrawn,
+    userLostRaffle: userLostRaffle,
+    userDidntParticipate: userDidntParticipate,
+    canEnterRaffle: canEnterRaffle,
+    canRedeemPts: canRedeemPts,
+    auctionInfo: auctionInfo,
+    auctionExpired:
+      redemptionType === 'auction' &&
+      auctionInfo &&
+      auctionInfo.end_date &&
+      new Date() >= new Date(auctionInfo.end_date),
   });
 
+  html += '</div>';
+
+  return html;
+}
+
+function buildCarouselHtml(urls) {
+  var spacer = '<div class="hc-carousel-spacer" aria-hidden="true"></div>';
+  var inner = '';
+  if (!urls.length) {
+    inner =
+      '<div class="hc-carousel">' +
+      spacer +
+      '<div class="hc-carousel-slide"><div class="hc-carousel-ph">No Image</div></div>' +
+      spacer +
+      '</div>';
+    return '<div class="hc-product-carousel-bleed">' + inner + '</div>';
+  }
+  inner = '<div class="hc-carousel">' + spacer;
+  urls.forEach(function (url) {
+    inner +=
+      '<div class="hc-carousel-slide"><div class="hc-carousel-img-wrap"><img class="hc-carousel-img" src="' +
+      escapeAttr(url) +
+      '" alt="" /></div></div>';
+  });
+  inner += spacer + '</div>';
+  if (urls.length > 1) {
+    inner += '<div class="hc-carousel-dots">';
+    urls.forEach(function (_, i) {
+      inner += '<span class="hc-carousel-dot' + (i === 0 ? ' active' : '') + '"></span>';
+    });
+    inner += '</div>';
+  }
+  return '<div class="hc-product-carousel-bleed">' + inner + '</div>';
+}
+
+function buildAuctionBidStatusHtml(auctionInfo) {
+  var ub = auctionInfo.user_current_bid;
+  var ch = auctionInfo.current_highest_bid;
+  if (ub == null || ub === '') return '';
+  var winning = Number(ub) === Number(ch);
+  var cls = winning ? 'hc-auction-bid-status--win' : 'hc-auction-bid-status--out';
+  var title = winning ? "You're the highest bidder!" : "You've been outbid";
+  return '<div class="hc-auction-bid-status ' + cls + '">' + escapeHtml(title) + '</div>';
+}
+
+function buildAuctionPillHtml(auctionInfo) {
+  if (!auctionInfo || !auctionInfo.end_date) return '';
+  return RafflePill({
+    type: 'auction',
+    auctionInfo: auctionInfo,
+    status: auctionInfo.status || 'active',
+  });
+}
+
+function buildBottomBarHtml(o) {
+  var product = o.product;
+  var rt = o.redemptionType;
+  var hideFooter =
+    (o.completed && rt !== 'auction' && rt !== 'raffle') ||
+    (rt === 'auction' && o.userWonAuction) ||
+    (rt === 'raffle' && o.userWonRaffle);
+
+  if (hideFooter) {
+    return '<div class="hc-detail-bottom hc-detail-bottom--empty"></div>';
+  }
+
+  var html = '<div class="hc-detail-bottom hc-product-bottom">';
+
+  if (rt === 'auction' && o.auctionInfo) {
+    if (o.userWonAuction) {
+      html += '</div>';
+      return html;
+    }
+    var minBid = o.auctionInfo.current_highest_bid
+      ? Number(o.auctionInfo.current_highest_bid) + Number(o.auctionInfo.minimum_increment || 0)
+      : Number(o.auctionInfo.starting_bid || 0);
+    var afford = o.availablePts >= minBid;
+    var auctionDisabled =
+      o.auctionExpired || !afford || o.cardLockedActive || o.isLocked || o.auctionInfo.status !== 'active';
+    var btnLabel = o.isLocked ? 'Locked' : o.auctionExpired ? 'Auction Ended' : afford ? 'Place Bid' : 'Minimum Bid: ' + formatDisplayNumber(minBid) + ' pts';
+
+    html += '<div id="hc-bid-panel" style="display:none" class="hc-bid-panel">';
+    html += '<div class="hc-bid-row">Current Bid: ' + formatDisplayNumber(o.auctionInfo.current_highest_bid || o.auctionInfo.starting_bid) + ' pts</div>';
+    html += '<div class="hc-bid-row hc-bid-row--muted">Minimum Bid: ' + formatDisplayNumber(minBid) + ' pts</div>';
+    html +=
+      '<input type="number" id="hc-bid-input" class="hc-bid-input" placeholder="Enter bid amount" />';
+    html += MainButton({ id: 'hc-bid-submit', text: 'Submit Bid' });
+    html += '</div>';
+
+    html += MainButton({
+      id: 'hc-place-bid-toggle',
+      text: btnLabel,
+      disabled: auctionDisabled,
+    });
+    html += '</div>';
+    return html;
+  }
+
+  if (rt === 'raffle') {
+    if (o.userWonRaffle) {
+      html += '</div>';
+      return html;
+    }
+    if (o.raffleCompleteButNotDrawn || o.userLostRaffle || o.userDidntParticipate) {
+      html += '<div class="hc-raffle-ended-msg">';
+      html +=
+        '<div class="hc-raffle-ended-title">' +
+        (o.userLostRaffle ? 'Thanks for participating!' : 'Raffle Complete') +
+        '</div>';
+      html +=
+        '<div class="hc-raffle-ended-sub">' +
+        (o.userLostRaffle
+          ? "You didn't win this time, but keep trying!"
+          : 'This raffle has ended. Check out our other active raffles for a chance to win!') +
+        '</div>';
+      html += '</div>';
+      html += '</div>';
+      return html;
+    }
+
+    if (o.ticketCount > 0 && !o.isLocked && !o.raffleDrawingPassed) {
+      html += '<div class="hc-split-actions">';
+      html += MainButton({
+        id: 'hc-redeem-pts',
+        large: false,
+        className: 'hc-split-half',
+        disabled: !o.canRedeemPts || o.cardLockedActive,
+        html:
+          'Redeem for&nbsp;<strong>' +
+          formatDisplayNumber(product.points_cost || 0) +
+          ' pts</strong>',
+      });
+      html += '<div class="hc-split-div"></div>';
+      html += MainButton({
+        id: 'hc-redeem-ticket',
+        large: false,
+        className: 'hc-split-half',
+        disabled: o.cardLockedActive,
+        html:
+          'Use ticket (<strong>' + formatDisplayNumber(o.ticketCount) + '</strong>)',
+      });
+      html += '</div>';
+      html += '</div>';
+      return html;
+    }
+
+    var raffleDisabled = !o.canEnterRaffle || o.cardLockedActive || o.isLocked;
+    html += MainButton({
+      id: 'hc-redeem-raffle',
+      disabled: raffleDisabled,
+      text: o.isLocked ? 'Locked' : '',
+      html: o.isLocked
+        ? null
+        : 'Redeem for&nbsp;<strong>' +
+          formatDisplayNumber(product.points_cost || 0) +
+          ' pts</strong>',
+    });
+    html += '</div>';
+    return html;
+  }
+
+  html += '<div class="hc-checkout-actions">';
+  if (!o.isCardOnly) {
+    var redeemDisabled = !o.canRedeemPts || o.cardLockedActive || o.isLocked;
+    html += MainButton({
+      id: 'hc-detail-redeem',
+      disabled: redeemDisabled,
+      text: o.isLocked ? 'Locked' : '',
+      html: o.isLocked
+        ? null
+        : 'Redeem for&nbsp;<strong>' +
+          formatDisplayNumber(product.points_cost || 0) +
+          ' pts</strong>',
+    });
+  }
+  if (o.canPayWithStripe) {
+    html += MainButton({
+      id: 'hc-detail-stripe',
+      outlined: true,
+      className: 'hc-stripe-pay',
+      text: 'Pay $' + (o.stripeCents / 100).toFixed(2) + ' with card',
+    });
+  }
+  html += '</div>';
+  html += '</div>';
+  return html;
+}
+
+function bindDetailEvents(container, product, summary, currentUser, cardLinkStatus, ticketsResponse) {
+  var backBtn = document.getElementById('hc-back-btn');
+  if (backBtn) {
+    backBtn.addEventListener('click', function () {
+      window.location.hash = '#/rewards';
+    });
+  }
+
+  var linkBtn = container.querySelector('.hc-rewards-link-card-btn');
+  if (linkBtn) {
+    linkBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      window.location.hash = '#/cards';
+    });
+  }
+
+  initCarouselDots(container);
+
+  attachRafflePillAuction(container);
+
+  var stripeCents = Number(product.cash_price_cents != null ? product.cash_price_cents : product.cashPriceCents);
+  var cardLockedActive = !isEarlyReleaseUser(currentUser) && cardLinkStatus === 'unlinked';
+  var timeLocked = isMoreThanWeekAway(product);
+  var isLocked = product.is_locked || timeLocked;
+
   var stripeBtn = document.getElementById('hc-detail-stripe');
-  if (stripeBtn && canPayWithStripe) {
-    stripeBtn.addEventListener('click', async function () {
-      var usd = (stripeCents / 100).toFixed(2);
-      if (
-        !window.confirm(
-          'Purchase "' +
-            reward.title +
-            '" for $' +
-            usd +
-            ' with card?\n\nYou will complete payment securely on Stripe on the next page. Points will not be charged.',
-        )
-      ) {
-        return;
-      }
-      stripeBtn.disabled = true;
-      try {
-        var data = await api.createStripeRewardCheckoutSession(reward.id);
-        if (data && data.url) {
-          window.location.href = data.url;
-        } else {
-          showToast('Could not start checkout.');
-          stripeBtn.disabled = false;
-        }
-      } catch (err) {
-        showToast(err.message || 'Checkout failed.');
-        stripeBtn.disabled = false;
-      }
+  var canPayStripeCalc = canPayWithStripeEmbed({
+    enabled: product.enabled,
+    cashPriceCents: product.cash_price_cents != null ? product.cash_price_cents : product.cashPriceCents,
+    redemptionType: product.redemption_type || product.redemptionType,
+  });
+  if (stripeBtn && canPayStripeCalc && !cardLockedActive && !isLocked) {
+    stripeBtn.addEventListener('click', function () {
+      var avail = getAvailablePoints(summary);
+      writeRedemptionConfirmAndNavigate(product, {
+        availablePoints: avail,
+        availableTickets: 0,
+        payWithStripe: true,
+        useRaffleTicket: false,
+      });
     });
   }
 
   var redeemBtn = document.getElementById('hc-detail-redeem');
-  if (redeemBtn && canRedeemPoints && pointsCost > 0) {
+  var ptsCost = product.points_cost || 0;
+  var avail = getAvailablePoints(summary);
+  var rtRedeem = product.redemption_type || '';
+  if (
+    redeemBtn &&
+    avail >= ptsCost &&
+    ptsCost > 0 &&
+    rtRedeem !== 'auction' &&
+    rtRedeem !== 'raffle' &&
+    rtRedeem !== 'card'
+  ) {
     redeemBtn.addEventListener('click', function () {
-      document.getElementById('hc-redeem-modal-text').innerHTML =
-        'Are you sure you want to redeem <strong>' +
-        escapeHtml(reward.title) +
-        '</strong> for <strong>' +
-        pointsCost.toLocaleString() +
-        ' points</strong>?';
-      document.getElementById('hc-redeem-modal').style.display = 'flex';
+      writeRedemptionConfirmAndNavigate(product, {
+        availablePoints: avail,
+        availableTickets: 0,
+        payWithStripe: false,
+        useRaffleTicket: false,
+      });
     });
   }
 
-  document.getElementById('hc-redeem-cancel').addEventListener('click', function () {
-    document.getElementById('hc-redeem-modal').style.display = 'none';
+  var ticketCount = countUniversalTickets(ticketsResponse);
+
+  var rafflePts = document.getElementById('hc-redeem-pts');
+  if (rafflePts) {
+    rafflePts.addEventListener('click', function () {
+      if (rafflePts.disabled) return;
+      writeRedemptionConfirmAndNavigate(product, {
+        availablePoints: avail,
+        availableTickets: ticketCount,
+        payWithStripe: false,
+        useRaffleTicket: false,
+      });
+    });
+  }
+
+  var raffleTix = document.getElementById('hc-redeem-ticket');
+  if (raffleTix) {
+    raffleTix.addEventListener('click', function () {
+      if (raffleTix.disabled) return;
+      writeRedemptionConfirmAndNavigate(product, {
+        availablePoints: avail,
+        availableTickets: ticketCount,
+        payWithStripe: false,
+        useRaffleTicket: true,
+      });
+    });
+  }
+
+  var raffleSingle = document.getElementById('hc-redeem-raffle');
+  if (raffleSingle) {
+    raffleSingle.addEventListener('click', function () {
+      if (raffleSingle.disabled) return;
+      writeRedemptionConfirmAndNavigate(product, {
+        availablePoints: avail,
+        availableTickets: ticketCount,
+        payWithStripe: false,
+        useRaffleTicket: false,
+      });
+    });
+  }
+
+  var bidToggle = document.getElementById('hc-place-bid-toggle');
+  var bidPanel = document.getElementById('hc-bid-panel');
+  if (bidToggle && bidPanel) {
+    bidToggle.addEventListener('click', function () {
+      if (bidToggle.disabled) return;
+      bidPanel.style.display = bidPanel.style.display === 'none' ? 'block' : 'none';
+      bidToggle.style.display = bidPanel.style.display === 'block' ? 'none' : 'block';
+    });
+  }
+
+  var bidSubmit = document.getElementById('hc-bid-submit');
+  if (bidSubmit && product.auction_info) {
+    bidSubmit.addEventListener('click', async function () {
+      var input = document.getElementById('hc-bid-input');
+      var raw = input && input.value;
+      var amt = parseFloat(raw);
+      if (!raw || isNaN(amt) || amt <= 0) {
+        showError('Please enter a valid bid amount.');
+        return;
+      }
+      bidSubmit.disabled = true;
+      try {
+        await api.placeAuctionBid(product.auction_info.id, amt);
+        showSuccess('Bid placed!');
+        window.location.reload();
+      } catch (err) {
+        showError(err.message || 'Bid failed.');
+        bidSubmit.disabled = false;
+      }
+    });
+  }
+}
+
+function initCarouselDots(container) {
+  var carousel = container.querySelector('.hc-carousel');
+  if (!carousel) return;
+  var dots = container.querySelectorAll('.hc-carousel-dot');
+  if (!dots.length) return;
+  carousel.addEventListener('scroll', function () {
+    var slides = carousel.querySelectorAll('.hc-carousel-slide');
+    if (!slides.length) return;
+    var cRect = carousel.getBoundingClientRect();
+    var mid = cRect.left + cRect.width / 2;
+    var best = 0;
+    var bestDist = Infinity;
+    slides.forEach(function (slide, i) {
+      var r = slide.getBoundingClientRect();
+      var sc = r.left + r.width / 2;
+      var dist = Math.abs(sc - mid);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = i;
+      }
+    });
+    dots.forEach(function (d, i) {
+      d.classList.toggle('active', i === best);
+    });
   });
-
-  document.getElementById('hc-redeem-modal').addEventListener('click', function (e) {
-    if (e.target === e.currentTarget) {
-      e.currentTarget.style.display = 'none';
-    }
-  });
-
-  document.getElementById('hc-redeem-confirm').addEventListener('click', async function () {
-    var confirmBtn = this;
-    confirmBtn.disabled = true;
-    confirmBtn.textContent = 'Redeeming...';
-
-    try {
-      await api.redeemReward(reward.id);
-      document.getElementById('hc-redeem-modal').style.display = 'none';
-      showToast('Redeemed "' + reward.title + '" successfully!');
-      setTimeout(function () {
-        window.location.hash = '#/rewards';
-      }, 1500);
-    } catch (err) {
-      showToast('Failed to redeem: ' + (err.message || 'Unknown error'));
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = 'Confirm';
-    }
-  });
 }
 
-function showToast(msg) {
-  var el = document.getElementById('hc-toast');
-  if (!el) return;
-  el.textContent = msg;
-  el.style.display = 'block';
-  setTimeout(function () {
-    el.style.display = 'none';
-  }, 3000);
+function capitalize(s) {
+  if (!s) return '';
+  return s.charAt(0).toUpperCase() + String(s).slice(1);
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function nlToBr(s) {
+  return s.replace(/\n/g, '<br>');
 }
 
-function escapeAttr(str) {
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
