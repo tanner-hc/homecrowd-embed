@@ -11,6 +11,7 @@ import { renderOffers } from './views/offers.js';
 import { renderOfferDetail } from './views/offer-detail.js';
 import { renderRedemptionConfirmation } from './views/redemption-confirmation.js';
 import { renderRedemptionThanks, finalizeStripeThanksReturn } from './views/redemption-thanks.js';
+import { renderHome } from './views/home.js';
 import LoadingSpinner from './base-components/LoadingSpinner.js';
 
 var appEl = document.getElementById('app');
@@ -25,7 +26,7 @@ var hostConfig =
 var params = new URLSearchParams(window.location.search);
 var schoolId = (hostConfig && hostConfig.schoolId) || params.get('schoolId') || '';
 var partnerToken = (hostConfig && hostConfig.token) || params.get('token') || '';
-var initialView = (hostConfig && hostConfig.view) || params.get('view') || 'rewards';
+var initialView = (hostConfig && hostConfig.view) || params.get('view') || 'home';
 
 var postLoginStripeThanksId = null;
 
@@ -217,7 +218,7 @@ function render(route) {
       user = u;
       suppressPartnerAutologinAfterLogout = false;
       postToNative('homecrowd:login', { user: u });
-      navigate('/rewards');
+      navigate('/home');
     });
     return;
   }
@@ -305,7 +306,7 @@ function render(route) {
   }
 
   // Offer detail route: /offers/:id
-  var offerMatch = route.match(/^\/offers\/(.+)$/);
+  var offerMatch = pathOnly.match(/^\/offers\/(.+)$/);
   if (offerMatch) {
     var offerIdParam = offerMatch[1];
     var contentEl = renderLayout(route);
@@ -316,9 +317,11 @@ function render(route) {
   // Authenticated layout
   var contentEl = renderLayout(route);
 
-  if (route === '/cards') {
+  if (pathOnly === '/home') {
+    renderHome(contentEl);
+  } else if (pathOnly === '/cards') {
     renderCards(contentEl);
-  } else if (route === '/offers') {
+  } else if (pathOnly === '/offers') {
     renderOffers(contentEl);
   } else {
     renderRewards(contentEl);
@@ -331,15 +334,19 @@ function renderLayout(route) {
     /^\/rewards\/[^/]+$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/confirm$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/thanks$/.test(pathOnly);
-  var rewardsTabActive = route === '/rewards' ? ' active' : '';
+  var homeTabActive = pathOnly === '/home' ? ' active' : '';
+  var rewardsTabActive = pathOnly === '/rewards' ? ' active' : '';
   var offersTabActive =
-    route === '/offers' || /^\/offers\/[^/]+$/.test(route) ? ' active' : '';
-  var cardsTabActive = route === '/cards' ? ' active' : '';
+    pathOnly === '/offers' || /^\/offers\/[^/]+$/.test(pathOnly) ? ' active' : '';
+  var cardsTabActive = pathOnly === '/cards' ? ' active' : '';
 
   var tabsHtml = '';
   if (!isRewardDetailPage) {
     tabsHtml =
       '<nav class="hc-nav">\
+        <a href="#/home" class="hc-nav-link' +
+      homeTabActive +
+      '">Home</a>\
         <a href="#/rewards" class="hc-nav-link' +
       rewardsTabActive +
       '">Rewards</a>\

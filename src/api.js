@@ -268,3 +268,19 @@ export async function getFeaturedOffers(offerType) {
   var params = offerType ? '?offer_type=' + offerType : '';
   return request('/api/merchant/featured-offers/' + params);
 }
+
+export async function getLeaderboard() {
+  return request('/api/users/leaderboard/');
+}
+
+export async function getUserPointsSummary(userId) {
+  return request('/api/users/users/' + encodeURIComponent(userId) + '/points_summary/');
+}
+
+export async function getRaffleTicketsSummary() {
+  return request('/api/rewards/raffle-tickets/summary/');
+}
+
+export async function getRaffleEntriesSummary() {
+  return request('/api/rewards/raffle-entries/summary/');
+}
