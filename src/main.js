@@ -23,6 +23,8 @@ import { renderSecuritySettings } from './views/security-settings.js';
 import { renderChangePassword } from './views/change-password.js';
 import { renderInviteFriend } from './views/invite-friend.js';
 import { renderActivityLog } from './views/activity-log.js';
+import { renderBrowserExtension } from './views/browser-extension.js';
+import { renderSupport } from './views/support.js';
 import LoadingSpinner from './base-components/LoadingSpinner.js';
 import { preloadMapKitForEmbed } from './mapkit-embed.js';
 
@@ -361,6 +363,10 @@ function render(route) {
     renderInviteFriend(contentEl);
   } else if (pathOnly === '/activity-log') {
     renderActivityLog(contentEl);
+  } else if (pathOnly === '/browser-extension') {
+    renderBrowserExtension(contentEl);
+  } else if (pathOnly === '/support') {
+    renderSupport(contentEl);
   } else if (pathOnly === '/offers') {
     renderOffers(contentEl);
   } else {
@@ -386,7 +392,9 @@ function renderLayout(route) {
     pathOnly === '/security-settings' ||
     pathOnly === '/change-password' ||
     pathOnly === '/invite-friend' ||
-    pathOnly === '/activity-log'
+    pathOnly === '/activity-log' ||
+    pathOnly === '/browser-extension' ||
+    pathOnly === '/support'
       ? ' active'
       : '';
 

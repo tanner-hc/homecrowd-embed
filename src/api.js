@@ -372,3 +372,11 @@ export async function sendReferralInviteEmail(email) {
     body: JSON.stringify({ email: clean }),
   });
 }
+
+export async function submitSupportMessage(message, context) {
+  var payload = Object.assign({ message: String(message || '').trim() }, context || {});
+  return request('/api/users/contact-support/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}

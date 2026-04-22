@@ -4506,6 +4506,117 @@ body {
   line-height: 1.45;
 }
 
+.hc-browser-extension {
+  padding-bottom: 24px;
+  background: #ffffff;
+  min-height: 100%;
+}
+
+.hc-be-body {
+  padding: 20px 24px 24px;
+}
+
+.hc-be-content {
+  padding-top: 20px;
+}
+
+.hc-be-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 12px;
+  text-align: center;
+  font-family: var(--hc-font);
+}
+
+.hc-be-description {
+  font-size: 16px;
+  font-weight: 400;
+  color: #6b7280;
+  text-align: center;
+  line-height: 1.5;
+  margin-bottom: 40px;
+  font-family: var(--hc-font);
+}
+
+.hc-be-actions {
+  margin-top: 20px;
+}
+
+.hc-browser-extension .hc-bc-main-btn--filled {
+  background: #00c8ff;
+  border-color: #00c8ff;
+  color: #000;
+}
+
+.hc-browser-extension .hc-bc-main-btn--filled:hover:not(:disabled) {
+  background: #00a8d6;
+  border-color: #00a8d6;
+  color: #000;
+}
+
+.hc-browser-extension .hc-bc-main-btn--filled .hc-bc-main-btn-loader {
+  border-color: rgba(0, 0, 0, 0.22);
+  border-top-color: #000;
+}
+
+.hc-support-page {
+  padding-bottom: 24px;
+  background: #ffffff;
+  min-height: 100%;
+}
+
+.hc-support-body {
+  padding: 0 20px 24px;
+}
+
+.hc-support-subtitle {
+  margin: 8px 0 30px;
+  font-size: 16px;
+  color: #6b7280;
+  line-height: 1.45;
+  font-family: var(--hc-font);
+}
+
+.hc-support-form {
+  margin-bottom: 30px;
+}
+
+.hc-support-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 150px;
+  padding: 16px;
+  resize: vertical;
+  background: #f8f9fa;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  font-family: var(--hc-font);
+  font-size: 16px;
+  color: #000;
+}
+
+.hc-support-actions {
+  margin-top: 20px;
+}
+
+.hc-support-page .hc-bc-main-btn--filled {
+  background: #00c8ff;
+  border-color: #00c8ff;
+  color: #000;
+}
+
+.hc-support-page .hc-bc-main-btn--filled:hover:not(:disabled) {
+  background: #00a8d6;
+  border-color: #00a8d6;
+  color: #000;
+}
+
+.hc-support-page .hc-bc-main-btn--filled .hc-bc-main-btn-loader {
+  border-color: rgba(0, 0, 0, 0.22);
+  border-top-color: #000;
+}
+
 .hc-activity-log {
   padding-bottom: 24px;
   background: #ffffff;

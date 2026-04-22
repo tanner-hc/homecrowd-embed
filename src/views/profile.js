@@ -1,5 +1,4 @@
 import * as api from '../api.js';
-import { postToNative } from '../bridge.js';
 import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import ScreenTitle from '../base-components/ScreenTitle.js';
@@ -280,13 +279,13 @@ async function loadProfile(container) {
   var extBtn = container.querySelector('#hc-profile-extension');
   if (extBtn) {
     extBtn.addEventListener('click', function () {
-      postToNative('homecrowd:profile-action', { screen: 'ExtensionDownload' });
+      navigate('/browser-extension');
     });
   }
   var supportBtn = container.querySelector('#hc-profile-support');
   if (supportBtn) {
     supportBtn.addEventListener('click', function () {
-      postToNative('homecrowd:profile-action', { screen: 'ContactSupport' });
+      navigate('/support');
     });
   }
 
