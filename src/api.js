@@ -380,3 +380,32 @@ export async function submitSupportMessage(message, context) {
     body: JSON.stringify(payload),
   });
 }
+
+export async function getContent(options) {
+  options = options || {};
+  var params = [];
+  if (options.content_type) {
+    params.push('content_type=' + encodeURIComponent(String(options.content_type)));
+  }
+  if (options.status != null) {
+    params.push('status=' + encodeURIComponent(String(options.status)));
+  } else {
+    params.push('status=active');
+  }
+  if (options.featured !== undefined) {
+    params.push('featured=' + encodeURIComponent(String(options.featured)));
+  }
+  var query = params.length ? '?' + params.join('&') : '';
+  return request('/api/content/' + query);
+}
+
+export async function getContentItem(contentId) {
+  return request('/api/content/' + encodeURIComponent(contentId) + '/');
+}
+
+export async function incrementContentView(contentId) {
+  return request('/api/content/' + encodeURIComponent(contentId) + '/increment_view_count/', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}

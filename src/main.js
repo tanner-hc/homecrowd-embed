@@ -16,6 +16,8 @@ import { renderRedemptionConfirmation } from './views/redemption-confirmation.js
 import { renderRedemptionThanks, finalizeStripeThanksReturn } from './views/redemption-thanks.js';
 import { renderHome } from './views/home.js';
 import { renderProfile } from './views/profile.js';
+import { renderContent } from './views/content.js';
+import { renderContentDetail } from './views/content-detail.js';
 import { renderAccountSettings } from './views/account-settings.js';
 import { renderProfileDetails } from './views/profile-details.js';
 import { renderNotificationSettings } from './views/notification-settings.js';
@@ -30,6 +32,8 @@ import { preloadMapKitForEmbed } from './mapkit-embed.js';
 
 var appEl = document.getElementById('app');
 var user = null;
+var profileUserForTabs = null;
+var profileUserForTabsLoading = false;
 var lastAutologinTokenApplied = '';
 var suppressPartnerAutologinAfterLogout = false;
 
@@ -204,6 +208,7 @@ async function init() {
   window.addEventListener('homecrowd:embed-logout', function () {
     suppressPartnerAutologinAfterLogout = true;
     user = null;
+    profileUserForTabs = null;
     lastAutologinTokenApplied = '';
     api.clearTokens();
     postToNative('homecrowd:logout');
@@ -220,11 +225,42 @@ async function init() {
 
   // Tell the native app we're ready
   postToNative('homecrowd:ready');
+
+  // Load full profile (contains school feature flags like content_active).
+  refreshProfileUserForTabs();
 }
 
 function routePathOnly(route) {
   var q = route.indexOf('?');
   return q >= 0 ? route.slice(0, q) : route;
+}
+
+function refreshProfileUserForTabs() {
+  if (profileUserForTabsLoading || !user) return;
+  profileUserForTabsLoading = true;
+  api
+    .getUserProfile()
+    .then(function (profile) {
+      profileUserForTabs = profile || null;
+      var route = getRoute();
+      if (route) render(route);
+    })
+    .catch(function () { })
+    .finally(function () {
+      profileUserForTabsLoading = false;
+    });
+}
+
+function isContentTabEnabled(currentUser) {
+  var sourceUser = profileUserForTabs && typeof profileUserForTabs === 'object'
+    ? profileUserForTabs
+    : currentUser;
+  if (!sourceUser || typeof sourceUser !== 'object') return false;
+  var school = sourceUser.active_school || sourceUser.activeSchool;
+  if (!school || typeof school !== 'object') return false;
+  if (school.content_active === true) return true;
+  if (school.contentActive === true) return true;
+  return false;
 }
 
 function render(route) {
@@ -241,15 +277,26 @@ function render(route) {
     appEl.innerHTML = '';
     renderLogin(appEl, function (u) {
       user = u;
+      profileUserForTabs = null;
       suppressPartnerAutologinAfterLogout = false;
       postToNative('homecrowd:login', { user: u });
       preloadMapKitForEmbed();
+      refreshProfileUserForTabs();
       navigate('/home');
     });
     return;
   }
 
   var pathOnly = routePathOnly(route);
+  if (!profileUserForTabs && !profileUserForTabsLoading && user) {
+    refreshProfileUserForTabs();
+  }
+  var contentTabEnabled = isContentTabEnabled(user);
+
+  if (!contentTabEnabled && (pathOnly === '/content' || /^\/content\/[^/]+$/.test(pathOnly))) {
+    navigate('/rewards');
+    return;
+  }
 
   var thanksMatch = pathOnly.match(/^\/rewards\/([^/]+)\/thanks$/);
   if (thanksMatch) {
@@ -340,6 +387,15 @@ function render(route) {
     return;
   }
 
+  // Content detail route: /content/:id
+  var contentMatch = pathOnly.match(/^\/content\/(.+)$/);
+  if (contentMatch) {
+    var contentIdParam = contentMatch[1];
+    var contentEl2 = renderLayout(route);
+    renderContentDetail(contentEl2, contentIdParam);
+    return;
+  }
+
   // Authenticated layout
   var contentEl = renderLayout(route);
 
@@ -347,6 +403,8 @@ function render(route) {
     renderHome(contentEl);
   } else if (pathOnly === '/cards') {
     renderCards(contentEl);
+  } else if (pathOnly === '/content') {
+    renderContent(contentEl);
   } else if (pathOnly === '/profile') {
     renderProfile(contentEl);
   } else if (pathOnly === '/account-settings') {
@@ -376,12 +434,17 @@ function render(route) {
 
 function renderLayout(route) {
   var pathOnly = routePathOnly(route);
+  var contentTabEnabled = isContentTabEnabled(user);
   var isRewardDetailPage =
     /^\/rewards\/[^/]+$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/confirm$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/thanks$/.test(pathOnly);
   var homeTabActive = pathOnly === '/home' ? ' active' : '';
   var rewardsTabActive = pathOnly === '/rewards' ? ' active' : '';
+  var contentTabActive =
+    contentTabEnabled && (pathOnly === '/content' || /^\/content\/[^/]+$/.test(pathOnly))
+      ? ' active'
+      : '';
   var offersTabActive =
     pathOnly === '/offers' || /^\/offers\/[^/]+$/.test(pathOnly) ? ' active' : '';
   var profileTabActive =
@@ -400,6 +463,9 @@ function renderLayout(route) {
 
   var tabsHtml = '';
   if (!isRewardDetailPage) {
+    var contentTabHtml = contentTabEnabled
+      ? '<a href="#/content" class="hc-nav-link' + contentTabActive + '">Content</a>'
+      : '';
     tabsHtml =
       '<nav class="hc-nav">\
         <a href="#/home" class="hc-nav-link' +
@@ -408,7 +474,9 @@ function renderLayout(route) {
         <a href="#/rewards" class="hc-nav-link' +
       rewardsTabActive +
       '">Rewards</a>\
-        <a href="#/offers" class="hc-nav-link' +
+        ' +
+      contentTabHtml +
+      '<a href="#/offers" class="hc-nav-link' +
       offersTabActive +
       '">Offers</a>\
         <a href="#/profile" class="hc-nav-link' +
