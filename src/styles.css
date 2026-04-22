@@ -1494,7 +1494,7 @@ body {
 }
 
 .hc-carousel-spacer {
-  flex: 0 0 max(0px, calc((100% - 280px) / 2 - 16px));
+  flex: 0 0 max(0px, calc((100% - var(--hc-carousel-slide-w, 280px)) / 2 - 16px));
   scroll-snap-align: none;
   pointer-events: none;
 }
@@ -1508,7 +1508,7 @@ body {
 }
 
 .hc-carousel-slide {
-  flex: 0 0 280px;
+  flex: 0 0 var(--hc-carousel-slide-w, 280px);
   scroll-snap-align: center;
 }
 
@@ -1881,60 +1881,83 @@ body {
   font-weight: 700;
 }
 
-/* Featured Offers Slider (matches FeaturedMerchantsSlider) */
-.hc-featured-slider {
-  display: flex;
-  overflow-x: auto;
-  gap: 8px;
-  padding: 0 20px 20px;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.hc-featured-slider::-webkit-scrollbar {
-  display: none;
+/* Offers hero carousel: same pattern as reward-detail (hc-product-carousel-bleed + hc-carousel + spacers) */
+.hc-offers-hero-carousel {
+  --hc-carousel-slide-w: 300px;
+  margin-bottom: 24px;
 }
 
 .hc-featured-card {
-  flex-shrink: 0;
-  width: 285px;
-  height: 285px;
+  width: 100%;
+  aspect-ratio: 1;
   border-radius: 12px;
   overflow: hidden;
   background: #fff;
-  box-shadow: var(--hc-shadow);
   position: relative;
-  scroll-snap-align: center;
   cursor: pointer;
+  box-sizing: border-box;
+}
+
+.hc-featured-img-wrap {
+  position: absolute;
+  inset: 0;
+  background: #d2d2d2;
 }
 
 .hc-featured-img {
   width: 100%;
   height: 100%;
+  min-width: 100%;
+  min-height: 100%;
   object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.hc-featured-gradient {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 0%,
+    #ffffff 81.73%,
+    #ffffff 100%
+  );
+  pointer-events: none;
 }
 
 .hc-featured-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--hc-bg-secondary);
+  height: 100%;
   font-size: 18px;
   font-weight: 700;
   color: var(--hc-text-secondary);
 }
 
-.hc-featured-logo {
+.hc-featured-footer {
   position: absolute;
-  bottom: 36px;
+  bottom: 12px;
   left: 12px;
+  right: 16px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  z-index: 2;
+  gap: 8px;
+}
+
+.hc-featured-logo {
   width: 30px;
   height: 30px;
-  border-radius: 50%;
-  background: white;
-  box-shadow: var(--hc-shadow);
+  border-radius: 15px;
+  background: #fff;
   overflow: hidden;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1943,33 +1966,180 @@ body {
 .hc-featured-logo img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .hc-featured-name {
-  position: absolute;
-  bottom: 10px;
-  left: 12px;
-  right: 12px;
-  font-size: 13px;
-  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
   color: #000;
+  line-height: 1.1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Featured small slider (matches ClickOffersSlider bottom position) */
-.hc-featured-slider-small {
-  padding-bottom: 16px;
+/* Online featured carousels (same hc-carousel + spacers as reward-detail) */
+.hc-online-carousel {
+  margin: 8px 0 16px;
+  width: 100%;
 }
 
-.hc-featured-card-small {
-  width: 200px;
-  height: 120px;
+.hc-online-carousel .hc-carousel {
+  padding-top: 4px;
+  padding-bottom: 12px;
 }
 
-/* Featured bottom grid (matches BottomFeaturedGrid) */
+.hc-online-card {
+  width: 100%;
+  height: var(--hc-online-card-h, 180px);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #f0f0f0;
+}
+
+.hc-online-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hc-online-card-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #999;
+  text-align: center;
+  padding: 8px;
+}
+
+/* Map + location (MarketplaceScreen) */
+.hc-offers-map-section {
+  margin: 0 20px 20px;
+}
+
+.hc-offers-location-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.hc-offers-location-text {
+  font-size: 14px;
+  font-weight: 400;
+  color: #666;
+  text-align: center;
+  line-height: 1.4;
+  margin: 0;
+  padding: 24px 24px 0;
+  font-family: var(--hc-font);
+}
+
+.hc-offers-location-btn {
+  display: block;
+  margin: 24px auto 24px;
+  padding: 12px 32px;
+  min-width: 160px;
+  border: none;
+  border-radius: 25px;
+  background: var(--hc-primary);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: var(--hc-font);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-offers-location-btn:disabled {
+  opacity: 0.7;
+}
+
+.hc-offers-map-mount {
+  height: 300px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  background: #e8eaed;
+}
+
+.hc-offers-map-mount.hc-offers-map-loading {
+  min-height: 300px;
+}
+
+.hc-offers-map-skeleton {
+  height: 100%;
+  min-height: 260px;
+  background: linear-gradient(
+    110deg,
+    #e8eaed 0%,
+    #e8eaed 40%,
+    #f2f3f5 50%,
+    #e8eaed 60%,
+    #e8eaed 100%
+  );
+  background-size: 200% 100%;
+  animation: hc-offers-map-skeleton-shimmer 1.1s ease-in-out infinite;
+}
+
+@keyframes hc-offers-map-skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.hc-offers-map-unavailable {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 100%;
+  min-height: 260px;
+  padding: 24px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #666;
+  font-family: var(--hc-font);
+  background: #f5f5f7;
+  box-sizing: border-box;
+}
+
+.hc-offers-map-mount .leaflet-container {
+  height: 100%;
+  width: 100%;
+  font-family: var(--hc-font);
+}
+
+.hc-offers-map-mount .leaflet-container .maplibregl-map,
+.hc-offers-map-mount .leaflet-container .maplibregl-canvas-container {
+  width: 100%;
+  height: 100%;
+}
+
+.hc-offers-map-mount .hc-map-pin-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.hc-offers-map-mount .hc-map-pin-icon svg {
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.22));
+}
+
+/* Featured bottom grid (BottomFeaturedGrid: row logo + name) */
 .hc-featured-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1978,24 +2148,29 @@ body {
 }
 
 .hc-featured-grid-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   cursor: pointer;
+  min-width: 0;
+}
+
+.hc-featured-grid-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
 }
 
 .hc-featured-grid-logo {
   width: 50px;
   height: 50px;
-  border-radius: 50%;
-  object-fit: contain;
-  margin-bottom: 8px;
+  border-radius: 25px;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .hc-featured-grid-initials {
   width: 50px;
   height: 50px;
-  border-radius: 50%;
+  border-radius: 25px;
   background: var(--hc-bg-secondary);
   display: flex;
   align-items: center;
@@ -2003,18 +2178,20 @@ body {
   font-size: 16px;
   font-weight: 700;
   color: var(--hc-text-secondary);
-  margin-bottom: 8px;
+  flex-shrink: 0;
 }
 
 .hc-featured-grid-name {
-  font-size: 13px;
-  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
   color: #000;
-  text-align: center;
-  white-space: nowrap;
+  line-height: 1.1;
   overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 /* Merchant Grid (matches MarketplaceScreen 2-column grid) */

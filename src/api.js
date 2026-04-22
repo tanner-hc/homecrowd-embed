@@ -99,7 +99,7 @@ async function request(path, options) {
     try {
       var parsed = JSON.parse(body);
       message = parsed.detail || message;
-    } catch (e) {}
+    } catch (e) { }
     throw new Error(message);
   }
 
@@ -143,6 +143,10 @@ export async function fetchSchoolConfig(schoolId) {
 
 export async function fetchCurrentUser() {
   return request(EMBED_BASE + '/auth/me/');
+}
+
+export async function getEmbedMapKitJsToken() {
+  return request(EMBED_BASE + '/mapkit-js-token/');
 }
 
 export async function logout() {
@@ -242,8 +246,19 @@ export async function deactivateCard(cardId) {
 
 // --- Offers ---
 
-export async function getOffers(page, pageSize) {
+export async function getOffers(page, pageSize, userLocation) {
   var params = 'page=' + (page || 1) + '&pageSize=' + (pageSize || 50);
+  if (
+    userLocation &&
+    userLocation.latitude != null &&
+    userLocation.longitude != null
+  ) {
+    params +=
+      '&latitude=' +
+      encodeURIComponent(String(userLocation.latitude)) +
+      '&longitude=' +
+      encodeURIComponent(String(userLocation.longitude));
+  }
   return request('/api/olive/offers/?' + params);
 }
 

@@ -1,3 +1,6 @@
+if (import.meta.env.DEV) {
+  import('./dev-client-log.js');
+}
 import * as api from './api.js';
 import { postToNative, onNativeMessage } from './bridge.js';
 import { navigate, getRoute, onRouteChange, startRouter } from './router.js';
@@ -13,6 +16,7 @@ import { renderRedemptionConfirmation } from './views/redemption-confirmation.js
 import { renderRedemptionThanks, finalizeStripeThanksReturn } from './views/redemption-thanks.js';
 import { renderHome } from './views/home.js';
 import LoadingSpinner from './base-components/LoadingSpinner.js';
+import { preloadMapKitForEmbed } from './mapkit-embed.js';
 
 var appEl = document.getElementById('app');
 var user = null;
@@ -74,6 +78,7 @@ async function applyAutologinToken(token, view, nextSchoolId) {
     user = await api.fetchCurrentUser();
     lastAutologinTokenApplied = token;
     postToNative('homecrowd:login', { user: user });
+    preloadMapKitForEmbed();
     navigate('/' + (view || initialView));
     return true;
   } catch (e) {
@@ -170,6 +175,7 @@ async function init() {
     try {
       user = await api.fetchCurrentUser();
       postToNative('homecrowd:login', { user: user });
+      preloadMapKitForEmbed();
     } catch (e) {
       api.clearTokens();
       user = null;
@@ -218,6 +224,7 @@ function render(route) {
       user = u;
       suppressPartnerAutologinAfterLogout = false;
       postToNative('homecrowd:login', { user: u });
+      preloadMapKitForEmbed();
       navigate('/home');
     });
     return;
@@ -385,7 +392,7 @@ function renderLayout(route) {
     api.clearTokens();
     postToNative('homecrowd:logout');
     navigate('/login');
-    api.logout().catch(function () {});
+    api.logout().catch(function () { });
   });
 
   return document.getElementById('hc-content');
