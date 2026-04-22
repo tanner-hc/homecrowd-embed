@@ -14,7 +14,7 @@
  *   or via postMessage with { type: 'homecrowd:configure', payload: {...} }
  *
  * Commands:
- *   homecrowd:configure  — { schoolId, token, view }
+ *   homecrowd:configure  — { schoolId, token, view, wildfireAppId }
  *   homecrowd:navigate   — { view: 'rewards' | 'cards' | 'login' }
  *
  * --- WebView → Native ---

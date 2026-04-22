@@ -17,6 +17,11 @@ var params = new URLSearchParams(window.location.search);
 var schoolId = params.get('schoolId') || '';
 var partnerToken = params.get('token') || '';
 var initialView = params.get('view') || 'rewards';
+var wildfireAppId =
+  params.get('wildfireAppId') ||
+  params.get('wildfire_app_id') ||
+  '';
+api.setEmbedContext({ wildfireAppId: wildfireAppId });
 
 async function applySchoolConfig(nextSchoolId) {
   schoolId = nextSchoolId || '';
@@ -60,6 +65,10 @@ async function applyAutologinToken(token, view, nextSchoolId) {
 
 // Listen for runtime config from native layer
 onNativeMessage('homecrowd:configure', function (config) {
+  if (config && (config.wildfireAppId || config.wildfire_app_id)) {
+    wildfireAppId = String(config.wildfireAppId || config.wildfire_app_id || '');
+    api.setEmbedContext({ wildfireAppId: wildfireAppId });
+  }
   if (config.schoolId) {
     applySchoolConfig(config.schoolId);
   }
