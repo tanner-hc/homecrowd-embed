@@ -3,7 +3,7 @@ if (import.meta.env.DEV) {
 }
 import * as api from './api.js';
 import { postToNative, onNativeMessage } from './bridge.js';
-import { navigate, getRoute, onRouteChange, startRouter } from './router.js';
+import { navigate, getRoute, onRouteChange, startRouter, nextNavEpoch } from './router.js';
 import { renderLogin } from './views/login.js';
 import { renderRewards } from './views/rewards.js';
 import logoUrl from './assets/header.png';
@@ -344,6 +344,7 @@ function removeRewardsPointsOverlay() {
 }
 
 function render(route) {
+  var routeEpoch = nextNavEpoch();
   removeRewardsPointsOverlay();
   if (!user && route !== '/login') {
     navigate('/login');
@@ -509,7 +510,7 @@ function render(route) {
   } else if (pathOnly === '/offers') {
     renderOffers(contentEl);
   } else {
-    renderRewards(contentEl);
+    renderRewards(contentEl, routeEpoch);
   }
 }
 

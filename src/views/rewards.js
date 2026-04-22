@@ -6,6 +6,7 @@ import ScreenTitle from '../base-components/ScreenTitle.js';
 import EmptyState from '../base-components/EmptyState.js';
 import Button from '../base-components/Button.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
+import { getNavEpoch } from '../router.js';
 
 function removeFloatingPointsOverlay() {
   var el = document.getElementById('hc-rewards-points-overlay');
@@ -14,12 +15,12 @@ function removeFloatingPointsOverlay() {
   }
 }
 
-export function renderRewards(container) {
+export function renderRewards(container, routeEpoch) {
   container.innerHTML = LoadingSpinner({
     text: 'Loading rewards...',
     className: 'hc-rewards-loading',
   });
-  loadRewards(container);
+  loadRewards(container, routeEpoch);
 }
 
 function normalizeMediaUrl(url) {
@@ -328,7 +329,7 @@ function buildRewardCardHtml(item, section, cardLinkStatus, isEarlyRelease, getI
   return html;
 }
 
-async function loadRewards(container) {
+async function loadRewards(container, routeEpoch) {
   removeFloatingPointsOverlay();
   try {
     var results = await Promise.all([
@@ -448,6 +449,10 @@ async function loadRewards(container) {
       '</span>';
     html += '</div></div>';
 
+    if (routeEpoch !== getNavEpoch() || !container.isConnected) {
+      return;
+    }
+
     container.innerHTML = html;
 
     var pointsOverlay = container.querySelector('#hc-rewards-points-overlay');
@@ -471,6 +476,9 @@ async function loadRewards(container) {
     }
   } catch (err) {
     removeFloatingPointsOverlay();
+    if (routeEpoch !== getNavEpoch() || !container.isConnected) {
+      return;
+    }
     container.innerHTML =
       '<div class="hc-alert-error">Failed to load rewards: ' + escapeHtml(err.message) + '</div>';
   }

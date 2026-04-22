@@ -103,6 +103,9 @@
   --hc-spacing-xl: 24px;
   --hc-spacing-2xl: 40px;
   --hc-font: 'Baikal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --hc-reward-footer-pad-x: 20px;
+  --hc-reward-footer-pad-y: 16px;
+  --hc-reward-footer-actions-gap: 12px;
 }
 
 *,
@@ -1499,7 +1502,8 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 10px 20px calc(12px + env(safe-area-inset-bottom, 0px));
+  padding: var(--hc-reward-footer-pad-y) var(--hc-reward-footer-pad-x)
+    calc(var(--hc-reward-footer-pad-y) + env(safe-area-inset-bottom, 0px));
   background: transparent;
   box-shadow: none;
   z-index: 60;
@@ -1576,6 +1580,16 @@ body {
 }
 
 .hc-content.hc-content--reward-detail .hc-detail-bottom {
+  left: 50%;
+  right: auto;
+  width: 100vw;
+  max-width: none;
+  margin-left: -50vw;
+  margin-right: 0;
+  box-sizing: border-box;
+}
+
+.hc-content.hc-content--reward-detail .hc-redemption-confirm-bottom {
   left: 50%;
   right: auto;
   width: 100vw;
@@ -1881,7 +1895,7 @@ body {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--hc-reward-footer-actions-gap);
 }
 
 .hc-stripe-pay {
@@ -3595,8 +3609,8 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 20px;
-  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  padding: var(--hc-reward-footer-pad-y) var(--hc-reward-footer-pad-x)
+    calc(var(--hc-reward-footer-pad-y) + env(safe-area-inset-bottom, 0px));
   background: #fff;
   z-index: 60;
   max-width: 600px;
@@ -3608,7 +3622,7 @@ body {
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  gap: 12px;
+  gap: var(--hc-reward-footer-actions-gap);
 }
 
 .hc-rc-bottom-inner > * {
@@ -3617,16 +3631,21 @@ body {
 }
 
 .hc-rc-cancel {
-  height: 52px;
-  padding: 10px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  height: auto;
+  padding: 14px var(--hc-spacing-base);
   border: none;
-  border-radius: 25px;
+  border-radius: var(--hc-radius-pill);
   background: #f0f0f0;
   color: #666;
   font-family: var(--hc-font);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 16px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
   text-align: center;
   cursor: pointer;
   box-shadow: 0 5px 8px rgba(0, 0, 0, 0.05);
@@ -3638,9 +3657,14 @@ body {
 }
 
 .hc-rc-confirm {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  height: 52px;
-  padding: 10px;
+  min-height: 52px;
+  height: auto;
+  padding: 14px var(--hc-spacing-base);
   border: none;
   border-radius: var(--hc-radius-pill);
   background: #00c8ff;
@@ -3649,7 +3673,7 @@ body {
   font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.03em;
-  line-height: 1.15;
+  line-height: 1.2;
   text-align: center;
   cursor: pointer;
   box-shadow: var(--hc-shadow-cta);
