@@ -29,6 +29,11 @@ import { renderBrowserExtension } from './views/browser-extension.js';
 import { renderSupport } from './views/support.js';
 import LoadingSpinner from './base-components/LoadingSpinner.js';
 import { preloadMapKitForEmbed } from './mapkit-embed.js';
+import houseFilledSvg from './assets/icons/house-filled.svg?raw';
+import giftFilledSvg from './assets/icons/gift-filled.svg?raw';
+import bagSvg from './assets/icons/bag.svg?raw';
+import playFilledSvg from './assets/icons/play-filled.svg?raw';
+import personSvg from './assets/icons/person.svg?raw';
 
 var appEl = document.getElementById('app');
 var user = null;
@@ -263,7 +268,83 @@ function isContentTabEnabled(currentUser) {
   return false;
 }
 
+function tabSvgInline(raw) {
+  return String(raw).replace(/^<svg\s/i, '<svg class="hc-tab-icon-svg" ');
+}
+
+function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
+  var homeActive = pathOnly === '/home' ? ' active' : '';
+  var rewardsActive = pathOnly === '/rewards' ? ' active' : '';
+  var contentActive =
+    contentTabEnabled && pathOnly === '/content' ? ' active' : '';
+  var offersActive = pathOnly === '/offers' ? ' active' : '';
+  var profileActive =
+    pathOnly === '/profile' ||
+    pathOnly === '/cards' ||
+    pathOnly === '/account-settings' ||
+    pathOnly === '/profile-details' ||
+    pathOnly === '/notification-settings' ||
+    pathOnly === '/security-settings' ||
+    pathOnly === '/change-password' ||
+    pathOnly === '/invite-friend' ||
+    pathOnly === '/activity-log' ||
+    pathOnly === '/browser-extension' ||
+    pathOnly === '/support'
+      ? ' active'
+      : '';
+
+  var html =
+    '<nav class="hc-tab-bar" role="navigation" aria-label="Main">' +
+    '<a href="#/home" class="hc-tab-link' +
+    homeActive +
+    '">' +
+    '<span class="hc-tab-icon-wrap">' +
+    tabSvgInline(houseFilledSvg) +
+    '</span><span class="hc-tab-label">Home</span></a>' +
+    '<a href="#/rewards" class="hc-tab-link' +
+    rewardsActive +
+    '">' +
+    '<span class="hc-tab-icon-wrap">' +
+    tabSvgInline(giftFilledSvg) +
+    '</span><span class="hc-tab-label">Rewards</span></a>';
+
+  if (contentTabEnabled) {
+    html +=
+      '<a href="#/content" class="hc-tab-link' +
+      contentActive +
+      '">' +
+      '<span class="hc-tab-icon-wrap">' +
+      tabSvgInline(playFilledSvg) +
+      '</span><span class="hc-tab-label">Content</span></a>';
+  }
+
+  html +=
+    '<a href="#/offers" class="hc-tab-link' +
+    offersActive +
+    '">' +
+    '<span class="hc-tab-icon-wrap">' +
+    tabSvgInline(bagSvg) +
+    '</span><span class="hc-tab-label">Offers</span></a>' +
+    '<a href="#/profile" class="hc-tab-link' +
+    profileActive +
+    '">' +
+    '<span class="hc-tab-icon-wrap">' +
+    tabSvgInline(personSvg) +
+    '</span><span class="hc-tab-label">Profile</span></a>' +
+    '</nav>';
+
+  return '<div class="hc-tab-bar-shell">' + html + '</div>';
+}
+
+function removeRewardsPointsOverlay() {
+  var el = document.getElementById('hc-rewards-points-overlay');
+  if (el && el.parentNode) {
+    el.parentNode.removeChild(el);
+  }
+}
+
 function render(route) {
+  removeRewardsPointsOverlay();
   if (!user && route !== '/login') {
     navigate('/login');
     return;
@@ -439,51 +520,11 @@ function renderLayout(route) {
     /^\/rewards\/[^/]+$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/confirm$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/thanks$/.test(pathOnly);
-  var homeTabActive = pathOnly === '/home' ? ' active' : '';
-  var rewardsTabActive = pathOnly === '/rewards' ? ' active' : '';
-  var contentTabActive =
-    contentTabEnabled && (pathOnly === '/content' || /^\/content\/[^/]+$/.test(pathOnly))
-      ? ' active'
-      : '';
-  var offersTabActive =
-    pathOnly === '/offers' || /^\/offers\/[^/]+$/.test(pathOnly) ? ' active' : '';
-  var profileTabActive =
-    pathOnly === '/profile' ||
-    pathOnly === '/account-settings' ||
-    pathOnly === '/profile-details' ||
-    pathOnly === '/notification-settings' ||
-    pathOnly === '/security-settings' ||
-    pathOnly === '/change-password' ||
-    pathOnly === '/invite-friend' ||
-    pathOnly === '/activity-log' ||
-    pathOnly === '/browser-extension' ||
-    pathOnly === '/support'
-      ? ' active'
-      : '';
+  var isOfferDetailPage = /^\/offers\/[^/]+$/.test(pathOnly);
+  var isContentDetailPage = /^\/content\/[^/]+$/.test(pathOnly);
+  var hideTabBar = isRewardDetailPage || isOfferDetailPage || isContentDetailPage;
 
-  var tabsHtml = '';
-  if (!isRewardDetailPage) {
-    var contentTabHtml = contentTabEnabled
-      ? '<a href="#/content" class="hc-nav-link' + contentTabActive + '">Content</a>'
-      : '';
-    tabsHtml =
-      '<nav class="hc-nav">\
-        <a href="#/home" class="hc-nav-link' +
-      homeTabActive +
-      '">Home</a>\
-        <a href="#/rewards" class="hc-nav-link' +
-      rewardsTabActive +
-      '">Rewards</a>\
-        ' +
-      contentTabHtml +
-      '<a href="#/offers" class="hc-nav-link' +
-      offersTabActive +
-      '">Offers</a>\
-        <a href="#/profile" class="hc-nav-link' +
-      profileTabActive +
-      '">Profile</a>\
-      </nav>';
-  }
+  var tabBarHtml = hideTabBar ? '' : buildBottomTabBarHtml(pathOnly, contentTabEnabled);
 
   appEl.innerHTML =
     '<div class="hc-embed">\
@@ -494,14 +535,14 @@ function renderLayout(route) {
           <img src="' +
     logoUrl +
     '" alt="Homecrowd" class="hc-header-logo" />\
-        </div>' +
-    tabsHtml +
-    '\
+        </div>\
       </div>\
       <main id="hc-content" class="hc-content' +
     (isRewardDetailPage ? ' hc-content--reward-detail' : '') +
-    '"></main>\
-    </div>';
+    (hideTabBar ? '' : ' hc-content--with-tab-bar') +
+    '"></main>' +
+    tabBarHtml +
+    '</div>';
 
   return document.getElementById('hc-content');
 }

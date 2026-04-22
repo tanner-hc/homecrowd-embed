@@ -7,6 +7,13 @@ import EmptyState from '../base-components/EmptyState.js';
 import Button from '../base-components/Button.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 
+function removeFloatingPointsOverlay() {
+  var el = document.getElementById('hc-rewards-points-overlay');
+  if (el && el.parentNode) {
+    el.parentNode.removeChild(el);
+  }
+}
+
 export function renderRewards(container) {
   container.innerHTML = LoadingSpinner({
     text: 'Loading rewards...',
@@ -322,6 +329,7 @@ function buildRewardCardHtml(item, section, cardLinkStatus, isEarlyRelease, getI
 }
 
 async function loadRewards(container) {
+  removeFloatingPointsOverlay();
   try {
     var results = await Promise.all([
       api.getRewardsSummary(),
@@ -430,7 +438,7 @@ async function loadRewards(container) {
     var displayNum = isEarlyRelease ? ticketCount : Number(availablePts) || 0;
     var displaySuffix = isEarlyRelease ? ' Raffle tickets' : ' Available points';
 
-    html += '<div class="hc-points-overlay">';
+    html += '<div id="hc-rewards-points-overlay" class="hc-points-overlay hc-points-overlay--floating">';
     html += '<div class="hc-points-overlay-inner">';
     html +=
       '<span class="hc-points-overlay-num">' +
@@ -441,6 +449,11 @@ async function loadRewards(container) {
     html += '</div></div>';
 
     container.innerHTML = html;
+
+    var pointsOverlay = container.querySelector('#hc-rewards-points-overlay');
+    if (pointsOverlay && document.body) {
+      document.body.appendChild(pointsOverlay);
+    }
 
     container.onclick = function (e) {
       var card = e.target.closest('[data-reward-id]');
@@ -457,6 +470,7 @@ async function loadRewards(container) {
       };
     }
   } catch (err) {
+    removeFloatingPointsOverlay();
     container.innerHTML =
       '<div class="hc-alert-error">Failed to load rewards: ' + escapeHtml(err.message) + '</div>';
   }
