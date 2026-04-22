@@ -262,7 +262,7 @@ async function loadProfile(container) {
   var inviteBtn = container.querySelector('#hc-profile-invite');
   if (inviteBtn) {
     inviteBtn.addEventListener('click', function () {
-      postToNative('homecrowd:profile-action', { screen: 'InviteFriend' });
+      navigate('/invite-friend');
     });
   }
   var activityBtn = container.querySelector('#hc-profile-activity');

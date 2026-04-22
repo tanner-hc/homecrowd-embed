@@ -4324,23 +4324,186 @@ body {
 }
 
 .hc-profile-details .hc-pd-actions .hc-bc-main-btn--filled,
-.hc-security-settings .hc-bc-main-btn--filled {
+.hc-security-settings .hc-bc-main-btn--filled,
+.hc-invite-friend .hc-pd-actions .hc-bc-main-btn--filled {
   background: #00c8ff;
   border-color: #00c8ff;
   color: #000;
 }
 
 .hc-profile-details .hc-pd-actions .hc-bc-main-btn--filled:hover:not(:disabled),
-.hc-security-settings .hc-bc-main-btn--filled:hover:not(:disabled) {
+.hc-security-settings .hc-bc-main-btn--filled:hover:not(:disabled),
+.hc-invite-friend .hc-pd-actions .hc-bc-main-btn--filled:hover:not(:disabled) {
   background: #00a8d6;
   border-color: #00a8d6;
   color: #000;
 }
 
 .hc-profile-details .hc-pd-actions .hc-bc-main-btn--filled .hc-bc-main-btn-loader,
-.hc-security-settings .hc-bc-main-btn--filled .hc-bc-main-btn-loader {
+.hc-security-settings .hc-bc-main-btn--filled .hc-bc-main-btn-loader,
+.hc-invite-friend .hc-pd-actions .hc-bc-main-btn--filled .hc-bc-main-btn-loader {
   border-color: rgba(0, 0, 0, 0.22);
   border-top-color: #000;
+}
+
+.hc-invite-friend {
+  padding-bottom: 24px;
+}
+
+.hc-invite-body {
+  padding-top: 4px;
+}
+
+.hc-invite-hero {
+  margin-bottom: 8px;
+}
+
+.hc-invite-hero-title {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--hc-text-primary);
+  font-family: var(--hc-font);
+  margin-bottom: 12px;
+}
+
+.hc-invite-hero-sub {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--hc-text-secondary);
+  font-family: var(--hc-font);
+}
+
+.hc-invite-email-wrap {
+  position: relative;
+}
+
+.hc-invite-email-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 48px;
+}
+
+.hc-invite-email-icon {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+}
+
+.hc-invite-email-svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.hc-invite-banner {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  background: #e3f2fd;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 20px 20px;
+  gap: 12px;
+}
+
+.hc-invite-banner-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.hc-invite-banner-icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+  color: #00c8ff;
+}
+
+.hc-invite-banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.hc-invite-banner-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1976d2;
+  font-family: var(--hc-font);
+  margin-bottom: 6px;
+}
+
+.hc-invite-banner-desc {
+  font-size: 14px;
+  font-weight: 400;
+  color: #546e7a;
+  line-height: 1.4;
+  font-family: var(--hc-font);
+}
+
+.hc-invite-link-box {
+  font-size: 14px;
+  line-height: 1.45;
+  word-break: break-all;
+  background: var(--hc-bg-secondary);
+  border: 1px solid var(--hc-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  font-family: var(--hc-font);
+  color: var(--hc-text-primary);
+}
+
+.hc-invite-share-btn {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.hc-invite-actions.hc-pd-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.hc-invite-or {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hc-text-tertiary);
+  font-family: var(--hc-font);
+  margin: 4px 0 0;
+}
+
+.hc-invite-link-missing {
+  margin: 0 0 8px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--hc-bg-secondary);
+  border: 1px solid var(--hc-border);
+  font-family: var(--hc-font);
+}
+
+.hc-invite-link-missing-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--hc-text-primary);
+  margin-bottom: 8px;
+}
+
+.hc-invite-link-missing-text {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--hc-text-secondary);
+  line-height: 1.45;
 }
 
 .hc-account-settings-section {

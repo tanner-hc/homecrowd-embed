@@ -340,3 +340,15 @@ export async function getRaffleEntriesSummary() {
 export async function getReferralCampaign() {
   return request('/api/users/users/referral-campaign/');
 }
+
+export async function getManagedLinks() {
+  return request('/api/users/managed-links/');
+}
+
+export async function sendReferralInviteEmail(email) {
+  var clean = String(email || '').trim();
+  return request('/api/users/users/invite-friend/', {
+    method: 'POST',
+    body: JSON.stringify({ email: clean }),
+  });
+}
