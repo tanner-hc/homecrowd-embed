@@ -208,7 +208,47 @@ function resolveSchoolHeroImage(user) {
   return { url: '', isLogo: false };
 }
 
-function buildLeaderboardRows(items) {
+function pickLastWeekWinner(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  var name =
+    raw.display_name != null && String(raw.display_name).trim()
+      ? String(raw.display_name).trim()
+      : raw.displayName != null && String(raw.displayName).trim()
+        ? String(raw.displayName).trim()
+        : raw.name != null && String(raw.name).trim()
+          ? String(raw.name).trim()
+          : '';
+  if (!name) return null;
+  var pts = raw.points != null ? Number(raw.points) : 0;
+  return { name: name, points: Number.isFinite(pts) ? pts : 0 };
+}
+
+function buildLastWeekWinnerHtml(winner) {
+  if (!winner) return '';
+  var ptsLine =
+    winner.points === 1 ? '1 point' : String(winner.points || 0) + ' points';
+  return (
+    '<div class="hc-home-lb-winner">' +
+    '<div class="hc-home-lb-winner-label">Last week\'s winner</div>' +
+    '<div class="hc-home-lb-winner-name">' +
+    escapeHtml(winner.name) +
+    '</div>' +
+    '<div class="hc-home-lb-winner-meta">' +
+    escapeHtml(ptsLine) +
+    '</div>' +
+    '</div>'
+  );
+}
+
+function buildLeaderboardRows(items, leaderboardActive) {
+  if (!leaderboardActive) {
+    return (
+      '<div class="hc-home-empty">' +
+      '<div class="hc-home-empty-title">Leaderboard unavailable</div>' +
+      '<div class="hc-home-empty-sub">Your school has turned off the weekly leaderboard.</div>' +
+      '</div>'
+    );
+  }
   if (!items.length) {
     return (
       '<div class="hc-home-empty">' +
@@ -246,6 +286,8 @@ function buildHomeHtml(ctx) {
   var userTier = ctx.userTier;
   var checkedItems = ctx.checkedItems;
   var leaderboardTop = ctx.leaderboardTop;
+  var leaderboardActive = ctx.leaderboardActive !== false;
+  var lastWeekWinner = ctx.lastWeekWinner || null;
   var weeklyPts = ctx.weeklyPoints;
   var streak = ctx.streakDays;
   var bannerUrl = ctx.bannerUrl;
@@ -278,9 +320,11 @@ function buildHomeHtml(ctx) {
     '<span class="hc-home-stat-icon-inner hc-home-stat-icon-inner--week" aria-hidden="true">' +
     svgAddClass(chartUpIconSvg, 'hc-home-stat-svg') +
     '</span></div>' +
-    '<div class="hc-home-stat-value hc-home-stat-value--pos">+ ' +
-    escapeHtml(String(weeklyPts)) +
-    ' pts</div>' +
+    '<div class="hc-home-stat-value ' +
+    (leaderboardActive ? 'hc-home-stat-value--pos' : 'hc-home-stat-value--muted') +
+    '">' +
+    (leaderboardActive ? '+ ' + escapeHtml(String(weeklyPts)) + ' pts' : '—') +
+    '</div>' +
     '</div>' +
     '<div class="hc-home-stat-tile">' +
     '<div class="hc-home-stat-label">Streak</div>' +
@@ -305,9 +349,16 @@ function buildHomeHtml(ctx) {
     combined +
     stats +
     '<div class="hc-home-lb-title">Weekly leaderboard</div>' +
-    '<div class="hc-home-lb-sub">Winner announced Saturday at 4:00 PM MT</div>' +
+    '<div class="hc-home-lb-sub">' +
+    escapeHtml(
+      leaderboardActive
+        ? 'Weekly prize winner is determined each Saturday at 4:00 PM MT for your school.'
+        : 'Leaderboard is not enabled for your school.',
+    ) +
+    '</div>' +
+    (leaderboardActive ? buildLastWeekWinnerHtml(lastWeekWinner) : '') +
     '<div class="hc-home-lb-spacer"></div>' +
-    buildLeaderboardRows(leaderboardTop) +
+    buildLeaderboardRows(leaderboardTop, leaderboardActive) +
     '</div></div>'
   );
 }
@@ -336,10 +387,23 @@ async function fetchDashboardPayload() {
   var leaderboardRes = await api.getLeaderboard().catch(function () {
     return null;
   });
-  var leaderboardList =
-    leaderboardRes && leaderboardRes.success && Array.isArray(leaderboardRes.leaderboard)
-      ? leaderboardRes.leaderboard
-      : [];
+  var leaderboardActive = true;
+  var leaderboardList = [];
+  var lastWeekWinner = null;
+  if (leaderboardRes && leaderboardRes.success) {
+    leaderboardActive = leaderboardRes.leaderboard_active !== false;
+    leaderboardList =
+      leaderboardActive && Array.isArray(leaderboardRes.leaderboard)
+        ? leaderboardRes.leaderboard
+        : [];
+    if (leaderboardActive) {
+      var rawWinner =
+        leaderboardRes.last_week_prize_winner != null
+          ? leaderboardRes.last_week_prize_winner
+          : leaderboardRes.lastWeekPrizeWinner;
+      lastWeekWinner = pickLastWeekWinner(rawWinner);
+    }
+  }
   var top = leaderboardList.slice(0, 10);
   var weeklyPoints = calculateWeeklyPoints(leaderboardRes, leaderboardList, freshUser && freshUser.id);
   var schoolHero = resolveSchoolHeroImage(freshUser);
@@ -361,6 +425,8 @@ async function fetchDashboardPayload() {
     userTier: userTier,
     checkedItems: checkedItems,
     leaderboardTop: top,
+    leaderboardActive: leaderboardActive,
+    lastWeekWinner: lastWeekWinner,
     weeklyPoints: weeklyPoints,
     streakDays: 0,
     bannerUrl: schoolHero.url,

@@ -4207,8 +4207,47 @@ body {
   color: #677a29;
 }
 
+.hc-home-stat-value--muted {
+  color: #666;
+}
+
 .hc-home-stat-value--danger {
   color: #d85012;
+}
+
+.hc-home-lb-winner {
+  background: #f8f8f8;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.hc-home-lb-winner-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #666;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-family: var(--hc-font);
+}
+
+.hc-home-lb-winner-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #000;
+  font-family: var(--hc-font);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-home-lb-winner-meta {
+  font-size: 13px;
+  font-weight: 300;
+  color: #666;
+  margin-top: 4px;
+  font-family: var(--hc-font);
 }
 
 .hc-home-lb-title {
