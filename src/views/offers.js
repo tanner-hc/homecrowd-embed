@@ -22,6 +22,8 @@ function getStoredOfferLocation() {
   return null;
 }
 
+var _userLocation = null;
+
 export function renderOffers(container) {
   container.innerHTML = LoadingSpinner({ text: 'Loading offers...' });
   loadOffers(container, 'stores');
