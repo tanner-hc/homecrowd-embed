@@ -247,6 +247,10 @@ export async function getRaffleTicketsList() {
   return request('/api/rewards/raffle-tickets/?available=true');
 }
 
+export async function getWeeklyLeaderboard() {
+  return request(EMBED_BASE + '/rewards/leaderboard/');
+}
+
 export async function getRewardsActivity() {
   return request(EMBED_BASE + '/rewards/activity/');
 }
@@ -319,18 +323,28 @@ export async function deactivateCard(cardId) {
 
 // --- Offers ---
 
-export async function getOffers(page, pageSize, userLocation) {
+export async function getOffers(page, pageSize, userLocationOrLat, longitude) {
   var params = 'page=' + (page || 1) + '&pageSize=' + (pageSize || 50);
+  var lat;
+  var lon;
   if (
-    userLocation &&
-    userLocation.latitude != null &&
-    userLocation.longitude != null
+    userLocationOrLat &&
+    typeof userLocationOrLat === 'object' &&
+    userLocationOrLat.latitude != null &&
+    userLocationOrLat.longitude != null
   ) {
+    lat = userLocationOrLat.latitude;
+    lon = userLocationOrLat.longitude;
+  } else {
+    lat = userLocationOrLat;
+    lon = longitude;
+  }
+  if (lat != null && lon != null && String(lat).trim() !== '' && String(lon).trim() !== '') {
     params +=
       '&latitude=' +
-      encodeURIComponent(String(userLocation.latitude)) +
+      encodeURIComponent(String(lat)) +
       '&longitude=' +
-      encodeURIComponent(String(userLocation.longitude));
+      encodeURIComponent(String(lon));
   }
   return request('/api/olive/offers/?' + params);
 }
