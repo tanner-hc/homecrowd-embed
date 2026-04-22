@@ -4,9 +4,13 @@ import visaLogoUrl from '../assets/visa-logo.png';
 import mastercardLogoUrl from '../assets/mastercard-logo.png';
 import shieldIconUrl from '../assets/shield.svg';
 import cardFilledIconUrl from '../assets/card-filled.svg';
+import LoadingSpinner from '../base-components/LoadingSpinner.js';
+import ScreenTitle from '../base-components/ScreenTitle.js';
+import { escapeHtml, escapeAttr } from '../base-components/html.js';
+import { showSuccess, showError } from '../base-components/toastApi.js';
 
 export function renderCards(container) {
-  container.innerHTML = '<div class="hc-spinner"></div>';
+  container.innerHTML = LoadingSpinner({ text: 'Loading cards...' });
   loadCards(container);
 }
 
@@ -20,17 +24,16 @@ async function loadCards(container) {
 
     var html = '';
 
-    // Screen title
     html += '<div class="hc-screen-title">';
-    html += '<div class="hc-screen-title-text">Linked Cards</div>';
+    html += ScreenTitle({ title: 'Linked Cards' });
     html += '</div>';
 
-    // Security banner
     html += '<div class="hc-security-banner">';
     html += '<div class="hc-security-icon"><img src="' + shieldIconUrl + '" width="24" height="24" alt="" /></div>';
     html += '<div class="hc-security-content">';
     html += '<div class="hc-security-title">Your data is secure</div>';
-    html += '<div class="hc-security-desc">We use bank-level encryption and never store your full card details</div>';
+    html +=
+      '<div class="hc-security-desc">We use bank-level encryption and never store your full card details</div>';
     html += '</div>';
     html += '</div>';
 
@@ -79,9 +82,6 @@ async function loadCards(container) {
     html += '</div>';
     html += '</div>';
     html += '</div>';
-
-    // Toast
-    html += '<div id="hc-toast" class="hc-toast" style="display:none"></div>';
 
     container.innerHTML = html;
 
@@ -144,7 +144,7 @@ async function loadCards(container) {
         deactivateTarget = null;
         loadCards(container);
       } catch (err) {
-        showToast('Failed: ' + (err.message || 'Unknown error'));
+        showToastError('Failed: ' + (err.message || 'Unknown error'));
         confirmBtn.disabled = false;
         confirmBtn.textContent = 'Deactivate';
       }
@@ -155,19 +155,9 @@ async function loadCards(container) {
 }
 
 function showToast(msg) {
-  var el = document.getElementById('hc-toast');
-  if (!el) return;
-  el.textContent = msg;
-  el.style.display = 'block';
-  setTimeout(function () { el.style.display = 'none'; }, 3000);
+  showSuccess(msg);
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function escapeAttr(str) {
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function showToastError(msg) {
+  showError(msg);
 }

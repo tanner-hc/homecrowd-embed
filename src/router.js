@@ -1,5 +1,15 @@
 var currentView = null;
 var listeners = [];
+var navEpoch = 0;
+
+export function nextNavEpoch() {
+  navEpoch += 1;
+  return navEpoch;
+}
+
+export function getNavEpoch() {
+  return navEpoch;
+}
 
 export function navigate(hash) {
   window.location.hash = hash;

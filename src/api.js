@@ -1,9 +1,28 @@
 var EMBED_BASE = '/api/embed/v1';
-var hostname = window.location.hostname;
-var baseUrl =
-  hostname === 'localhost' || hostname === '127.0.0.1'
-    ? 'http://localhost:8000'
-    : 'https://api.gethomecrowd.com';
+
+function resolveApiBaseUrl() {
+  var env =
+    typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL;
+  if (env) {
+    return String(env).replace(/\/$/, '');
+  }
+  var h = window.location.hostname || '';
+  if (h === 'embed.gethomecrowd.com') {
+    return 'https://api.gethomecrowd.com';
+  }
+  var isDevHost =
+    h === 'localhost' ||
+    h === '127.0.0.1' ||
+    /^192\.168\.\d{1,3}\.\d{1,3}$/.test(h) ||
+    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(h);
+  if (isDevHost) {
+    return '';
+  }
+  return 'https://api.gethomecrowd.com';
+}
+
+var baseUrl = resolveApiBaseUrl();
 var accessToken = null;
 var refreshToken = null;
 
@@ -56,6 +75,9 @@ async function request(path, options) {
   var token = getAccessToken();
   var headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
   if (token) headers['Authorization'] = 'Bearer ' + token;
+  if (typeof window !== 'undefined' && window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+    headers['X-Homecrowd-Client'] = 'mobile';
+  }
 
   var res = await fetch(baseUrl + path, Object.assign({}, options, { headers: headers }));
 
@@ -76,7 +98,19 @@ async function request(path, options) {
     var message = 'Request failed (' + res.status + ')';
     try {
       var parsed = JSON.parse(body);
-      message = parsed.detail || message;
+      if (typeof parsed.detail === 'string') {
+        message = parsed.detail;
+      } else if (parsed.detail != null) {
+        message = String(parsed.detail);
+      } else if (parsed && typeof parsed === 'object') {
+        var parts = [];
+        Object.keys(parsed).forEach(function (k) {
+          var v = parsed[k];
+          if (Array.isArray(v)) parts.push(v.join(' '));
+          else if (typeof v === 'string') parts.push(v);
+        });
+        if (parts.length) message = parts.join(' ');
+      }
     } catch (e) { }
     throw new Error(message);
   }
@@ -101,13 +135,15 @@ export async function loginWithPartnerToken(token) {
 }
 
 export async function loginWithPartnerTokenAndSchool(token, schoolId) {
+  var payload =
+    token && String(token).indexOf('autologin:') === 0
+      ? { token: token }
+      : schoolId
+        ? { token: token, schoolId: schoolId }
+        : { token: token };
   var data = await request(EMBED_BASE + '/auth/login/', {
     method: 'POST',
-    body: JSON.stringify(
-      schoolId
-        ? { token: token, schoolId: schoolId }
-        : { token: token }
-    ),
+    body: JSON.stringify(payload),
   });
   setTokens(data.access, data.refresh);
   return data;
@@ -121,6 +157,21 @@ export async function fetchCurrentUser() {
   return request(EMBED_BASE + '/auth/me/');
 }
 
+export async function getUserProfile() {
+  return request('/api/users/users/profile/');
+}
+
+export async function updateUserProfile(payload) {
+  return request('/api/users/users/profile/', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getEmbedMapKitJsToken() {
+  return request(EMBED_BASE + '/mapkit-js-token/');
+}
+
 export async function logout() {
   try {
     await request(EMBED_BASE + '/auth/logout/', { method: 'POST' });
@@ -128,6 +179,20 @@ export async function logout() {
     // ignore
   }
   clearTokens();
+}
+
+export async function resendVerificationEmail() {
+  return request('/api/users/resend-verification-email/', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+export async function changePassword(payload) {
+  return request('/api/auth/change-password/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 // --- Rewards ---
@@ -140,18 +205,83 @@ export async function getRewardsCatalog() {
   return request(EMBED_BASE + '/rewards/catalog/');
 }
 
-export async function getWeeklyLeaderboard() {
-  return request(EMBED_BASE + '/rewards/leaderboard/');
+export async function getRewardDetail(rewardId) {
+  return request('/api/rewards/rewards/' + encodeURIComponent(rewardId) + '/');
+}
+
+export async function createRedemptionMain(payload) {
+  return request('/api/rewards/redemptions/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function placeAuctionBid(auctionId, bidAmount) {
+  return request('/api/rewards/auctions/' + encodeURIComponent(auctionId) + '/bid/', {
+    method: 'POST',
+    body: JSON.stringify({ bid_amount: bidAmount }),
+  });
+}
+
+export async function getRaffleTickets() {
+  return request(EMBED_BASE + '/rewards/raffle-tickets/?available=true');
+}
+
+export async function getRaffleTicketsList() {
+  return request('/api/rewards/raffle-tickets/?available=true');
 }
 
 export async function getRewardsActivity() {
   return request(EMBED_BASE + '/rewards/activity/');
 }
 
+export async function getUserActivityLog(options) {
+  options = options || {};
+  var q = '';
+  if (options.limit) {
+    q = '?limit=' + encodeURIComponent(String(options.limit));
+  }
+  var data = await request('/api/rewards/user/activity/' + q);
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data && Array.isArray(data.activity_log)) {
+    return data.activity_log;
+  }
+  return [];
+}
+
+export async function getOliveTransactions() {
+  return request('/api/olive/listTransactions');
+}
+
 export async function redeemReward(rewardId, quantity) {
   return request(EMBED_BASE + '/rewards/redeem/', {
     method: 'POST',
     body: JSON.stringify({ rewardId: rewardId, quantity: quantity || 1 }),
+  });
+}
+
+export function buildStripeReturnUrls() {
+  var loc = window.location;
+  var base = loc.origin + loc.pathname + loc.search;
+  var sep = base.indexOf('?') >= 0 ? '&' : '?';
+  var h = loc.hash || '#/rewards';
+  return {
+    success_url: base + sep + 'stripe_success=1&session_id={CHECKOUT_SESSION_ID}' + h,
+    cancel_url: base + sep + 'stripe_cancel=1' + h,
+  };
+}
+
+export async function createStripeRewardCheckoutSession(rewardId) {
+  var urls = buildStripeReturnUrls();
+  return request(EMBED_BASE + '/rewards/stripe-checkout/', {
+    method: 'POST',
+    body: JSON.stringify({
+      reward_id: rewardId,
+      success_url: urls.success_url,
+      cancel_url: urls.cancel_url,
+    }),
   });
 }
 
@@ -173,10 +303,18 @@ export async function deactivateCard(cardId) {
 
 // --- Offers ---
 
-export async function getOffers(page, pageSize, latitude, longitude) {
+export async function getOffers(page, pageSize, userLocation) {
   var params = 'page=' + (page || 1) + '&pageSize=' + (pageSize || 50);
-  if (latitude && longitude) {
-    params += '&latitude=' + latitude + '&longitude=' + longitude;
+  if (
+    userLocation &&
+    userLocation.latitude != null &&
+    userLocation.longitude != null
+  ) {
+    params +=
+      '&latitude=' +
+      encodeURIComponent(String(userLocation.latitude)) +
+      '&longitude=' +
+      encodeURIComponent(String(userLocation.longitude));
   }
   return request('/api/olive/offers/?' + params);
 }
@@ -201,4 +339,73 @@ export async function trackWildfireClick(merchantId) {
 export async function getFeaturedOffers(offerType) {
   var params = offerType ? '?offer_type=' + offerType : '';
   return request('/api/merchant/featured-offers/' + params);
+}
+
+export async function getLeaderboard() {
+  return request('/api/users/leaderboard/');
+}
+
+export async function getUserPointsSummary(userId) {
+  return request('/api/users/users/' + encodeURIComponent(userId) + '/points_summary/');
+}
+
+export async function getRaffleTicketsSummary() {
+  return request('/api/rewards/raffle-tickets/summary/');
+}
+
+export async function getRaffleEntriesSummary() {
+  return request('/api/rewards/raffle-entries/summary/');
+}
+
+export async function getReferralCampaign() {
+  return request('/api/users/users/referral-campaign/');
+}
+
+export async function getManagedLinks() {
+  return request('/api/users/managed-links/');
+}
+
+export async function sendReferralInviteEmail(email) {
+  var clean = String(email || '').trim();
+  return request('/api/users/users/invite-friend/', {
+    method: 'POST',
+    body: JSON.stringify({ email: clean }),
+  });
+}
+
+export async function submitSupportMessage(message, context) {
+  var payload = Object.assign({ message: String(message || '').trim() }, context || {});
+  return request('/api/users/contact-support/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getContent(options) {
+  options = options || {};
+  var params = [];
+  if (options.content_type) {
+    params.push('content_type=' + encodeURIComponent(String(options.content_type)));
+  }
+  if (options.status != null) {
+    params.push('status=' + encodeURIComponent(String(options.status)));
+  } else {
+    params.push('status=active');
+  }
+  if (options.featured !== undefined) {
+    params.push('featured=' + encodeURIComponent(String(options.featured)));
+  }
+  var query = params.length ? '?' + params.join('&') : '';
+  return request('/api/content/' + query);
+}
+
+export async function getContentItem(contentId) {
+  return request('/api/content/' + encodeURIComponent(contentId) + '/');
+}
+
+export async function incrementContentView(contentId) {
+  return request('/api/content/' + encodeURIComponent(contentId) + '/increment_view_count/', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
 }
