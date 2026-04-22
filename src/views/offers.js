@@ -2,15 +2,38 @@ import * as api from '../api.js';
 import { postToNative } from '../bridge.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
 
+var _userLocation = null;
+
 export function renderOffers(container) {
   container.innerHTML = '<div class="hc-spinner"></div>';
-  loadOffers(container, 'stores');
+
+  // Try to get location silently first, then load
+  if (navigator.geolocation && navigator.permissions) {
+    navigator.permissions.query({ name: 'geolocation' }).then(function (result) {
+      if (result.state === 'granted') {
+        navigator.geolocation.getCurrentPosition(
+          function (pos) {
+            _userLocation = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+            loadOffers(container, 'stores');
+          },
+          function () { loadOffers(container, 'stores'); }
+        );
+      } else {
+        loadOffers(container, 'stores');
+      }
+    }).catch(function () { loadOffers(container, 'stores'); });
+  } else {
+    loadOffers(container, 'stores');
+  }
 }
 
 async function loadOffers(container, activeTab) {
   try {
+    var lat = _userLocation ? _userLocation.latitude : null;
+    var lng = _userLocation ? _userLocation.longitude : null;
+
     var results = await Promise.all([
-      api.getOffers(1, 50).catch(function () { return {}; }),
+      api.getOffers(1, 50, lat, lng).catch(function () { return {}; }),
       api.getWildfireOffers(1, 50).catch(function () { return {}; }),
       api.getFeaturedOffers('card_linked').catch(function () { return []; }),
       api.getFeaturedOffers('click').catch(function () { return []; }),
@@ -57,6 +80,18 @@ async function loadOffers(container, activeTab) {
     if (featuredStoresBottom.length > 0) {
       html += renderFeaturedGrid(featuredStoresBottom);
     }
+
+    // Store map — show map if stores have coords, always show enable location button below if location not granted
+    var storesWithCoords = cardlinked.filter(function (m) { return m.latitude && m.longitude; });
+    html += '<div id="hc-store-map-container">';
+    if (storesWithCoords.length > 0) {
+      html += '<div id="hc-store-map" class="hc-store-map"></div>';
+    }
+    html += '<div id="hc-enable-location" class="hc-enable-location">';
+    html += '<div class="hc-enable-location-text">Enable location to discover nearby stores</div>';
+    html += '<button id="hc-enable-location-btn" class="hc-btn hc-btn-primary" style="width:auto;min-height:40px;padding:8px 24px;font-size:14px;">Enable Location</button>';
+    html += '</div>';
+    html += '</div>';
 
     // Search bar
     html += '<div class="hc-search-wrap"><input id="hc-search-stores" class="hc-search-input" type="text" placeholder="Search" /></div>';
@@ -123,6 +158,43 @@ async function loadOffers(container, activeTab) {
         document.getElementById('hc-tab-online').style.display = targetTab === 'online' ? '' : 'none';
       });
     });
+
+    // Initialize store map and location prompt
+    var enableLocEl = document.getElementById('hc-enable-location');
+    var enableLocBtn = document.getElementById('hc-enable-location-btn');
+
+    // Hide location prompt if we already have location
+    if (_userLocation) {
+      if (enableLocEl) enableLocEl.style.display = 'none';
+    } else if (navigator.permissions) {
+      navigator.permissions.query({ name: 'geolocation' }).then(function (result) {
+        if (result.state === 'granted') {
+          if (enableLocEl) enableLocEl.style.display = 'none';
+        }
+      }).catch(function () {});
+    }
+
+    initStoreMap(storesWithCoords, _userLocation);
+
+    if (enableLocBtn) {
+      enableLocBtn.addEventListener('click', function () {
+        if (!navigator.geolocation) return;
+        enableLocBtn.textContent = 'Locating...';
+        enableLocBtn.disabled = true;
+        navigator.geolocation.getCurrentPosition(
+          function (pos) {
+            _userLocation = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+            // Reload entire offers view with location data
+            container.innerHTML = '<div class="hc-spinner"></div>';
+            loadOffers(container, activeTab);
+          },
+          function () {
+            enableLocBtn.textContent = 'Enable Location';
+            enableLocBtn.disabled = false;
+          }
+        );
+      });
+    }
 
     // Search filtering
     bindSearch('hc-search-stores', 'hc-stores-grid', cardlinked);
@@ -290,6 +362,79 @@ function renderMerchantCard(merchant) {
 function openExternalUrl(url) {
   postToNative('homecrowd:open-url', { url: url });
   showWebviewOverlay(url);
+}
+
+function initStoreMap(merchants, userLocation) {
+  var mapEl = document.getElementById('hc-store-map');
+  if (!mapEl || !merchants || merchants.length === 0) return;
+  if (typeof L === 'undefined') return; // Leaflet not loaded
+
+  var map = L.map(mapEl, {
+    center: [37.78, -122.43],
+    zoom: 11,
+    zoomControl: false,
+    attributionControl: false,
+  });
+  window._hcStoreMap = map;
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+  }).addTo(map);
+
+  // Purple marker icon matching mobile app
+  var purpleIcon = L.divIcon({
+    className: 'hc-map-marker',
+    html: '<div class="hc-map-pin"></div>',
+    iconSize: [24, 24],
+    iconAnchor: [12, 24],
+    popupAnchor: [0, -24],
+  });
+
+  merchants.forEach(function (m) {
+    var name = m.name || m.merchantName || '';
+    var address = '';
+    if (m.address) address = m.address + ', ';
+    if (m.city && m.state) address += m.city + ', ' + m.state;
+
+    var mapsUrl = 'https://maps.apple.com/?q=' + encodeURIComponent(name + (address ? ' ' + address : '')) + '&ll=' + m.latitude + ',' + m.longitude;
+    var marker = L.marker([m.latitude, m.longitude], { icon: purpleIcon }).addTo(map);
+    marker.bindPopup(
+      '<div style="font-family:Baikal-Bold,sans-serif;font-size:14px;margin-bottom:4px;">' + escapeHtml(name) + '</div>' +
+      (address ? '<a href="' + escapeAttr(mapsUrl) + '" target="_blank" style="font-family:Baikal-Regular,sans-serif;font-size:12px;color:#007AFF;text-decoration:underline;">' + escapeHtml(address) + '</a>' : '')
+    );
+  });
+
+  // If we have user location, add blue marker and zoom to closest 5 stores (matching mobile logic)
+  if (userLocation) {
+    var userIcon = L.divIcon({
+      className: 'hc-map-marker-user',
+      html: '<div class="hc-map-pin-user"></div>',
+      iconSize: [16, 16],
+      iconAnchor: [8, 8],
+    });
+    L.marker([userLocation.latitude, userLocation.longitude], { icon: userIcon }).addTo(map);
+
+    // Sort merchants by distance to user, take closest 5
+    var sorted = merchants.map(function (m) {
+      var dLat = (m.latitude - userLocation.latitude) * Math.PI / 180;
+      var dLng = (m.longitude - userLocation.longitude) * Math.PI / 180;
+      var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(userLocation.latitude * Math.PI / 180) * Math.cos(m.latitude * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+      m._dist = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 3959;
+      return m;
+    }).sort(function (a, b) { return a._dist - b._dist; }).slice(0, 5);
+
+    // Fit bounds to user + closest 5
+    var points = [[userLocation.latitude, userLocation.longitude]];
+    sorted.forEach(function (m) { points.push([m.latitude, m.longitude]); });
+    var bounds = L.latLngBounds(points);
+    map.fitBounds(bounds, { padding: [30, 30] });
+  } else {
+    // No user location — fit all merchants
+    var bounds = L.latLngBounds(merchants.map(function (m) { return [m.latitude, m.longitude]; }));
+    map.fitBounds(bounds, { padding: [30, 30] });
+  }
 }
 
 function escapeHtml(str) {

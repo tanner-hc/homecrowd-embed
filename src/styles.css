@@ -1,42 +1,48 @@
 /* Homecrowd Embed — matches mobile app design system */
 
-/* Baikal font faces */
+/* Baikal font faces — registered as individual families to match mobile app usage */
 @font-face {
-  font-family: 'Baikal';
+  font-family: 'Baikal-Book';
   src: url('./fonts/Baikal-Book.otf') format('opentype');
-  font-weight: 300;
+  font-weight: normal;
   font-style: normal;
 }
 @font-face {
-  font-family: 'Baikal';
+  font-family: 'Baikal-Regular';
   src: url('./fonts/Baikal-Regular.otf') format('opentype');
-  font-weight: 400;
+  font-weight: normal;
   font-style: normal;
 }
 @font-face {
-  font-family: 'Baikal';
+  font-family: 'Baikal-Medium';
   src: url('./fonts/Baikal-Medium.otf') format('opentype');
-  font-weight: 500;
+  font-weight: normal;
   font-style: normal;
 }
 @font-face {
-  font-family: 'Baikal';
+  font-family: 'Baikal-Bold';
   src: url('./fonts/Baikal-Bold.otf') format('opentype');
-  font-weight: 700;
+  font-weight: normal;
   font-style: normal;
 }
 @font-face {
-  font-family: 'Baikal';
+  font-family: 'Baikal-Condensed';
   src: url('./fonts/Baikal-Condensed.otf') format('opentype');
-  font-weight: 800;
+  font-weight: normal;
   font-style: normal;
 }
 @font-face {
-  font-family: 'Baikal';
+  font-family: 'Baikal-ExtraCondensedBold';
   src: url('./fonts/Baikal-ExtraCondensedBold.otf') format('opentype');
-  font-weight: 900;
+  font-weight: normal;
   font-style: normal;
 }
+
+/* Also register as single family with weights for the var(--hc-font) fallback */
+@font-face { font-family: 'Baikal'; src: url('./fonts/Baikal-Book.otf') format('opentype'); font-weight: 300; font-style: normal; }
+@font-face { font-family: 'Baikal'; src: url('./fonts/Baikal-Regular.otf') format('opentype'); font-weight: 400; font-style: normal; }
+@font-face { font-family: 'Baikal'; src: url('./fonts/Baikal-Medium.otf') format('opentype'); font-weight: 500; font-style: normal; }
+@font-face { font-family: 'Baikal'; src: url('./fonts/Baikal-Bold.otf') format('opentype'); font-weight: 700; font-style: normal; }
 
 :root {
   --hc-primary: #00C8FF;
@@ -65,7 +71,13 @@
   --hc-spacing-lg: 20px;
   --hc-spacing-xl: 24px;
   --hc-spacing-2xl: 40px;
-  --hc-font: 'Baikal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --hc-font: 'Baikal', 'Baikal-Regular', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --hc-font-book: 'Baikal-Book', 'Baikal', sans-serif;
+  --hc-font-regular: 'Baikal-Regular', 'Baikal', sans-serif;
+  --hc-font-medium: 'Baikal-Medium', 'Baikal', sans-serif;
+  --hc-font-bold: 'Baikal-Bold', 'Baikal', sans-serif;
+  --hc-font-condensed: 'Baikal-Condensed', 'Baikal', sans-serif;
+  --hc-font-extrabold: 'Baikal-ExtraCondensedBold', 'Baikal', sans-serif;
 }
 
 *,
@@ -140,8 +152,9 @@ body {
 }
 
 .hc-tab-label {
+  font-family: var(--hc-font-medium);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: normal;
   line-height: 1;
 }
 
@@ -269,9 +282,9 @@ body {
   padding: var(--hc-spacing-base) var(--hc-spacing-xl);
   border: none;
   border-radius: var(--hc-radius-pill);
-  font-family: var(--hc-font);
+  font-family: var(--hc-font-bold);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: normal;
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -406,8 +419,9 @@ body {
 }
 
 .hc-login-title {
+  font-family: var(--hc-font-extrabold);
   font-size: 40px;
-  font-weight: 900;
+  font-weight: normal;
   text-align: center;
   color: white;
   margin-bottom: var(--hc-spacing-sm);
@@ -488,8 +502,9 @@ body {
 }
 
 .hc-screen-title-text {
+  font-family: var(--hc-font-book);
   font-size: 19px;
-  font-weight: 300;
+  font-weight: normal;
   color: var(--hc-text-primary);
   margin-bottom: var(--hc-spacing-sm);
 }
@@ -569,8 +584,9 @@ body {
 }
 
 .hc-reward-title {
+  font-family: var(--hc-font-medium);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: normal;
   color: #000;
   line-height: 1.15;
   display: -webkit-box;
@@ -588,14 +604,16 @@ body {
 }
 
 .hc-reward-points-value {
+  font-family: var(--hc-font-book);
   font-size: 14px;
-  font-weight: 300;
+  font-weight: normal;
   color: #000;
 }
 
 .hc-reward-points-label {
+  font-family: var(--hc-font-book);
   font-size: 9px;
-  font-weight: 300;
+  font-weight: normal;
   color: #000;
 }
 
@@ -610,25 +628,28 @@ body {
   left: 50%;
   transform: translateX(-50%);
   background: rgba(216, 216, 216, 0.30);
-  backdrop-filter: blur(50px);
   -webkit-backdrop-filter: blur(50px);
+  backdrop-filter: blur(50px);
   border-radius: 12px;
   border: 1px solid rgba(248, 248, 248, 0.14);
   padding: 8px 18px;
   text-align: center;
-  z-index: 50;
+  z-index: 9000;
+  overflow: hidden;
 }
 
 .hc-points-overlay-value {
+  font-family: var(--hc-font-extrabold);
   font-size: 36px;
-  font-weight: 900;
+  font-weight: normal;
   color: #000;
   line-height: 1.1;
 }
 
 .hc-points-overlay-label {
+  font-family: var(--hc-font-book);
   font-size: 12px;
-  font-weight: 300;
+  font-weight: normal;
   color: #000;
 }
 
@@ -966,15 +987,17 @@ body {
 }
 
 .hc-empty-title {
+  font-family: var(--hc-font-book);
   font-size: 24px;
-  font-weight: 300;
+  font-weight: normal;
   color: #000;
   margin-bottom: 12px;
 }
 
 .hc-empty-text {
+  font-family: var(--hc-font-book);
   font-size: 16px;
-  font-weight: 300;
+  font-weight: normal;
   color: rgba(0, 0, 0, 0.60);
   line-height: 1.5;
   margin-top: 8px;
@@ -1345,6 +1368,62 @@ body {
 }
 
 /* Merchant Grid (matches MarketplaceScreen 2-column grid) */
+/* Store Map (matches StoreMap component) */
+.hc-store-map {
+  height: 300px;
+  margin: 0 20px 20px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #F0F0F0;
+}
+
+.hc-store-map .leaflet-container {
+  height: 100%;
+  width: 100%;
+  border-radius: 12px;
+}
+
+.hc-map-pin {
+  width: 24px;
+  height: 24px;
+  background: #9C27B0;
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.hc-map-pin-user {
+  width: 16px;
+  height: 16px;
+  background: #4285F4;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.3);
+}
+
+.hc-map-marker,
+.hc-map-marker-user {
+  background: none;
+  border: none;
+}
+
+/* Enable location prompt */
+.hc-enable-location {
+  margin: 0 20px 20px;
+  padding: 24px;
+  background: var(--hc-bg-secondary);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.hc-enable-location-text {
+  font-family: var(--hc-font-regular);
+  font-size: 14px;
+  color: var(--hc-text-secondary);
+  margin-bottom: 12px;
+}
+
 .hc-merchant-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1623,14 +1702,16 @@ body {
 }
 
 .hc-welcome-label {
+  font-family: var(--hc-font-medium);
   font-size: 20px;
-  font-weight: 500;
+  font-weight: normal;
   color: var(--hc-text-secondary);
 }
 
 .hc-welcome-name {
+  font-family: var(--hc-font-medium);
   font-size: 20px;
-  font-weight: 500;
+  font-weight: normal;
   color: var(--hc-text-primary);
 }
 
@@ -1675,16 +1756,17 @@ body {
 }
 
 .hc-gauge-value {
+  font-family: var(--hc-font-extrabold);
   font-size: 72px;
-  font-weight: 900;
+  font-weight: normal;
   color: var(--hc-text-primary);
   line-height: 1;
-  letter-spacing: -1px;
 }
 
 .hc-gauge-label {
+  font-family: var(--hc-font-book);
   font-size: 22px;
-  font-weight: 300;
+  font-weight: normal;
   color: var(--hc-text-primary);
   margin-top: -10px;
 }
@@ -1698,8 +1780,9 @@ body {
 
 .hc-gauge-footer-left,
 .hc-gauge-footer-right {
+  font-family: var(--hc-font-book);
   font-size: 14px;
-  font-weight: 300;
+  font-weight: normal;
   color: #9A9A9A;
 }
 
@@ -1707,8 +1790,9 @@ body {
   position: absolute;
   top: 15px;
   right: 12px;
+  font-family: var(--hc-font-bold);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: normal;
   color: #9A9A9A;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1739,8 +1823,9 @@ body {
 }
 
 .hc-stat-label {
+  font-family: var(--hc-font-book);
   font-size: 14px;
-  font-weight: 300;
+  font-weight: normal;
   color: var(--hc-text-secondary);
 }
 
@@ -1761,8 +1846,9 @@ body {
 }
 
 .hc-stat-value {
+  font-family: var(--hc-font-bold);
   font-size: 20px;
-  font-weight: 700;
+  font-weight: normal;
   line-height: 1.2;
 }
 
@@ -1813,8 +1899,9 @@ body {
 
 .hc-checkbox-label {
   flex: 1;
+  font-family: var(--hc-font-regular);
   font-size: 13px;
-  font-weight: 400;
+  font-weight: normal;
   color: #333333;
 }
 
@@ -1844,8 +1931,9 @@ body {
 }
 
 .hc-section-title {
+  font-family: var(--hc-font-book);
   font-size: 16px;
-  font-weight: 300;
+  font-weight: normal;
   color: var(--hc-text-primary);
 }
 
@@ -1870,8 +1958,9 @@ body {
 }
 
 .hc-activity-desc {
+  font-family: var(--hc-font-medium);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: normal;
   color: var(--hc-text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -1879,15 +1968,17 @@ body {
 }
 
 .hc-activity-date {
+  font-family: var(--hc-font-regular);
   font-size: 12px;
-  font-weight: 400;
+  font-weight: normal;
   color: var(--hc-text-tertiary);
   margin-top: 2px;
 }
 
 .hc-activity-points {
+  font-family: var(--hc-font-bold);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: normal;
   margin-left: var(--hc-spacing-md);
   white-space: nowrap;
 }
@@ -1932,8 +2023,9 @@ body {
 }
 
 .hc-profile-card-name {
+  font-family: var(--hc-font-bold);
   font-size: 20px;
-  font-weight: 700;
+  font-weight: normal;
   color: #fff;
   margin-bottom: var(--hc-spacing-xs);
 }
@@ -2000,8 +2092,9 @@ body {
 }
 
 .hc-profile-menu-title {
+  font-family: var(--hc-font-medium);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: normal;
   color: var(--hc-text-primary);
 }
 
@@ -2026,8 +2119,9 @@ body {
 /* Profile version */
 .hc-profile-version {
   text-align: center;
-  font-size: 12px;
-  font-weight: 400;
+  font-family: var(--hc-font-regular);
+  font-size: 14px;
+  font-weight: normal;
   color: var(--hc-text-muted);
   padding: var(--hc-spacing-base) 0;
 }

@@ -116,7 +116,13 @@ async function init() {
   postToNative('homecrowd:ready');
 }
 
+function cleanupOverlays() {
+  var overlay = document.getElementById('hc-points-overlay-global');
+  if (overlay) overlay.remove();
+}
+
 function render(route) {
+  cleanupOverlays();
   if (!user && route !== '/login') {
     navigate('/login');
     return;

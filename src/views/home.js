@@ -1,5 +1,6 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
+import { postToNative } from '../bridge.js';
 
 var chartUpIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M23 6L13.5 15.5L8.5 10.5L1 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 6H23V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 var activityIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 12H18L15 21L9 3L6 12H2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -141,9 +142,12 @@ async function loadHome(container, user) {
     html += renderHalfCircleGauge(gaugeValue, gaugeMax, Math.min(gaugePct, 100), gaugeOpts);
 
     // Onboarding checklist inside combined container (matches checkboxContainer)
-    if (cards.length === 0) {
+    if (tier && tier.type === 'onboarding' && tier.current < tier.target) {
+      var ob = tier.onboarding_status || {};
       html += '<div class="hc-checkbox-container">';
-      html += renderCheckboxItem(false, 'Link a card', 'cards');
+      html += renderCheckboxItem(!!ob.linked_card, 'Link a card', 'cards');
+      html += renderCheckboxItem(!!ob.extension_installed, 'Activate safari extension', 'extension');
+      html += renderCheckboxItem(!!ob.first_purchase, 'Make first in network purchase', 'offers');
       html += '</div>';
     }
 
@@ -202,6 +206,8 @@ async function loadHome(container, user) {
       if (!actionBtn) return;
       var action = actionBtn.getAttribute('data-action');
       if (action === 'cards') navigate('/cards');
+      else if (action === 'extension') postToNative('homecrowd:open-url', { url: 'https://apps.apple.com/app/homecrowd' });
+      else if (action === 'offers') navigate('/offers');
     });
 
     // Bind search

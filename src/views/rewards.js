@@ -52,13 +52,17 @@ async function loadRewards(container) {
       html += '</div>';
     }
 
-    // Points overlay (floating at bottom, matches PointsOverlay component)
-    html += '<div class="hc-points-overlay">';
-    html += '<div class="hc-points-overlay-value">' + (summary.availablePoints || 0).toLocaleString() + '</div>';
-    html += '<div class="hc-points-overlay-label">Available points</div>';
-    html += '</div>';
-
     container.innerHTML = html;
+
+    // Points overlay — append to body so backdrop-filter blurs content behind it
+    var existingOverlay = document.getElementById('hc-points-overlay-global');
+    if (existingOverlay) existingOverlay.remove();
+    var overlay = document.createElement('div');
+    overlay.id = 'hc-points-overlay-global';
+    overlay.className = 'hc-points-overlay';
+    overlay.innerHTML = '<div class="hc-points-overlay-value">' + (summary.availablePoints || 0).toLocaleString() + '</div>' +
+      '<div class="hc-points-overlay-label"> Available points</div>';
+    document.body.appendChild(overlay);
 
     // Bind reward card clicks — navigate to detail
     container.addEventListener('click', function (e) {

@@ -169,8 +169,11 @@ export async function deactivateCard(cardId) {
 
 // --- Offers ---
 
-export async function getOffers(page, pageSize) {
+export async function getOffers(page, pageSize, latitude, longitude) {
   var params = 'page=' + (page || 1) + '&pageSize=' + (pageSize || 50);
+  if (latitude && longitude) {
+    params += '&latitude=' + latitude + '&longitude=' + longitude;
+  }
   return request('/api/olive/offers/?' + params);
 }
 
