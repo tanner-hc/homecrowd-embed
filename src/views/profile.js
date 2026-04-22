@@ -268,7 +268,7 @@ async function loadProfile(container) {
   var activityBtn = container.querySelector('#hc-profile-activity');
   if (activityBtn) {
     activityBtn.addEventListener('click', function () {
-      postToNative('homecrowd:profile-action', { screen: 'ActivityLog' });
+      navigate('/activity-log');
     });
   }
   var cardsBtn = container.querySelector('#hc-profile-linked-cards');

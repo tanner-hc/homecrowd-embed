@@ -4506,6 +4506,191 @@ body {
   line-height: 1.45;
 }
 
+.hc-activity-log {
+  padding-bottom: 24px;
+  background: #ffffff;
+  min-height: 100%;
+}
+
+.hc-activity-log .hc-account-settings-nav {
+  top: calc(-1 * var(--hc-spacing-lg));
+  padding-top: var(--hc-spacing-lg);
+}
+
+.hc-al-body {
+  padding: 0 20px 24px;
+}
+
+.hc-al-sticky-block {
+  position: sticky;
+  top: calc(56px - var(--hc-spacing-lg));
+  z-index: 70;
+  background: #ffffff;
+  padding-top: 2px;
+  padding-bottom: 10px;
+}
+
+.hc-al-school-card {
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.hc-al-school-amount {
+  font-size: 36px;
+  font-weight: 900;
+  font-family: var(--hc-font);
+  color: #000;
+  line-height: 1.1;
+}
+
+.hc-al-school-label {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+  line-height: 1.35;
+  font-family: var(--hc-font);
+}
+
+.hc-al-search-wrap {
+  margin-bottom: 16px;
+}
+
+.hc-al-search {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.hc-al-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hc-al-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--hc-bg-secondary);
+  padding: 20px;
+  border-radius: 12px;
+  gap: 12px;
+}
+
+.hc-al-row-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.hc-al-row-title {
+  font-size: 15px;
+  font-weight: 300;
+  color: #000;
+  margin-bottom: 6px;
+  line-height: 15px;
+  letter-spacing: -0.15px;
+  font-family: var(--hc-font);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hc-al-row-sub {
+  font-size: 12px;
+  color: #9ca3af;
+  font-family: var(--hc-font);
+  font-weight: 300;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hc-al-row-right {
+  flex-shrink: 0;
+  text-align: right;
+  max-width: 42%;
+}
+
+.hc-al-pts {
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: -0.15px;
+  margin-bottom: 4px;
+  font-family: var(--hc-font);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hc-al-pts--earned {
+  color: #16a34a;
+}
+
+.hc-al-pts--spent {
+  color: #dc2626;
+}
+
+.hc-al-pts--adjustment {
+  color: #ca8a04;
+}
+
+.hc-al-pts--expired {
+  color: #6b7280;
+}
+
+.hc-al-pts--refund {
+  color: #2563eb;
+}
+
+.hc-al-pts--stripe {
+  color: #2563eb;
+}
+
+.hc-al-pts--default {
+  color: #000;
+}
+
+.hc-al-balance {
+  font-size: 12px;
+  color: #000;
+  font-family: var(--hc-font);
+  font-weight: 300;
+  letter-spacing: -0.12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hc-al-raffle {
+  font-size: 15px;
+  font-weight: 300;
+  color: #9ca3af;
+  letter-spacing: -0.15px;
+}
+
+.hc-al-empty {
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.hc-al-empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111;
+  margin-bottom: 8px;
+  font-family: var(--hc-font);
+}
+
+.hc-al-empty-sub {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.4;
+  font-family: var(--hc-font);
+}
+
 .hc-account-settings-section {
   margin-bottom: 4px;
 }

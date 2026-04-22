@@ -22,6 +22,7 @@ import { renderNotificationSettings } from './views/notification-settings.js';
 import { renderSecuritySettings } from './views/security-settings.js';
 import { renderChangePassword } from './views/change-password.js';
 import { renderInviteFriend } from './views/invite-friend.js';
+import { renderActivityLog } from './views/activity-log.js';
 import LoadingSpinner from './base-components/LoadingSpinner.js';
 import { preloadMapKitForEmbed } from './mapkit-embed.js';
 
@@ -358,6 +359,8 @@ function render(route) {
     renderChangePassword(contentEl);
   } else if (pathOnly === '/invite-friend') {
     renderInviteFriend(contentEl);
+  } else if (pathOnly === '/activity-log') {
+    renderActivityLog(contentEl);
   } else if (pathOnly === '/offers') {
     renderOffers(contentEl);
   } else {
@@ -382,7 +385,8 @@ function renderLayout(route) {
     pathOnly === '/notification-settings' ||
     pathOnly === '/security-settings' ||
     pathOnly === '/change-password' ||
-    pathOnly === '/invite-friend'
+    pathOnly === '/invite-friend' ||
+    pathOnly === '/activity-log'
       ? ' active'
       : '';
 

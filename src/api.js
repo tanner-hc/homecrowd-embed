@@ -235,6 +235,26 @@ export async function getRewardsActivity() {
   return request(EMBED_BASE + '/rewards/activity/');
 }
 
+export async function getUserActivityLog(options) {
+  options = options || {};
+  var q = '';
+  if (options.limit) {
+    q = '?limit=' + encodeURIComponent(String(options.limit));
+  }
+  var data = await request('/api/rewards/user/activity/' + q);
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data && Array.isArray(data.activity_log)) {
+    return data.activity_log;
+  }
+  return [];
+}
+
+export async function getOliveTransactions() {
+  return request('/api/olive/listTransactions');
+}
+
 export async function redeemReward(rewardId, quantity) {
   return request(EMBED_BASE + '/rewards/redeem/', {
     method: 'POST',
