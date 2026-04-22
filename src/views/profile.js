@@ -173,10 +173,12 @@ async function loadProfile(container) {
 
   var html = '';
   html += '<div id="hc-profile-root" class="hc-profile-view">';
+  html += '<div class="hc-profile-sticky-head">';
   html += '<div class="hc-screen-title hc-profile-title-wrap">';
   html += ScreenTitle({ title: 'Profile' });
   html += '</div>';
   html += profileCardHtml(cardUser);
+  html += '</div>';
   html += '<div class="hc-profile-scroll">';
   html += '<div class="hc-profile-menu">';
 

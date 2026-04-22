@@ -204,9 +204,26 @@ async function loadOffers(container, activeTab) {
 
 function buildFeaturedCardInner(f) {
   var oid = f.offer_id || f.id ? String(f.offer_id || f.id) : '';
+  var featuredPayload = escapeAttr(
+    JSON.stringify({
+      offerId: oid || '',
+      name: f.name || '',
+      logoUrl: f.small_logo_url || '',
+      logo: f.small_logo_url || '',
+      large_logo_url: f.large_logo_url || '',
+      summary: f.summary || '',
+      description: f.summary || '',
+      offerType: 'card_linked',
+      reach: 'state',
+      isOnline: false,
+    }),
+  );
   var html =
     '<div class="hc-featured-card"' +
     (oid ? ' data-offer-id="' + escapeAttr(oid) + '"' : '') +
+    ' data-featured-offer="' +
+    featuredPayload +
+    '"' +
     '>';
   html += '<div class="hc-featured-img-wrap">';
   if (f.large_logo_url) {
@@ -272,10 +289,26 @@ function renderOnlineFeaturedCarousel(items, position) {
   html += spacer;
   items.forEach(function (f) {
     var oid = String(f.offer_id || f.id || '');
+    var featuredPayload = escapeAttr(
+      JSON.stringify({
+        offerId: oid || '',
+        name: f.name || '',
+        logoUrl: f.small_logo_url || '',
+        logo: f.small_logo_url || '',
+        large_logo_url: f.large_logo_url || '',
+        summary: f.summary || '',
+        description: f.summary || '',
+        offerType: 'click',
+        reach: 'online_only',
+        isOnline: true,
+      }),
+    );
     html += '<div class="hc-carousel-slide">';
     html +=
       '<div class="hc-online-card" data-offer-id="' +
       escapeAttr(oid) +
+      '" data-featured-offer="' +
+      featuredPayload +
       '">';
     if (f.large_logo_url) {
       html +=
@@ -1153,9 +1186,26 @@ function renderFeaturedGrid(items) {
   var html = '<div class="hc-featured-grid">';
   items.forEach(function (f) {
     var gridOid = f.offer_id || f.id ? String(f.offer_id || f.id) : '';
+    var featuredPayload = escapeAttr(
+      JSON.stringify({
+        offerId: gridOid || '',
+        name: f.name || '',
+        logoUrl: f.small_logo_url || '',
+        logo: f.small_logo_url || '',
+        large_logo_url: f.large_logo_url || '',
+        summary: f.summary || '',
+        description: f.summary || '',
+        offerType: 'card_linked',
+        reach: 'state',
+        isOnline: false,
+      }),
+    );
     html +=
       '<div class="hc-featured-grid-item"' +
       (gridOid ? ' data-offer-id="' + escapeAttr(gridOid) + '"' : '') +
+      ' data-featured-offer="' +
+      featuredPayload +
+      '"' +
       '>';
     html += '<div class="hc-featured-grid-row">';
     if (f.small_logo_url) {
@@ -1247,6 +1297,19 @@ async function handleOffersMarketplaceCardClick(card) {
   if (!card) return;
   var offerId = card.getAttribute('data-offer-id');
   var offerType = card.getAttribute('data-offer-type');
+  var featuredOfferRaw = card.getAttribute('data-featured-offer');
+
+  if (featuredOfferRaw) {
+    try {
+      sessionStorage.setItem(
+        'hc_offer_detail_initial',
+        JSON.stringify({
+          offerId: offerId || '',
+          offer: JSON.parse(featuredOfferRaw),
+        }),
+      );
+    } catch (e) {}
+  }
 
   if (offerId && card.classList.contains('hc-online-card')) {
     try {
@@ -1266,6 +1329,11 @@ async function handleOffersMarketplaceCardClick(card) {
 
   if (offerId && offerType !== 'wildfire') {
     window.location.hash = '#/offers/' + offerId;
+    return;
+  }
+
+  if (!offerId && featuredOfferRaw) {
+    window.location.hash = '#/offers/featured';
     return;
   }
 

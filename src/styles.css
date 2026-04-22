@@ -126,6 +126,14 @@ body {
   flex-direction: column;
 }
 
+input,
+textarea,
+select,
+option,
+button {
+  font-family: var(--hc-font);
+}
+
 html {
   height: 100%;
   min-height: 100%;
@@ -2359,23 +2367,40 @@ body {
 
 .hc-offer-cashback-section {
   background: var(--hc-bg-secondary);
-  padding: 16px 20px;
-  margin: 0 20px 16px;
-  border-radius: 12px;
+  padding: 28px 20px 30px;
+  margin: 0 0 16px;
   text-align: center;
+}
+
+.hc-offer-cashback-kicker {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
 }
 
 .hc-offer-cashback-value {
   font-size: 20px;
   font-weight: 700;
-  color: #000;
-  margin-bottom: 4px;
+  line-height: 1.2;
+  color: #0b2a4a;
+  margin-bottom: 10px;
+}
+
+.hc-offer-cashback-subtitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: #4b5563;
+  letter-spacing: 0.6px;
+  line-height: 1.2;
+  margin-bottom: 10px;
 }
 
 .hc-offer-cashback-note {
-  font-size: 12px;
-  font-weight: 300;
-  color: #666;
+  font-size: 13px;
+  font-weight: 400;
+  color: #8a8f98;
 }
 
 .hc-offer-info-section {
@@ -2383,22 +2408,26 @@ body {
 }
 
 .hc-offer-info-title {
-  font-size: 16px;
+  font-size: 12px;
   font-weight: 700;
   color: #000;
   margin-bottom: 12px;
+  letter-spacing: 1px;
+  font-family: 'Baikal-Bold', var(--hc-font);
 }
 
 .hc-offer-info-value {
-  font-size: 14px;
-  font-weight: 300;
-  color: #333;
+  font-size: 16px;
+  font-weight: 400;
+  color: #1f2937;
+  line-height: 1.35;
+  font-family: 'Baikal-Regular', var(--hc-font);
 }
 
 .hc-offer-term-row {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
+  gap: 16px;
   padding: 8px 0;
   border-bottom: 1px solid var(--hc-border);
 }
@@ -2409,24 +2438,29 @@ body {
 
 .hc-offer-term-label {
   font-size: 14px;
-  font-weight: 500;
-  color: #666;
-  flex-shrink: 0;
-  margin-right: 16px;
+  font-weight: 700;
+  color: #000;
+  width: 44%;
+  line-height: 1.2;
+  font-family: 'Baikal-Bold', var(--hc-font);
 }
 
 .hc-offer-term-value {
+  flex: 1;
   font-size: 14px;
-  font-weight: 300;
-  color: #000;
-  text-align: right;
+  font-weight: 400;
+  color: #5f6368;
+  text-align: left;
+  line-height: 1.3;
+  font-family: 'Baikal-Regular', var(--hc-font);
 }
 
 .hc-offer-desc-text {
   font-size: 14px;
-  font-weight: 300;
-  color: #222;
-  line-height: 1.4;
+  font-weight: 400;
+  color: #3f3f46;
+  line-height: 1.45;
+  font-family: 'Baikal-Regular', var(--hc-font);
 }
 
 .hc-offer-bottom {
@@ -3876,7 +3910,7 @@ body {
   font-weight: 800;
   line-height: 1;
   color: #000;
-  font-family: 'Baikal ExtraCondensed Bold', var(--hc-font);
+  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
 }
 
 .hc-dash-gauge-label {
@@ -4177,6 +4211,8 @@ body {
 }
 
 .hc-profile-view {
+  background: #ffffff;
+  min-height: 100%;
   padding-bottom: 24px;
 }
 
@@ -5246,8 +5282,27 @@ body {
   padding: 0 20px 10px;
 }
 
+.hc-profile-sticky-head {
+  position: sticky;
+  top: 0;
+  z-index: 120;
+  background: #ffffff;
+  padding-top: 4px;
+  padding-bottom: 8px;
+}
+
+.hc-profile-sticky-head::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -20px;
+  height: 20px;
+  background: #ffffff;
+}
+
 .hc-profile-card {
-  margin: 20px;
+  margin: 12px 20px 12px;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
