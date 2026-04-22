@@ -98,7 +98,19 @@ async function request(path, options) {
     var message = 'Request failed (' + res.status + ')';
     try {
       var parsed = JSON.parse(body);
-      message = parsed.detail || message;
+      if (typeof parsed.detail === 'string') {
+        message = parsed.detail;
+      } else if (parsed.detail != null) {
+        message = String(parsed.detail);
+      } else if (parsed && typeof parsed === 'object') {
+        var parts = [];
+        Object.keys(parsed).forEach(function (k) {
+          var v = parsed[k];
+          if (Array.isArray(v)) parts.push(v.join(' '));
+          else if (typeof v === 'string') parts.push(v);
+        });
+        if (parts.length) message = parts.join(' ');
+      }
     } catch (e) { }
     throw new Error(message);
   }
@@ -145,6 +157,17 @@ export async function fetchCurrentUser() {
   return request(EMBED_BASE + '/auth/me/');
 }
 
+export async function getUserProfile() {
+  return request('/api/users/users/profile/');
+}
+
+export async function updateUserProfile(payload) {
+  return request('/api/users/users/profile/', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function getEmbedMapKitJsToken() {
   return request(EMBED_BASE + '/mapkit-js-token/');
 }
@@ -156,6 +179,20 @@ export async function logout() {
     // ignore
   }
   clearTokens();
+}
+
+export async function resendVerificationEmail() {
+  return request('/api/users/resend-verification-email/', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+export async function changePassword(payload) {
+  return request('/api/auth/change-password/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 // --- Rewards ---
@@ -298,4 +335,8 @@ export async function getRaffleTicketsSummary() {
 
 export async function getRaffleEntriesSummary() {
   return request('/api/rewards/raffle-entries/summary/');
+}
+
+export async function getReferralCampaign() {
+  return request('/api/users/users/referral-campaign/');
 }

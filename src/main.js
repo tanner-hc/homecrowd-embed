@@ -15,6 +15,12 @@ import { renderOfferDetail } from './views/offer-detail.js';
 import { renderRedemptionConfirmation } from './views/redemption-confirmation.js';
 import { renderRedemptionThanks, finalizeStripeThanksReturn } from './views/redemption-thanks.js';
 import { renderHome } from './views/home.js';
+import { renderProfile } from './views/profile.js';
+import { renderAccountSettings } from './views/account-settings.js';
+import { renderProfileDetails } from './views/profile-details.js';
+import { renderNotificationSettings } from './views/notification-settings.js';
+import { renderSecuritySettings } from './views/security-settings.js';
+import { renderChangePassword } from './views/change-password.js';
 import LoadingSpinner from './base-components/LoadingSpinner.js';
 import { preloadMapKitForEmbed } from './mapkit-embed.js';
 
@@ -191,6 +197,15 @@ async function init() {
     postToNative('homecrowd:route-change', { route: route });
     render(route);
   });
+  window.addEventListener('homecrowd:embed-logout', function () {
+    suppressPartnerAutologinAfterLogout = true;
+    user = null;
+    lastAutologinTokenApplied = '';
+    api.clearTokens();
+    postToNative('homecrowd:logout');
+    navigate('/login');
+    api.logout().catch(function () { });
+  });
   startRouter();
 
   if (!user && getRoute() !== '/login') {
@@ -328,6 +343,18 @@ function render(route) {
     renderHome(contentEl);
   } else if (pathOnly === '/cards') {
     renderCards(contentEl);
+  } else if (pathOnly === '/profile') {
+    renderProfile(contentEl);
+  } else if (pathOnly === '/account-settings') {
+    renderAccountSettings(contentEl);
+  } else if (pathOnly === '/profile-details') {
+    renderProfileDetails(contentEl);
+  } else if (pathOnly === '/notification-settings') {
+    renderNotificationSettings(contentEl);
+  } else if (pathOnly === '/security-settings') {
+    renderSecuritySettings(contentEl);
+  } else if (pathOnly === '/change-password') {
+    renderChangePassword(contentEl);
   } else if (pathOnly === '/offers') {
     renderOffers(contentEl);
   } else {
@@ -345,7 +372,15 @@ function renderLayout(route) {
   var rewardsTabActive = pathOnly === '/rewards' ? ' active' : '';
   var offersTabActive =
     pathOnly === '/offers' || /^\/offers\/[^/]+$/.test(pathOnly) ? ' active' : '';
-  var cardsTabActive = pathOnly === '/cards' ? ' active' : '';
+  var profileTabActive =
+    pathOnly === '/profile' ||
+    pathOnly === '/account-settings' ||
+    pathOnly === '/profile-details' ||
+    pathOnly === '/notification-settings' ||
+    pathOnly === '/security-settings' ||
+    pathOnly === '/change-password'
+      ? ' active'
+      : '';
 
   var tabsHtml = '';
   if (!isRewardDetailPage) {
@@ -360,9 +395,9 @@ function renderLayout(route) {
         <a href="#/offers" class="hc-nav-link' +
       offersTabActive +
       '">Offers</a>\
-        <a href="#/cards" class="hc-nav-link' +
-      cardsTabActive +
-      '">Cards</a>\
+        <a href="#/profile" class="hc-nav-link' +
+      profileTabActive +
+      '">Profile</a>\
       </nav>';
   }
 
@@ -382,18 +417,7 @@ function renderLayout(route) {
       <main id="hc-content" class="hc-content' +
     (isRewardDetailPage ? ' hc-content--reward-detail' : '') +
     '"></main>\
-      <button id="hc-logout-btn" class="hc-logout-fixed">Log out</button>\
     </div>';
-
-  document.getElementById('hc-logout-btn').addEventListener('click', function () {
-    suppressPartnerAutologinAfterLogout = true;
-    user = null;
-    lastAutologinTokenApplied = '';
-    api.clearTokens();
-    postToNative('homecrowd:logout');
-    navigate('/login');
-    api.logout().catch(function () { });
-  });
 
   return document.getElementById('hc-content');
 }
