@@ -10,9 +10,13 @@ async function loadRewards(container) {
     var results = await Promise.all([
       api.getRewardsSummary(),
       api.getRewardsCatalog(),
+      api.getWeeklyLeaderboard().catch(function () {
+        return null;
+      }),
     ]);
     var summary = results[0];
     var catalog = results[1];
+    var leaderboard = results[2];
 
     var html = '';
 
@@ -21,6 +25,56 @@ async function loadRewards(container) {
     html += '<div class="hc-screen-title-text">Rewards</div>';
     html += '<div class="hc-screen-title-subtitle">Auctions and raffles for exclusive perks</div>';
     html += '</div>';
+
+    if (leaderboard && leaderboard.success && leaderboard.leaderboard_active !== false) {
+      html += '<div class="hc-section-title-text">Weekly leaderboard</div>';
+      html += '<p class="hc-leaderboard-subtitle">Rankings for your school. Weekly prize winner is set each Saturday at 4:00 PM MT.</p>';
+      if (leaderboard.last_week_prize_winner) {
+        var w = leaderboard.last_week_prize_winner;
+        html += '<div class="hc-last-week-winner">';
+        html +=
+          '<div class="hc-last-week-winner-label">Last week\'s winner</div>';
+        html += '<div class="hc-last-week-winner-name">' + escapeHtml(w.display_name || w.name) + '</div>';
+        html +=
+          '<div class="hc-last-week-winner-meta">' +
+          (w.points === 1 ? '1 point' : w.points + ' points') +
+          '</div>';
+        html += '</div>';
+      }
+      if (leaderboard.leaderboard && leaderboard.leaderboard.length > 0) {
+        html += '<div class="hc-leaderboard-list">';
+        leaderboard.leaderboard.forEach(function (row) {
+          var rankSuffix =
+            row.rank === 1 ? 'st' : row.rank === 2 ? 'nd' : row.rank === 3 ? 'rd' : 'th';
+          html += '<div class="hc-leaderboard-row' + (row.rank === 1 ? ' hc-leaderboard-row-top' : '') + '">';
+          html += '<div class="hc-leaderboard-row-main">';
+          html +=
+            '<div class="hc-leaderboard-name">' +
+            escapeHtml(row.display ? row.display.top_left : row.name) +
+            '</div>';
+          html +=
+            '<div class="hc-leaderboard-points">' +
+            (row.points === 1 ? '1 point' : row.points + ' points') +
+            '</div>';
+          html += '</div>';
+          html +=
+            '<div class="hc-leaderboard-rank">' +
+            row.rank +
+            rankSuffix +
+            ' Place</div>';
+          html += '</div>';
+        });
+        html += '</div>';
+      } else {
+        html += '<div class="hc-leaderboard-empty">No points earned yet this week at your school.</div>';
+      }
+      html += '<div class="hc-leaderboard-spacer"></div>';
+    } else if (leaderboard && leaderboard.success && leaderboard.leaderboard_active === false) {
+      html += '<div class="hc-section-title-text">Weekly leaderboard</div>';
+      html +=
+        '<p class="hc-leaderboard-subtitle">Leaderboard is not enabled for your school.</p>';
+      html += '<div class="hc-leaderboard-spacer"></div>';
+    }
 
     // Reward cards list
     if (!catalog || catalog.length === 0) {
