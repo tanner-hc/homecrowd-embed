@@ -15,7 +15,6 @@ import { renderOffers } from './views/offers.js';
 import { renderOfferDetail } from './views/offer-detail.js';
 import { renderRedemptionConfirmation } from './views/redemption-confirmation.js';
 import { renderRedemptionThanks, finalizeStripeThanksReturn } from './views/redemption-thanks.js';
-import { renderHome } from './views/home.js';
 import { renderProfile } from './views/profile.js';
 import { renderContent } from './views/content.js';
 import { renderContentDetail } from './views/content-detail.js';
