@@ -9,6 +9,7 @@ import { renderHome } from './views/home.js';
 import { renderRewards } from './views/rewards.js';
 import logoUrl from './assets/header.png';
 import { renderCards } from './views/cards.js';
+import { renderLinkCards } from './views/link-cards.js';
 import { renderRewardDetail } from './views/reward-detail.js';
 import { resolveCardLinkStatus } from './cardLinkStatus.js';
 import { renderOffers } from './views/offers.js';
@@ -285,6 +286,7 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
   var profileActive =
     pathOnly === '/profile' ||
     pathOnly === '/cards' ||
+    pathOnly === '/cards/link' ||
     pathOnly === '/account-settings' ||
     pathOnly === '/profile-details' ||
     pathOnly === '/notification-settings' ||
@@ -492,6 +494,8 @@ function render(route) {
 
   if (pathOnly === '/home') {
     renderHome(contentEl);
+  } else if (pathOnly === '/cards/link') {
+    renderLinkCards(contentEl);
   } else if (pathOnly === '/cards') {
     renderCards(contentEl);
   } else if (pathOnly === '/content') {
@@ -540,6 +544,10 @@ function renderLayout(route) {
   var isOfferDetailPage = /^\/offers\/[^/]+$/.test(pathOnly);
   var isContentDetailPage = /^\/content\/[^/]+$/.test(pathOnly);
   var hideTabBar = isRewardDetailPage || isOfferDetailPage || isContentDetailPage;
+  var flushTopContentClass =
+    pathOnly === '/invite-friend' || pathOnly === '/support' || pathOnly === '/cards/link'
+      ? ' hc-content--flush-top'
+      : '';
 
   var tabBarHtml = hideTabBar ? '' : buildBottomTabBarHtml(pathOnly, contentTabEnabled);
 
@@ -557,6 +565,7 @@ function renderLayout(route) {
       <main id="hc-content" class="hc-content' +
     (isRewardDetailPage ? ' hc-content--reward-detail' : '') +
     (hideTabBar ? '' : ' hc-content--with-tab-bar') +
+    flushTopContentClass +
     '"></main>' +
     tabBarHtml +
     '</div>';
