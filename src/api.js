@@ -91,9 +91,6 @@ async function request(path, options) {
   if (typeof window !== 'undefined' && window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
     headers['X-Homecrowd-Client'] = 'mobile';
   }
-  if (wildfireAppId) {
-    headers['X-Homecrowd-Wildfire-App-Id'] = wildfireAppId;
-  }
 
   var res = await fetch(baseUrl + path, Object.assign({}, options, { headers: headers }));
 
@@ -247,10 +244,6 @@ export async function getRaffleTicketsList() {
   return request('/api/rewards/raffle-tickets/?available=true');
 }
 
-export async function getWeeklyLeaderboard() {
-  return request(EMBED_BASE + '/rewards/leaderboard/');
-}
-
 export async function getRewardsActivity() {
   return request(EMBED_BASE + '/rewards/activity/');
 }
@@ -323,28 +316,18 @@ export async function deactivateCard(cardId) {
 
 // --- Offers ---
 
-export async function getOffers(page, pageSize, userLocationOrLat, longitude) {
+export async function getOffers(page, pageSize, userLocation) {
   var params = 'page=' + (page || 1) + '&pageSize=' + (pageSize || 50);
-  var lat;
-  var lon;
   if (
-    userLocationOrLat &&
-    typeof userLocationOrLat === 'object' &&
-    userLocationOrLat.latitude != null &&
-    userLocationOrLat.longitude != null
+    userLocation &&
+    userLocation.latitude != null &&
+    userLocation.longitude != null
   ) {
-    lat = userLocationOrLat.latitude;
-    lon = userLocationOrLat.longitude;
-  } else {
-    lat = userLocationOrLat;
-    lon = longitude;
-  }
-  if (lat != null && lon != null && String(lat).trim() !== '' && String(lon).trim() !== '') {
     params +=
       '&latitude=' +
-      encodeURIComponent(String(lat)) +
+      encodeURIComponent(String(userLocation.latitude)) +
       '&longitude=' +
-      encodeURIComponent(String(lon));
+      encodeURIComponent(String(userLocation.longitude));
   }
   return request('/api/olive/offers/?' + params);
 }

@@ -5,11 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:embed": "vite --host embed.gethomecrowd.com",
     "build": "vite build",
     "preview": "vite preview",
     "deploy:prod": "aws codebuild start-build --project-name homecrowd-embed-prod"
   },
   "devDependencies": {
     "vite": "^6.0.0"
+  },
+  "dependencies": {
+    "@apple/mapkit-loader": "^0.2.1"
   }
 }

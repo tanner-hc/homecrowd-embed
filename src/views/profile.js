@@ -1,110 +1,313 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
-import { postToNative } from '../bridge.js';
-import logoUrl from '../assets/header.png';
+import LoadingSpinner from '../base-components/LoadingSpinner.js';
+import ScreenTitle from '../base-components/ScreenTitle.js';
+import SecondaryButton from '../base-components/SecondaryButton.js';
+import MainButton from '../base-components/MainButton.js';
+import { escapeHtml, escapeAttr } from '../base-components/html.js';
+import iconTransparentUrl from '../assets/icon-transparent.png';
+import settingsIconSvg from '../assets/icons/settings.svg?raw';
+import cardIconSvg from '../assets/icons/card.svg?raw';
+import phoneIconSvg from '../assets/icons/phone.svg?raw';
+import activityIconSvg from '../assets/icons/activity.svg?raw';
+import extensionIconSvg from '../assets/icons/extension.svg?raw';
+import referralIconSvg from '../assets/icons/referral.svg?raw';
+import chevronRightIconSvg from '../assets/icons/chevron-right.svg?raw';
 
-export function renderProfile(container, user, onLogout) {
-  var fullName = ((user.firstName || '') + ' ' + (user.lastName || '')).trim() || 'Homecrowd Fan';
-  var memberSince = user.dateJoined ? formatMemberDate(user.dateJoined) : '';
+function svgAddClass(svgRaw, className) {
+  return String(svgRaw).replace(/^<svg\s/i, '<svg class="' + className + '" ');
+}
+
+function formatFanId(fanId) {
+  if (fanId == null) return 'N/A';
+  var s = String(fanId).trim();
+  return s !== '' ? s : 'N/A';
+}
+
+function pickFanId(user) {
+  if (!user || typeof user !== 'object') return '';
+  var v = user.fanId != null ? user.fanId : user.fan_id;
+  if (v == null) return '';
+  var s = String(v).trim();
+  return s;
+}
+
+function pickDateJoined(user) {
+  if (!user || typeof user !== 'object') return null;
+  return (
+    user.dateJoined ||
+    user.date_joined ||
+    user.createdAt ||
+    user.created_at ||
+    null
+  );
+}
+
+function formatMemberSince(dateString) {
+  if (!dateString) return null;
+  try {
+    var joinDate = new Date(dateString);
+    if (!isNaN(joinDate.getTime())) {
+      return joinDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    }
+  } catch (_e) { }
+  return null;
+}
+
+function isReferralCampaignActive(campaign, isEarlyRelease) {
+  if (isEarlyRelease) return true;
+  if (!campaign) return false;
+  var raw = campaign.incentive_value;
+  if (raw === null || raw === undefined) return true;
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw > 0 : true;
+  var parsed = parseInt(String(raw), 10);
+  return Number.isFinite(parsed) ? parsed > 0 : true;
+}
+
+function pickActiveSchool(u) {
+  if (!u || typeof u !== 'object') return null;
+  return u.activeSchool || u.active_school || null;
+}
+
+function schoolEarlyRelease(school) {
+  if (!school || typeof school !== 'object') return false;
+  if (school.earlyRelease === true) return true;
+  if (school.early_release === true) return true;
+  return false;
+}
+
+function profileCardHtml(user) {
+  var first = (user && (user.firstName || user.first_name)) || '';
+  var last = (user && (user.lastName || user.last_name)) || '';
+  var name = (first + ' ' + last).trim() || 'Member';
+  var fanId = pickFanId(user);
+  var memberSince = formatMemberSince(pickDateJoined(user));
+  var memberBlock = '';
+  if (memberSince) {
+    memberBlock =
+      '<div class="hc-profile-card-member">' +
+      '<span class="hc-profile-card-stat-label">MEMBER SINCE</span>' +
+      '<span class="hc-profile-card-stat-value">' +
+      escapeHtml(memberSince) +
+      '</span>' +
+      '</div>';
+  }
+  return (
+    '<div class="hc-profile-card">' +
+    '<div class="hc-profile-card-inner">' +
+    '<div class="hc-profile-card-tagline">Shop Smarter, Cheer Louder</div>' +
+    '<div class="hc-profile-card-body">' +
+    '<div class="hc-profile-card-user">' +
+    '<div class="hc-profile-card-name">' +
+    escapeHtml(name) +
+    '</div>' +
+    '<div class="hc-profile-card-stat">' +
+    '<span class="hc-profile-card-stat-label">FAN ID</span>' +
+    '<span class="hc-profile-card-stat-value hc-profile-card-stat-value--bold">' +
+    escapeHtml(formatFanId(fanId)) +
+    '</span>' +
+    '</div>' +
+    '</div>' +
+    '</div>' +
+    '<div class="hc-profile-card-logo-wrap">' +
+    '<img src="' +
+    escapeAttr(iconTransparentUrl) +
+    '" alt="" class="hc-profile-card-logo" />' +
+    '</div>' +
+    memberBlock +
+    '</div>' +
+    '</div>'
+  );
+}
+
+function secondaryIconHtml(svgRaw) {
+  return svgAddClass(svgRaw, 'hc-profile-secondary-icon');
+}
+
+function chevronRightHtml() {
+  return svgAddClass(chevronRightIconSvg, 'hc-profile-chevron-icon');
+}
+
+export function renderProfile(container) {
+  container.innerHTML = LoadingSpinner({ text: 'Loading profile...' });
+  loadProfile(container);
+}
+
+async function loadProfile(container) {
+  var embedUser;
+  var profileUser = null;
+  var referralCampaign = null;
+  try {
+    embedUser = await api.fetchCurrentUser();
+  } catch (err) {
+    container.innerHTML =
+      '<div class="hc-alert-error">' + escapeHtml(err.message || 'Failed to load profile') + '</div>';
+    return;
+  }
+  try {
+    profileUser = await api.getUserProfile();
+  } catch (_e) {
+    profileUser = null;
+  }
+  try {
+    var referralResponse = await api.getReferralCampaign();
+    referralCampaign = referralResponse && referralResponse.campaign ? referralResponse.campaign : null;
+  } catch (_e) {
+    referralCampaign = null;
+  }
+
+  var cardUser = profileUser || embedUser;
+  var prefsUser = profileUser || embedUser;
+  var school = pickActiveSchool(prefsUser);
+  var isEarlyRelease = schoolEarlyRelease(school);
+  var showInvite = isReferralCampaignActive(referralCampaign, isEarlyRelease);
+  var showActivity = !isEarlyRelease;
+  var emailUnverified = !!(
+    prefsUser &&
+    (prefsUser.emailVerified === false || prefsUser.email_verified === false)
+  );
 
   var html = '';
-
-  // Screen title (matches ScreenTitle component — paddingHorizontal 20, marginBottom 0)
-  html += '<div class="hc-screen-title" style="margin-bottom:10px">';
-  html += '<div class="hc-screen-title-text">Profile</div>';
+  html += '<div id="hc-profile-root" class="hc-profile-view">';
+  html += '<div class="hc-profile-sticky-head">';
+  html += '<div class="hc-screen-title hc-profile-title-wrap">';
+  html += ScreenTitle({ title: 'Profile' });
   html += '</div>';
-
-  // Profile card (matches ProfileCard component — LinearGradient brandSky, with watermark)
-  html += '<div class="hc-profile-card">';
-  html += '<div class="hc-profile-card-top">';
-  html += '<div class="hc-profile-card-tagline">Shop Smarter.<br>Cheer Louder.</div>';
+  html += profileCardHtml(cardUser);
   html += '</div>';
-  html += '<div class="hc-profile-card-body">';
-  html += '<div class="hc-profile-card-name">' + escapeHtml(fullName) + '</div>';
-  if (user.fanId) {
-    html += '<div class="hc-profile-card-label">FAN ID: <span class="hc-profile-card-bold">' + escapeHtml(user.fanId) + '</span></div>';
-  }
-  if (memberSince) {
-    html += '<div class="hc-profile-card-label">MEMBER SINCE ' + escapeHtml(memberSince) + '</div>';
-  }
-  html += '</div>';
-  html += '<img src="' + logoUrl + '" class="hc-profile-card-watermark" alt="" />';
-  html += '</div>';
-
-  // Menu items (matches SecondaryButton components with exact subtitles from ProfileScreen)
+  html += '<div class="hc-profile-scroll">';
   html += '<div class="hc-profile-menu">';
-  html += renderMenuItem('activity', activityIcon, 'Activity log', 'See your points earning history');
-  html += renderMenuItem('cards', cardIcon, 'Linked cards', 'View and manage payment methods');
-  html += renderMenuItem('support', supportIcon, 'Support', 'Get help or give feedback');
-  html += '</div>';
 
-  // Logout button (matches MainButton with color={colors.danger})
+  html += SecondaryButton({
+    leftHtml: secondaryIconHtml(settingsIconSvg),
+    title: 'Account settings',
+    subtitle: 'Manage your account details',
+    rightHtml: chevronRightHtml(),
+    showBadge: emailUnverified,
+    id: 'hc-profile-account-settings',
+  });
+
+  if (showInvite) {
+    html += SecondaryButton({
+      leftHtml: secondaryIconHtml(referralIconSvg),
+      title: 'Invite a Friend',
+      subtitle: isEarlyRelease
+        ? 'Invite friends to join Homecrowd'
+        : 'Send an invite to a friend and earn points',
+      rightHtml: chevronRightHtml(),
+      id: 'hc-profile-invite',
+    });
+  }
+
+  if (showActivity) {
+    html += SecondaryButton({
+      leftHtml: secondaryIconHtml(activityIconSvg),
+      title: 'Activity log',
+      subtitle: 'See your points earning history',
+      rightHtml: chevronRightHtml(),
+      id: 'hc-profile-activity',
+    });
+  }
+
+  html += SecondaryButton({
+    leftHtml: secondaryIconHtml(cardIconSvg),
+    title: 'Linked cards',
+    subtitle: 'View and manage payment methods',
+    rightHtml: chevronRightHtml(),
+    id: 'hc-profile-linked-cards',
+  });
+
+  html += SecondaryButton({
+    leftHtml: secondaryIconHtml(extensionIconSvg),
+    title: 'Browser Extension',
+    subtitle: 'Download the Safari extension',
+    rightHtml: chevronRightHtml(),
+    id: 'hc-profile-extension',
+  });
+
+  html += SecondaryButton({
+    leftHtml: secondaryIconHtml(phoneIconSvg),
+    title: 'Support',
+    subtitle: 'Get help or give feedback',
+    rightHtml: chevronRightHtml(),
+    id: 'hc-profile-support',
+  });
+
+  html += '</div>';
   html += '<div class="hc-profile-logout-section">';
-  html += '<button id="hc-profile-logout" class="hc-btn hc-btn-danger hc-btn-large">Log Out</button>';
+  html += MainButton({
+    id: 'hc-profile-logout',
+    text: 'Log Out',
+    loadingText: 'Logging out...',
+    className: 'hc-profile-logout-btn',
+  });
   html += '</div>';
-
-  // Version footer (matches versionText — Baikal-Regular 14px mutedBlue)
-  html += '<div class="hc-profile-version">Homecrowd Embed v0.1.0</div>';
+  html += '<div class="hc-profile-version-section">';
+  html += '<span class="hc-profile-version-text">Homecrowd v1.1.0</span>';
+  html += '</div>';
+  html += '</div>';
+  html += '</div>';
 
   container.innerHTML = html;
 
-  // Bind menu clicks
-  container.addEventListener('click', function (e) {
-    var menuItem = e.target.closest('[data-menu]');
-    if (!menuItem) return;
-    var action = menuItem.getAttribute('data-menu');
-    if (action === 'cards') {
+  var accountBtn = container.querySelector('#hc-profile-account-settings');
+  if (accountBtn) {
+    accountBtn.addEventListener('click', function () {
+      navigate('/account-settings');
+    });
+  }
+  var inviteBtn = container.querySelector('#hc-profile-invite');
+  if (inviteBtn) {
+    inviteBtn.addEventListener('click', function () {
+      navigate('/invite-friend');
+    });
+  }
+  var activityBtn = container.querySelector('#hc-profile-activity');
+  if (activityBtn) {
+    activityBtn.addEventListener('click', function () {
+      navigate('/activity-log');
+    });
+  }
+  var cardsBtn = container.querySelector('#hc-profile-linked-cards');
+  if (cardsBtn) {
+    cardsBtn.addEventListener('click', function () {
       navigate('/cards');
-    } else if (action === 'activity') {
-      navigate('/home');
-    } else if (action === 'support') {
-      postToNative('homecrowd:open-url', { url: 'mailto:support@gethomecrowd.com' });
-    }
-  });
-
-  // Bind logout
-  document.getElementById('hc-profile-logout').addEventListener('click', async function () {
-    this.disabled = true;
-    this.textContent = 'Logging out...';
-    await api.logout();
-    onLogout();
-  });
-}
-
-function renderMenuItem(action, icon, title, subtitle) {
-  var html = '<div class="hc-profile-menu-item" data-menu="' + action + '">';
-  html += '<div class="hc-profile-menu-icon">' + icon + '</div>';
-  html += '<div class="hc-profile-menu-text">';
-  html += '<div class="hc-profile-menu-title">' + escapeHtml(title) + '</div>';
-  if (subtitle) {
-    html += '<div class="hc-profile-menu-subtitle">' + escapeHtml(subtitle) + '</div>';
+    });
   }
-  html += '</div>';
-  html += '<div class="hc-profile-menu-chevron">' + chevronRight + '</div>';
-  html += '</div>';
-  return html;
-}
+  var extBtn = container.querySelector('#hc-profile-extension');
+  if (extBtn) {
+    extBtn.addEventListener('click', function () {
+      navigate('/browser-extension');
+    });
+  }
+  var supportBtn = container.querySelector('#hc-profile-support');
+  if (supportBtn) {
+    supportBtn.addEventListener('click', function () {
+      navigate('/support');
+    });
+  }
 
-function formatMemberDate(iso) {
-  if (!iso) return '';
-  try {
-    var d = new Date(iso);
-    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  } catch (e) {
-    return '';
+  var logoutBtn = container.querySelector('#hc-profile-logout');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function () {
+      logoutBtn.disabled = true;
+      var prevHtml = logoutBtn.innerHTML;
+      logoutBtn.innerHTML =
+        '<span class="hc-bc-main-btn-loader" aria-hidden="true"></span><span>Logging out...</span>';
+      try {
+        handleLogout();
+      } finally {
+        logoutBtn.disabled = false;
+        logoutBtn.innerHTML = prevHtml;
+      }
+    });
   }
 }
 
-// Icons matching the mobile app's SVG icons
-var activityIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 12H18L15 21L9 3L6 12H2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
-var cardIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 5H4C2.89543 5 2 5.89543 2 7V17C2 18.1046 2.89543 19 4 19H20C21.1046 19 22 18.1046 22 17V7C22 5.89543 21.1046 5 20 5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 10H22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
-var supportIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 16.92V19.92C22 20.4835 21.7625 21.0241 21.3401 21.4223C20.9177 21.8205 20.3436 22.0421 19.78 22.02C16.7428 21.6893 13.787 20.7309 11.11 19.21C8.58 17.8063 6.4237 15.65 5.02 13.12C3.49375 10.4319 2.53486 7.46305 2.21 4.41C2.18835 3.8508 2.40799 3.30945 2.80335 2.89018C3.19871 2.4709 3.73482 2.23425 4.29 2.23H7.29C8.27726 2.22039 9.11498 2.93956 9.25 3.92C9.36543 4.84029 9.59097 5.7436 9.92 6.61C10.1977 7.35 10.0078 8.18 9.42 8.72L8.09 10.05C9.37897 12.3074 11.2026 14.131 13.46 15.42L14.79 14.09C15.3291 13.5014 16.1577 13.3113 16.9 13.59C17.7647 13.9195 18.6662 14.1451 19.585 14.26C20.5786 14.3964 21.303 15.2526 21.28 16.25L22 16.92Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
-var chevronRight = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function handleLogout() {
+  window.dispatchEvent(new CustomEvent('homecrowd:embed-logout'));
 }

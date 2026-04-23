@@ -1,15 +1,48 @@
 import * as api from '../api.js';
 import { postToNative } from '../bridge.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
+import LoadingSpinner from '../base-components/LoadingSpinner.js';
+import Button from '../base-components/Button.js';
+import { escapeHtml, escapeAttr } from '../base-components/html.js';
 
 export function renderOfferDetail(container, offerId) {
-  container.innerHTML = '<div class="hc-spinner"></div>';
+  container.innerHTML = LoadingSpinner({ text: 'Loading offer...' });
   loadOfferDetail(container, offerId);
+}
+
+function consumeInitialOffer(offerId) {
+  try {
+    var raw = sessionStorage.getItem('hc_offer_detail_initial');
+    if (!raw) return null;
+    sessionStorage.removeItem('hc_offer_detail_initial');
+    var parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    var savedId = parsed.offerId != null ? String(parsed.offerId) : '';
+    if (savedId && offerId && savedId !== String(offerId)) return null;
+    return parsed.offer && typeof parsed.offer === 'object' ? parsed.offer : null;
+  } catch (e) {
+    return null;
+  }
 }
 
 async function loadOfferDetail(container, offerId) {
   try {
-    var offer = await api.getOfferDetails(offerId);
+    var initialOffer = consumeInitialOffer(offerId);
+    var offer = null;
+    var canFetchById = offerId && offerId !== 'featured' && offerId !== 'unknown';
+    if (canFetchById) {
+      try {
+        var fetched = await api.getOfferDetails(offerId);
+        offer = Object.assign({}, initialOffer || {}, fetched || {});
+      } catch (_e) {
+        offer = initialOffer;
+      }
+    } else {
+      offer = initialOffer;
+    }
+    if (!offer) {
+      throw new Error('Offer not found');
+    }
 
     var html = '';
 
@@ -32,51 +65,43 @@ async function loadOfferDetail(container, offerId) {
     html += '<div class="hc-offer-brand-name">' + escapeHtml(name) + '</div>';
     html += '</div>';
 
-    // Cashback section
-    var cashback = getCashbackDisplay(offer);
-    if (cashback) {
-      html += '<div class="hc-offer-cashback-section">';
-      html += '<div class="hc-offer-cashback-value">' + escapeHtml(cashback) + '</div>';
-      html += '<div class="hc-offer-cashback-note">Points contributed by Homecrowd and the merchant</div>';
-      html += '</div>';
-    }
+    html += '<div class="hc-offer-cashback-section">';
+    html += '<div class="hc-offer-cashback-kicker">YOU\'LL EARN</div>';
+    html += '<div class="hc-offer-cashback-value">1 point for every $1 spent</div>';
+    html += '<div class="hc-offer-cashback-subtitle">ON ELIGIBLE PURCHASES</div>';
+    html +=
+      '<div class="hc-offer-cashback-note">' +
+      escapeHtml(getSchoolCashbackText(offer)) +
+      '</div>';
+    html += '</div>';
 
-    // Where to shop
     var locationText = getLocationText(offer);
-    if (locationText) {
-      html += '<div class="hc-offer-info-section">';
-      html += '<div class="hc-offer-info-title">Where to shop</div>';
-      html += '<div class="hc-offer-info-value">' + escapeHtml(locationText) + '</div>';
-      html += '</div>';
-    }
+    html += '<div class="hc-offer-info-section">';
+    html += '<div class="hc-offer-info-title">WHERE TO SHOP</div>';
+    html += '<div class="hc-offer-info-value">' + escapeHtml(locationText) + '</div>';
+    html += '</div>';
 
     // Important terms
     html += '<div class="hc-offer-info-section">';
-    html += '<div class="hc-offer-info-title">Important terms</div>';
-
-    // Validity days
-    if (offer.daysAvailability && offer.daysAvailability.length > 0 && offer.daysAvailability.length < 7) {
-      html += '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Valid on</span><span class="hc-offer-term-value">' + escapeHtml(getDaysOfWeek(offer.daysAvailability)) + '</span></div>';
-    }
-
-    // Redemption limit
-    if (offer.redeemLimitPerUser) {
-      var limitText = offer.redeemLimitPerUser + 'x';
-      if (offer.redeemLimitPerUserInterval) {
-        limitText += ' per ' + offer.redeemLimitPerUserInterval;
-      }
-      html += '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Redemption limit</span><span class="hc-offer-term-value">' + escapeHtml(limitText) + '</span></div>';
-    }
+    html += '<div class="hc-offer-info-title">IMPORTANT TERMS</div>';
+    html +=
+      '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Valid Days:</span><span class="hc-offer-term-value">' +
+      escapeHtml(getDaysOfWeek(offer.daysAvailability)) +
+      '</span></div>';
+    html +=
+      '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Redemption Limit:</span><span class="hc-offer-term-value">' +
+      escapeHtml(getRedemptionLimitText(offer)) +
+      '</span></div>';
 
     // Minimum purchase
     if (offer.purchaseAmount) {
       html += '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Minimum purchase</span><span class="hc-offer-term-value">$' + Number(offer.purchaseAmount).toFixed(2) + '</span></div>';
     }
 
-    // Expiry
-    if (offer.endDate) {
-      html += '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Expires</span><span class="hc-offer-term-value">' + new Date(offer.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + '</span></div>';
-    }
+    html +=
+      '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Offer Expires:</span><span class="hc-offer-term-value">' +
+      escapeHtml(getExpiryText(offer)) +
+      '</span></div>';
 
     // Payment methods
     var schemes = getPaymentMethods(offer);
@@ -90,7 +115,7 @@ async function loadOfferDetail(container, offerId) {
     var description = offer.description || offer.qualifier || offer.tile || '';
     if (description) {
       html += '<div class="hc-offer-info-section">';
-      html += '<div class="hc-offer-info-title">Details</div>';
+      html += '<div class="hc-offer-info-title">DESCRIPTION</div>';
       html += '<div class="hc-offer-desc-text">' + escapeHtml(description) + '</div>';
       html += '</div>';
     }
@@ -100,12 +125,14 @@ async function loadOfferDetail(container, offerId) {
     if (shopUrl || offer.offerType === 'click' || offer.offerType === 'click_sso') {
       html += '<div style="height:80px"></div>';
       html += '<div class="hc-offer-bottom">';
-      html += '<button id="hc-shop-btn" class="hc-btn hc-btn-primary hc-btn-large">Shop Now</button>';
+      html += Button({
+        id: 'hc-shop-btn',
+        title: 'Shop Now',
+        variant: 'primary',
+        className: 'hc-btn-large',
+      });
       html += '</div>';
     }
-
-    // Toast
-    html += '<div id="hc-toast" class="hc-toast" style="display:none"></div>';
 
     container.innerHTML = html;
 
@@ -165,7 +192,7 @@ function getCashbackDisplay(offer) {
 }
 
 function getLocationText(offer) {
-  if (offer.isOnline || offer.reach === 'online_only') return 'Online only';
+  if (offer.isOnline || offer.reach === 'online_only') return 'Online';
   if (offer.stores && offer.stores.length > 0) {
     var s = offer.stores[0];
     var parts = [s.address, s.city, s.state].filter(Boolean);
@@ -175,7 +202,7 @@ function getLocationText(offer) {
   if (offer.address || offer.city) {
     return [offer.address, offer.city, offer.state].filter(Boolean).join(', ');
   }
-  return null;
+  return 'In-Store Locations';
 }
 
 function getPaymentMethods(offer) {
@@ -200,12 +227,31 @@ function getDaysOfWeek(days) {
   return days.map(function (d) { return names[d]; }).join(', ');
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function getRedemptionLimitText(offer) {
+  if (!offer || !offer.redeemLimitPerUser) return 'Unlimited redemptions';
+  var limit = Number(offer.redeemLimitPerUser);
+  if (!Number.isFinite(limit) || limit <= 0) return 'Unlimited redemptions';
+  var text = limit + 'x';
+  if (offer.redeemLimitPerUserInterval) {
+    text += ' per ' + offer.redeemLimitPerUserInterval;
+  }
+  return text;
 }
 
-function escapeAttr(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function getExpiryText(offer) {
+  if (!offer || !offer.endDate) return 'No expiration date';
+  var d = new Date(offer.endDate);
+  if (isNaN(d.getTime())) return 'No expiration date';
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
+
+function getSchoolCashbackText(offer) {
+  if (offer && offer.cashback != null && String(offer.cashback).trim() !== '') {
+    return String(offer.cashback) + '% cashback goes to your school';
+  }
+  if (offer && offer.reward && offer.reward.value != null && String(offer.reward.value).trim() !== '') {
+    return String(offer.reward.value) + '% cashback goes to your school';
+  }
+  return '5% cashback goes to your school';
+}
+
