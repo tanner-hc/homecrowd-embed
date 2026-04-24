@@ -151,17 +151,33 @@ export async function login(email, password) {
   return data;
 }
 
+export async function register(userData) {
+  var data = await request('/api/auth/register/', {
+    method: 'POST',
+    body: JSON.stringify(userData || {}),
+  });
+  if (data && data.tokens) {
+    setTokens(data.tokens.access, data.tokens.refresh);
+  }
+  return data;
+}
+
+export async function assignSchool(schoolId) {
+  return request('/api/assign-school/', {
+    method: 'POST',
+    body: JSON.stringify({ school_id: schoolId }),
+  });
+}
+
 export async function loginWithPartnerToken(token) {
   return loginWithPartnerTokenAndSchool(token);
 }
 
 export async function loginWithPartnerTokenAndSchool(token, schoolId) {
-  var payload =
-    token && String(token).indexOf('autologin:') === 0
-      ? { token: token }
-      : schoolId
-        ? { token: token, schoolId: schoolId }
-        : { token: token };
+  var payload = { token: token };
+  if (schoolId) {
+    payload.schoolId = schoolId;
+  }
   var data = await request(EMBED_BASE + '/auth/login/', {
     method: 'POST',
     body: JSON.stringify(payload),
