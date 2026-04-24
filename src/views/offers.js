@@ -73,7 +73,7 @@ async function loadOffers(container, activeTab) {
       return f.is_active && f.bottom_featured;
     });
 
-    var html = '';
+    var html = '<div class="hc-offers-page">';
 
     html += '<div class="hc-offers-tabs">';
     html +=
@@ -164,6 +164,8 @@ async function loadOffers(container, activeTab) {
     }
 
     html += '<div style="height:80px"></div>';
+    html += '</div>';
+
     html += '</div>';
 
     container.innerHTML = html;

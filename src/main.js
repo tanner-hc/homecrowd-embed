@@ -9,6 +9,7 @@ import { renderHome } from './views/home.js';
 import { renderRewards } from './views/rewards.js';
 import logoUrl from './assets/header.png';
 import { renderCards } from './views/cards.js';
+import { renderLinkCards } from './views/link-cards.js';
 import { renderRewardDetail } from './views/reward-detail.js';
 import { resolveCardLinkStatus } from './cardLinkStatus.js';
 import { renderOffers } from './views/offers.js';
@@ -47,7 +48,12 @@ var hostConfig =
     ? window.__HC_EMBED_HOST_CONFIG__
     : null;
 var params = new URLSearchParams(window.location.search);
-var schoolId = (hostConfig && hostConfig.schoolId) || params.get('schoolId') || '';
+function getSchoolIdFromConfig(config) {
+  if (!config || typeof config !== 'object') return '';
+  return String(config.schoolId || config.school_id || '').trim();
+}
+var schoolId =
+  getSchoolIdFromConfig(hostConfig) || params.get('schoolId') || params.get('school_id') || '';
 var partnerToken = (hostConfig && hostConfig.token) || params.get('token') || '';
 var initialView = (hostConfig && hostConfig.view) || params.get('view') || 'home';
 
@@ -111,22 +117,23 @@ async function applyAutologinToken(token, view, nextSchoolId) {
 
 // Listen for runtime config from native layer
 onNativeMessage('homecrowd:configure', function (config) {
+  var configSchoolId = getSchoolIdFromConfig(config);
   if (config && (config.wildfireAppId || config.wildfire_app_id)) {
     wildfireAppId = String(config.wildfireAppId || config.wildfire_app_id || '');
     api.setEmbedContext({ wildfireAppId: wildfireAppId });
   }
-  if (config.schoolId) {
-    applySchoolConfig(config.schoolId);
+  if (configSchoolId) {
+    applySchoolConfig(configSchoolId);
   }
   if (config.token) {
     if (suppressPartnerAutologinAfterLogout) {
       return;
     }
     partnerToken = config.token;
-    if (config.schoolId) {
-      schoolId = String(config.schoolId);
+    if (configSchoolId) {
+      schoolId = configSchoolId;
     }
-    applyAutologinToken(partnerToken, config.view || 'rewards', config.schoolId || schoolId).then(function (didLogin) {
+    applyAutologinToken(partnerToken, config.view || 'rewards', configSchoolId || schoolId).then(function (didLogin) {
       if (!didLogin) {
         navigate('/login');
       }
@@ -181,8 +188,9 @@ async function init() {
   handleStripeReturnQuery();
   var injected = window.__HC_EMBED_HOST_CONFIG__;
   if (injected && typeof injected === 'object') {
-    if (injected.schoolId) {
-      schoolId = String(injected.schoolId);
+    var injectedSchoolId = getSchoolIdFromConfig(injected);
+    if (injectedSchoolId) {
+      schoolId = injectedSchoolId;
     }
     if (injected.token) {
       partnerToken = injected.token;
@@ -285,6 +293,7 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
   var profileActive =
     pathOnly === '/profile' ||
     pathOnly === '/cards' ||
+    pathOnly === '/cards/link' ||
     pathOnly === '/account-settings' ||
     pathOnly === '/profile-details' ||
     pathOnly === '/notification-settings' ||
@@ -366,15 +375,21 @@ function render(route) {
 
   if (route === '/login') {
     appEl.innerHTML = '';
-    renderLogin(appEl, function (u) {
+    renderLogin(appEl, async function (u) {
+      if (schoolId) {
+        try {
+          await api.assignSchool(schoolId);
+          u = await api.fetchCurrentUser();
+        } catch (e) { }
+      }
       user = u;
       profileUserForTabs = null;
       suppressPartnerAutologinAfterLogout = false;
       postToNative('homecrowd:login', { user: u });
       preloadMapKitForEmbed();
       refreshProfileUserForTabs();
-      navigate('/home');
-    });
+      navigate('/' + initialView);
+    }, { schoolId: schoolId });
     return;
   }
 
@@ -492,6 +507,8 @@ function render(route) {
 
   if (pathOnly === '/home') {
     renderHome(contentEl);
+  } else if (pathOnly === '/cards/link') {
+    renderLinkCards(contentEl);
   } else if (pathOnly === '/cards') {
     renderCards(contentEl);
   } else if (pathOnly === '/content') {
@@ -540,6 +557,10 @@ function renderLayout(route) {
   var isOfferDetailPage = /^\/offers\/[^/]+$/.test(pathOnly);
   var isContentDetailPage = /^\/content\/[^/]+$/.test(pathOnly);
   var hideTabBar = isRewardDetailPage || isOfferDetailPage || isContentDetailPage;
+  var flushTopContentClass =
+    pathOnly === '/invite-friend' || pathOnly === '/support' || pathOnly === '/cards/link'
+      ? ' hc-content--flush-top'
+      : '';
 
   var tabBarHtml = hideTabBar ? '' : buildBottomTabBarHtml(pathOnly, contentTabEnabled);
 
@@ -557,6 +578,7 @@ function renderLayout(route) {
       <main id="hc-content" class="hc-content' +
     (isRewardDetailPage ? ' hc-content--reward-detail' : '') +
     (hideTabBar ? '' : ' hc-content--with-tab-bar') +
+    flushTopContentClass +
     '"></main>' +
     tabBarHtml +
     '</div>';

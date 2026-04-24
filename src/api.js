@@ -109,9 +109,14 @@ async function request(path, options) {
   if (!res.ok) {
     var body = await res.text();
     var message = 'Request failed (' + res.status + ')';
+    var parsed = null;
     try {
-      var parsed = JSON.parse(body);
-      if (typeof parsed.detail === 'string') {
+      parsed = JSON.parse(body);
+      if (typeof parsed.error === 'string' && parsed.error) {
+        message = parsed.error;
+      } else if (typeof parsed.message === 'string' && parsed.message) {
+        message = parsed.message;
+      } else if (typeof parsed.detail === 'string') {
         message = parsed.detail;
       } else if (parsed.detail != null) {
         message = String(parsed.detail);
@@ -125,7 +130,10 @@ async function request(path, options) {
         if (parts.length) message = parts.join(' ');
       }
     } catch (e) { }
-    throw new Error(message);
+    var reqErr = new Error(message);
+    reqErr.status = res.status;
+    reqErr.body = parsed;
+    throw reqErr;
   }
 
   return res.json();
@@ -143,17 +151,33 @@ export async function login(email, password) {
   return data;
 }
 
+export async function register(userData) {
+  var data = await request('/api/auth/register/', {
+    method: 'POST',
+    body: JSON.stringify(userData || {}),
+  });
+  if (data && data.tokens) {
+    setTokens(data.tokens.access, data.tokens.refresh);
+  }
+  return data;
+}
+
+export async function assignSchool(schoolId) {
+  return request('/api/assign-school/', {
+    method: 'POST',
+    body: JSON.stringify({ school_id: schoolId }),
+  });
+}
+
 export async function loginWithPartnerToken(token) {
   return loginWithPartnerTokenAndSchool(token);
 }
 
 export async function loginWithPartnerTokenAndSchool(token, schoolId) {
-  var payload =
-    token && String(token).indexOf('autologin:') === 0
-      ? { token: token }
-      : schoolId
-        ? { token: token, schoolId: schoolId }
-        : { token: token };
+  var payload = { token: token };
+  if (schoolId) {
+    payload.schoolId = schoolId;
+  }
   var data = await request(EMBED_BASE + '/auth/login/', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -311,6 +335,20 @@ export async function createCardLinkSession() {
 export async function deactivateCard(cardId) {
   return request(EMBED_BASE + '/cards/' + encodeURIComponent(cardId) + '/deactivate/', {
     method: 'POST',
+  });
+}
+
+export async function createOliveMember() {
+  return request('/api/olive/createMember', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+export async function addCardDirect(cardData) {
+  return request('/api/olive/addCardDirect', {
+    method: 'POST',
+    body: JSON.stringify(cardData),
   });
 }
 

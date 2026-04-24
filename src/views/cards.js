@@ -1,5 +1,4 @@
 import * as api from '../api.js';
-import { postToNative } from '../bridge.js';
 import visaLogoUrl from '../assets/visa-logo.png';
 import mastercardLogoUrl from '../assets/mastercard-logo.png';
 import shieldIconUrl from '../assets/shield.svg';
@@ -14,18 +13,31 @@ export function renderCards(container) {
   loadCards(container);
 }
 
+function brandLogoUrl(brand) {
+  var b = String(brand || '').toLowerCase();
+  if (b === 'visa') return visaLogoUrl;
+  if (b === 'master' || b === 'mc' || b === 'mastercard') return mastercardLogoUrl;
+  return null;
+}
+
 async function loadCards(container) {
   try {
     var cards = await api.getCards();
-    // Filter active cards only
     var activeCards = (cards || []).filter(function (card) {
       return card.status === 'active';
     });
 
     var html = '';
 
-    html += '<div class="hc-screen-title">';
-    html += ScreenTitle({ title: 'Linked Cards' });
+    html += '<div class="hc-cards-screen-head">';
+    html += '<div class="hc-cards-screen-title">';
+    html += ScreenTitle({
+      title: 'My Cards',
+      subtitle: 'Manage your linked payment cards',
+    });
+    html += '</div>';
+    html +=
+      '<a href="#/cards/link" class="hc-cards-add-btn" aria-label="Link new card"><span class="hc-cards-add-icon">+</span></a>';
     html += '</div>';
 
     html += '<div class="hc-security-banner">';
@@ -37,101 +49,89 @@ async function loadCards(container) {
     html += '</div>';
     html += '</div>';
 
-    // Existing cards list
     if (activeCards.length > 0) {
       html += '<div class="hc-cards-section">';
       activeCards.forEach(function (card) {
+        var logo = brandLogoUrl(card.brand);
         html += '<div class="hc-card-item">';
         html += '<div class="hc-card-item-content">';
-        html += '<div class="hc-card-item-icon"><img src="' + cardFilledIconUrl + '" width="20" height="15" alt="" /></div>';
+        if (logo) {
+          html +=
+            '<div class="hc-card-item-icon hc-card-item-icon--brand"><img src="' +
+            logo +
+            '" alt="" width="28" height="18" /></div>';
+        } else {
+          html += '<div class="hc-card-item-icon"><img src="' + cardFilledIconUrl + '" width="20" height="15" alt="" /></div>';
+        }
         html += '<div class="hc-card-item-details">';
-        html += '<div class="hc-card-item-number">*** ' + escapeHtml(card.last4) + '</div>';
+        html += '<div class="hc-card-item-number">•••• •••• •••• ' + escapeHtml(card.last4) + '</div>';
         if (card.nickname) {
           html += '<div class="hc-card-item-nickname">' + escapeHtml(card.nickname) + '</div>';
         }
         html += '</div>';
         html += '</div>';
-        html += '<button class="hc-card-menu-btn" data-deactivate-id="' + escapeAttr(card.id) + '" data-card-last4="' + escapeAttr(card.last4) + '">⋮</button>';
+        html +=
+          '<button type="button" class="hc-card-menu-btn" data-deactivate-id="' +
+          escapeAttr(card.id) +
+          '" data-card-last4="' +
+          escapeAttr(card.last4) +
+          '">⋮</button>';
         html += '</div>';
       });
       html += '</div>';
+    } else {
+      html += '<div class="hc-cards-empty">';
+      html += '<div class="hc-cards-empty-icon" aria-hidden="true">💳</div>';
+      html += '<div class="hc-cards-empty-title">No Cards Linked</div>';
+      html +=
+        '<div class="hc-cards-empty-sub">Link your payment cards to start earning rewards on every purchase</div>';
+      html +=
+        '<a href="#/cards/link" class="hc-btn hc-btn-primary hc-btn-large hc-cards-empty-cta">Link Your First Card</a>';
+      html += '</div>';
     }
 
-    // Card type selection buttons
-    html += '<div class="hc-add-card-section">';
-    html += '<div class="hc-card-type-selection">';
-    html += '<button class="hc-card-type-btn" id="hc-add-visa">';
-    html += '<img src="' + visaLogoUrl + '" class="hc-card-type-logo" alt="Visa" />';
-    html += '<div class="hc-card-type-text">Add visa</div>';
-    html += '</button>';
-    html += '<button class="hc-card-type-btn" id="hc-add-mastercard">';
-    html += '<img src="' + mastercardLogoUrl + '" class="hc-card-type-logo hc-mc-logo" alt="Mastercard" />';
-    html += '<div class="hc-card-type-text">Add Mastercard</div>';
-    html += '</button>';
-    html += '</div>';
-    html += '</div>';
-
-    // Deactivate modal
     html += '<div id="hc-deactivate-modal" class="hc-modal-overlay" style="display:none">';
     html += '<div class="hc-deactivate-modal">';
     html += '<div class="hc-deactivate-modal-title">Deactivate Card</div>';
     html += '<div id="hc-deactivate-modal-text" class="hc-deactivate-modal-message"></div>';
     html += '<div class="hc-deactivate-modal-actions">';
-    html += '<button id="hc-deactivate-cancel" class="hc-deactivate-cancel-btn">Cancel</button>';
-    html += '<button id="hc-deactivate-confirm" class="hc-deactivate-confirm-btn">Deactivate</button>';
+    html += '<button type="button" id="hc-deactivate-cancel" class="hc-deactivate-cancel-btn">Cancel</button>';
+    html += '<button type="button" id="hc-deactivate-confirm" class="hc-deactivate-confirm-btn">Deactivate</button>';
     html += '</div>';
     html += '</div>';
     html += '</div>';
 
     container.innerHTML = html;
 
-    // Bind add card buttons
-    var addVisaBtn = document.getElementById('hc-add-visa');
-    var addMcBtn = document.getElementById('hc-add-mastercard');
-
-    function handleAddCard() {
-      postToNative('homecrowd:card-link', { type: 'visa' });
-      showToast('Card linking initiated. Complete in your app.');
-    }
-
-    addVisaBtn.addEventListener('click', function () {
-      postToNative('homecrowd:card-link', { type: 'visa' });
-      showToast('Card linking initiated. Complete in your app.');
-    });
-
-    addMcBtn.addEventListener('click', function () {
-      postToNative('homecrowd:card-link', { type: 'mastercard' });
-      showToast('Card linking initiated. Complete in your app.');
-    });
-
-    // Bind deactivate
     var deactivateTarget = null;
 
-    container.addEventListener('click', function (e) {
+    container.onclick = function (e) {
       var btn = e.target.closest('[data-deactivate-id]');
-      if (!btn) return;
+      if (!btn || !container.contains(btn)) return;
       deactivateTarget = {
         id: btn.getAttribute('data-deactivate-id'),
         last4: btn.getAttribute('data-card-last4'),
       };
       document.getElementById('hc-deactivate-modal-text').textContent =
-        'Are you sure you want to deactivate this card ending in ' + deactivateTarget.last4 + '? This action cannot be undone.';
+        'Are you sure you want to deactivate this card ending in ' +
+        deactivateTarget.last4 +
+        '? This action cannot be undone.';
       document.getElementById('hc-deactivate-modal').style.display = 'flex';
-    });
+    };
 
-    document.getElementById('hc-deactivate-cancel').addEventListener('click', function () {
+    document.getElementById('hc-deactivate-cancel').onclick = function () {
       document.getElementById('hc-deactivate-modal').style.display = 'none';
       deactivateTarget = null;
-    });
+    };
 
-    document.getElementById('hc-deactivate-modal').addEventListener('click', function (e) {
+    document.getElementById('hc-deactivate-modal').onclick = function (e) {
       if (e.target === e.currentTarget) {
         e.currentTarget.style.display = 'none';
         deactivateTarget = null;
       }
-    });
+    };
 
-    document.getElementById('hc-deactivate-confirm').addEventListener('click', async function () {
+    document.getElementById('hc-deactivate-confirm').onclick = async function () {
       if (!deactivateTarget) return;
       var confirmBtn = this;
       confirmBtn.disabled = true;
@@ -140,24 +140,17 @@ async function loadCards(container) {
       try {
         await api.deactivateCard(deactivateTarget.id);
         document.getElementById('hc-deactivate-modal').style.display = 'none';
-        showToast('Card deactivated');
+        showSuccess('Card deactivated');
         deactivateTarget = null;
         loadCards(container);
       } catch (err) {
-        showToastError('Failed: ' + (err.message || 'Unknown error'));
+        showError('Failed: ' + (err.message || 'Unknown error'));
         confirmBtn.disabled = false;
         confirmBtn.textContent = 'Deactivate';
       }
-    });
+    };
   } catch (err) {
-    container.innerHTML = '<div class="hc-alert-error">Failed to load cards: ' + escapeHtml(err.message) + '</div>';
+    container.innerHTML =
+      '<div class="hc-alert-error">Failed to load cards: ' + escapeHtml(err.message) + '</div>';
   }
-}
-
-function showToast(msg) {
-  showSuccess(msg);
-}
-
-function showToastError(msg) {
-  showError(msg);
 }
