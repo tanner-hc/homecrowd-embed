@@ -5,6 +5,13 @@ import { buildDashboardHalfCircleGaugeHtml } from '../base-components/DashboardH
 import chartUpIconSvg from '../assets/icons/chart-up.svg?raw';
 import activityIconSvg from '../assets/icons/activity.svg?raw';
 import checkmarkIconSvg from '../assets/icons/checkmark.svg?raw';
+import cardImageUrl from '../assets/intro_images/card.png';
+import linkCardImageUrl from '../assets/intro_images/link_card.png';
+import screenOneImageUrl from '../assets/intro_images/screen_one.png';
+import arrowDownImageUrl from '../assets/intro_images/arrow_down.png';
+import downloadExtImageUrl from '../assets/intro_images/download_ext.png';
+import screenTwoImageUrl from '../assets/intro_images/screen_two.png';
+import screenThreeImageUrl from '../assets/intro_images/screen_three.png';
 
 function svgAddClass(svgRaw, className) {
   return String(svgRaw).replace(/^<svg\s/i, '<svg class="' + className + '" ');
@@ -156,9 +163,11 @@ function buildCheckboxSection(userTier, checkedItems) {
       showGo: !checkedItems.firstPurchase,
     },
   ];
+  var showIntroHelp = !checkedItems.linkCard || !checkedItems.safariExtension || !checkedItems.firstPurchase;
   var html = '<div class="hc-dash-checkbox-wrap">';
   rows.forEach(function (row) {
     var done = !!checkedItems[row.key];
+    var showHelpIcon = row.key === 'linkCard' && showIntroHelp;
     html += '<div class="hc-dash-checkbox-item">';
     html += '<div class="hc-dash-checkbox-row">';
     html +=
@@ -183,10 +192,73 @@ function buildCheckboxSection(userTier, checkedItems) {
     } else {
       html += '<span class="hc-dash-go-placeholder"></span>';
     }
+    if (showHelpIcon) {
+      html +=
+        '<button type="button" class="hc-dash-help-btn" data-intro-open="1" aria-label="Open onboarding help">' +
+        '<span class="hc-dash-help-icon" aria-hidden="true"></span>' +
+        '</button>';
+    }
     html += '</div></div>';
   });
   html += '</div>';
   return html;
+}
+
+function buildIntroModalHtml() {
+  return (
+    '<div id="hc-intro-modal" class="hc-intro-modal" aria-hidden="true">' +
+    '<div class="hc-intro-modal-backdrop" data-intro-close="1"></div>' +
+    '<div class="hc-intro-modal-sheet">' +
+    '<div class="hc-intro-view">' +
+    '<div class="hc-intro-slider-wrap">' +
+    '<div id="hc-intro-track" class="hc-intro-track">' +
+    '<section class="hc-intro-slide">' +
+    '<div class="hc-intro-column hc-intro-column--first">' +
+    '<img src="' +
+    cardImageUrl +
+    '" alt="" class="hc-intro-img hc-intro-img--card" />' +
+    '<img src="' +
+    linkCardImageUrl +
+    '" alt="" class="hc-intro-img hc-intro-img--link-card" />' +
+    '<img src="' +
+    screenOneImageUrl +
+    '" alt="" class="hc-intro-img hc-intro-img--screen-one" />' +
+    '</div>' +
+    '</section>' +
+    '<section class="hc-intro-slide">' +
+    '<div class="hc-intro-column hc-intro-column--second">' +
+    '<img src="' +
+    arrowDownImageUrl +
+    '" alt="" class="hc-intro-img hc-intro-img--arrow-down" />' +
+    '<img src="' +
+    downloadExtImageUrl +
+    '" alt="" class="hc-intro-img hc-intro-img--download-ext" />' +
+    '<img src="' +
+    screenTwoImageUrl +
+    '" alt="" class="hc-intro-img hc-intro-img--screen-two" />' +
+    '</div>' +
+    '</section>' +
+    '<section class="hc-intro-slide">' +
+    '<div class="hc-intro-column hc-intro-column--third">' +
+    '<img src="' +
+    screenThreeImageUrl +
+    '" alt="" class="hc-intro-img hc-intro-img--screen-three" />' +
+    '</div>' +
+    '</section>' +
+    '</div>' +
+    '</div>' +
+    '<div class="hc-intro-bottom">' +
+    '<div class="hc-intro-dots">' +
+    '<span class="hc-intro-dot hc-intro-dot--active" data-index="0"></span>' +
+    '<span class="hc-intro-dot" data-index="1"></span>' +
+    '<span class="hc-intro-dot" data-index="2"></span>' +
+    '</div>' +
+    '<button type="button" id="hc-intro-continue" class="hc-intro-btn">Continue</button>' +
+    '</div>' +
+    '</div>' +
+    '</div>' +
+    '</div>'
+  );
 }
 
 function resolveSchoolHeroImage(user) {
@@ -359,7 +431,9 @@ function buildHomeHtml(ctx) {
     (leaderboardActive ? buildLastWeekWinnerHtml(lastWeekWinner) : '') +
     '<div class="hc-home-lb-spacer"></div>' +
     buildLeaderboardRows(leaderboardTop, leaderboardActive) +
-    '</div></div>'
+    '</div>' +
+    buildIntroModalHtml() +
+    '</div>'
   );
 }
 
@@ -442,6 +516,105 @@ function loadHome(container) {
   fetchDashboardPayload()
     .then(function (ctx) {
       container.innerHTML = buildHomeHtml(ctx);
+      var introModal = container.querySelector('#hc-intro-modal');
+      var embedRoot = container.closest('.hc-embed');
+      if (introModal && embedRoot && introModal.parentNode !== embedRoot) {
+        embedRoot.appendChild(introModal);
+      }
+      var introSliderWrap = introModal ? introModal.querySelector('.hc-intro-slider-wrap') : null;
+      var introDots = introModal
+        ? Array.prototype.slice.call(introModal.querySelectorAll('.hc-intro-dot'))
+        : [];
+      var introContinueBtn = introModal ? introModal.querySelector('#hc-intro-continue') : null;
+      var introOpenButtons = Array.prototype.slice.call(container.querySelectorAll('[data-intro-open="1"]'));
+      var introCloseButtons = introModal
+        ? Array.prototype.slice.call(introModal.querySelectorAll('[data-intro-close="1"]'))
+        : [];
+      var currentSlide = 0;
+      var totalSlides = 3;
+
+      function updateDots() {
+        introDots.forEach(function (dot, idx) {
+          dot.classList.toggle('hc-intro-dot--active', idx === currentSlide);
+        });
+      }
+
+      function updateSlidePosition(animated) {
+        if (!introSliderWrap) return;
+        var pageWidth = introSliderWrap.clientWidth || 0;
+        introSliderWrap.scrollTo({
+          left: pageWidth * currentSlide,
+          behavior: animated ? 'smooth' : 'auto',
+        });
+        updateDots();
+      }
+
+      function openIntroModal() {
+        if (!introModal) return;
+        currentSlide = 0;
+        introModal.classList.add('is-open');
+        introModal.setAttribute('aria-hidden', 'false');
+        window.requestAnimationFrame(function () {
+          updateSlidePosition(false);
+        });
+      }
+
+      function closeIntroModal() {
+        if (!introModal || !introModal.classList.contains('is-open')) return;
+        introModal.classList.remove('is-open');
+        window.setTimeout(function () {
+          introModal.setAttribute('aria-hidden', 'true');
+        }, 220);
+      }
+
+      introOpenButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          openIntroModal();
+        });
+      });
+
+      introCloseButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          closeIntroModal();
+        });
+      });
+
+      introDots.forEach(function (dot) {
+        dot.addEventListener('click', function () {
+          var idx = Number(dot.getAttribute('data-index'));
+          if (!Number.isFinite(idx)) return;
+          currentSlide = Math.max(0, Math.min(totalSlides - 1, idx));
+          updateSlidePosition(true);
+        });
+      });
+
+      if (introSliderWrap) {
+        introSliderWrap.addEventListener('scroll', function () {
+          var pageWidth = introSliderWrap.clientWidth || 0;
+          if (!pageWidth) return;
+          var idx = Math.round(introSliderWrap.scrollLeft / pageWidth);
+          var normalizedIdx = Math.max(0, Math.min(totalSlides - 1, idx));
+          if (normalizedIdx !== currentSlide) {
+            currentSlide = normalizedIdx;
+            updateDots();
+          }
+        });
+      }
+
+      if (introContinueBtn) {
+        introContinueBtn.addEventListener('click', function () {
+          if (currentSlide < totalSlides - 1) {
+            currentSlide += 1;
+            updateSlidePosition(true);
+            return;
+          }
+          closeIntroModal();
+        });
+      }
+
+      window.addEventListener('resize', function () {
+        updateSlidePosition(false);
+      });
     })
     .catch(function (err) {
       container.innerHTML =

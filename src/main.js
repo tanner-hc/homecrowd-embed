@@ -5,6 +5,7 @@ import * as api from './api.js';
 import { postToNative, onNativeMessage } from './bridge.js';
 import { navigate, getRoute, onRouteChange, startRouter, nextNavEpoch } from './router.js';
 import { renderLogin } from './views/login.js';
+import { renderIntro } from './views/intro.js';
 import { renderHome } from './views/home.js';
 import { renderRewards } from './views/rewards.js';
 import logoUrl from './assets/header.png';
@@ -363,17 +364,18 @@ function cleanupOverlays() {
 
 function render(route) {
   var routeEpoch = nextNavEpoch();
+  var pathOnly = routePathOnly(route);
   removeRewardsPointsOverlay();
-  if (!user && route !== '/login') {
+  if (!user && pathOnly !== '/login' && pathOnly !== '/intro') {
     navigate('/login');
     return;
   }
-  if (user && route === '/login') {
+  if (user && pathOnly === '/login') {
     navigate('/' + initialView);
     return;
   }
 
-  if (route === '/login') {
+  if (pathOnly === '/login') {
     appEl.innerHTML = '';
     renderLogin(appEl, async function (u) {
       if (schoolId) {
@@ -393,7 +395,12 @@ function render(route) {
     return;
   }
 
-  var pathOnly = routePathOnly(route);
+  if (pathOnly === '/intro') {
+    var introContentEl = renderLayout(route);
+    renderIntro(introContentEl, route);
+    return;
+  }
+
   if (!profileUserForTabs && !profileUserForTabsLoading && user) {
     refreshProfileUserForTabs();
   }
@@ -556,7 +563,7 @@ function renderLayout(route) {
     /^\/rewards\/[^/]+\/thanks$/.test(pathOnly);
   var isOfferDetailPage = /^\/offers\/[^/]+$/.test(pathOnly);
   var isContentDetailPage = /^\/content\/[^/]+$/.test(pathOnly);
-  var hideTabBar = isRewardDetailPage || isOfferDetailPage || isContentDetailPage;
+  var hideTabBar = isRewardDetailPage || isOfferDetailPage || isContentDetailPage || pathOnly === '/intro';
   var flushTopContentClass =
     pathOnly === '/invite-friend' || pathOnly === '/support' || pathOnly === '/cards/link'
       ? ' hc-content--flush-top'
