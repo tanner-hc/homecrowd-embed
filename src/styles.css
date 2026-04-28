@@ -292,6 +292,11 @@ body {
   z-index: 150;
 }
 
+.hc-tab-bar-shell--locked {
+  background: #bfc3c8;
+  opacity: 0.75;
+}
+
 .hc-tab-bar {
   display: flex;
   flex-direction: row;
@@ -323,6 +328,92 @@ body {
 
 .hc-tab-link.active {
   color: #00c8ff;
+}
+
+.hc-global-instruction-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 9999;
+}
+
+.hc-global-instruction-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.hc-global-instruction-inner {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  height: 100%;
+  margin: 0 auto;
+}
+
+.hc-global-instruction-help {
+  position: absolute;
+  top: 54%;
+  right: 26px;
+  width: 42px;
+  height: 42px;
+  border-radius: 21px;
+  background: #fff;
+  border: 2px solid #00b8d4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  z-index: 10000;
+}
+
+.hc-global-instruction-help-icon {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #99a1af;
+  border-radius: 999px;
+  color: #99a1af;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  font-family: var(--hc-font);
+}
+
+.hc-global-instruction-hint {
+  position: absolute;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.hc-global-instruction-text {
+  position: absolute;
+  color: #666;
+  font-size: 14px;
+  font-family: var(--hc-font);
+  text-transform: uppercase;
+  background: #fff;
+  border: 2px solid #00b8d4;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 12px;
+  text-align: center;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.hc-global-instruction-arrow {
+  width: 100px;
+  height: 118px;
+  position: absolute;
+}
+
+.hc-global-instruction-arrow-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .hc-tab-icon-wrap {

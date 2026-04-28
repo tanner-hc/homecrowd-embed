@@ -13,6 +13,19 @@ import downloadExtImageUrl from '../assets/intro_images/download_ext.png';
 import screenTwoImageUrl from '../assets/intro_images/screen_two.png';
 import screenThreeImageUrl from '../assets/intro_images/screen_three.png';
 
+var instructionOverlayEl = null;
+var instructionTabBarEl = null;
+var instructionTabGuardHandler = null;
+var instructionRepositionHandler = null;
+var instructionScrollEl = null;
+var curvedArrowSvgHtml =
+  '<svg class="hc-global-instruction-arrow-svg" viewBox="0 0 140 160" fill="none" aria-hidden="true">' +
+  '<path d="M38 14 C28 45 25 85 45 105 C60 120 86 118 108 112" stroke="#00B8D4" stroke-width="13" stroke-opacity="0.35" stroke-linecap="round" stroke-linejoin="round"></path>' +
+  '<path d="M90 98 L110 112 L92 130" stroke="#00B8D4" stroke-width="13" stroke-opacity="0.35" stroke-linecap="round" stroke-linejoin="round"></path>' +
+  '<path d="M38 14 C28 45 25 85 45 105 C60 120 86 118 108 112" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></path>' +
+  '<path d="M90 98 L110 112 L92 130" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></path>' +
+  '</svg>';
+
 function svgAddClass(svgRaw, className) {
   return String(svgRaw).replace(/^<svg\s/i, '<svg class="' + className + '" ');
 }
@@ -38,6 +51,13 @@ function pickLifetimePoints(u) {
   if (!u) return 0;
   var v = u.lifetimePoints != null ? u.lifetimePoints : u.lifetime_points;
   return Number.isFinite(Number(v)) ? Number(v) : 0;
+}
+
+function isInstructionComplete(user) {
+  if (!user || typeof user !== 'object') return false;
+  if (user.is_instruction_complete === true) return true;
+  if (user.isInstructionComplete === true) return true;
+  return false;
 }
 
 function getOnboardingChecks(tier) {
@@ -437,8 +457,121 @@ function buildHomeHtml(ctx) {
   );
 }
 
+function clearInstructionOverlay() {
+  if (instructionTabBarEl) {
+    instructionTabBarEl.classList.remove('hc-tab-bar-shell--locked');
+  }
+  if (instructionTabGuardHandler && instructionTabBarEl) {
+    instructionTabBarEl.removeEventListener('click', instructionTabGuardHandler, true);
+  }
+  instructionTabGuardHandler = null;
+  instructionTabBarEl = null;
+  if (instructionOverlayEl && instructionOverlayEl.parentNode) {
+    instructionOverlayEl.parentNode.removeChild(instructionOverlayEl);
+  }
+  if (instructionRepositionHandler) {
+    window.removeEventListener('resize', instructionRepositionHandler);
+    if (instructionScrollEl) {
+      instructionScrollEl.removeEventListener('scroll', instructionRepositionHandler);
+    }
+  }
+  instructionRepositionHandler = null;
+  instructionScrollEl = null;
+  instructionOverlayEl = null;
+}
+
+function mountInstructionOverlay(container) {
+  clearInstructionOverlay();
+  var embedRoot = container.closest('.hc-embed');
+  if (!embedRoot) return;
+  var tabBarShell = embedRoot.querySelector('.hc-tab-bar-shell');
+  if (!tabBarShell) return;
+  instructionTabBarEl = tabBarShell;
+  instructionTabBarEl.classList.add('hc-tab-bar-shell--locked');
+  instructionTabGuardHandler = function (event) {
+    var link = event.target && event.target.closest ? event.target.closest('.hc-tab-link') : null;
+    if (!link) return;
+    var href = String(link.getAttribute('href') || '');
+    if (href === '#/home') return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  instructionTabBarEl.addEventListener('click', instructionTabGuardHandler, true);
+  instructionOverlayEl = document.createElement('div');
+  instructionOverlayEl.className = 'hc-global-instruction-overlay';
+  instructionOverlayEl.innerHTML =
+    '<div class="hc-global-instruction-backdrop"></div>' +
+    '<div class="hc-global-instruction-inner">' +
+    '<button type="button" class="hc-global-instruction-help" aria-label="Open onboarding help">' +
+    '<span class="hc-global-instruction-help-icon" aria-hidden="true">?</span>' +
+    '</button>' +
+    '<div class="hc-global-instruction-hint" aria-hidden="true">' +
+    '<div class="hc-global-instruction-text">Learn how it works</div>' +
+    '<div class="hc-global-instruction-arrow">' +
+    curvedArrowSvgHtml +
+    '</div>' +
+    '</div>' +
+    '</div>';
+  var targetHelpBtn = container.querySelector('[data-intro-open="1"]');
+  var innerEl = instructionOverlayEl.querySelector('.hc-global-instruction-inner');
+  var floatingHelpBtn = instructionOverlayEl.querySelector('.hc-global-instruction-help');
+  var hintEl = instructionOverlayEl.querySelector('.hc-global-instruction-hint');
+  var hintTextEl = instructionOverlayEl.querySelector('.hc-global-instruction-text');
+  var hintArrowEl = instructionOverlayEl.querySelector('.hc-global-instruction-arrow');
+  instructionRepositionHandler = function () {
+    if (!targetHelpBtn || !innerEl || !floatingHelpBtn || !hintEl || !hintTextEl || !hintArrowEl) return;
+    var targetRect = targetHelpBtn.getBoundingClientRect();
+    var innerRect = innerEl.getBoundingClientRect();
+    var centerX = targetRect.left + targetRect.width / 2 - innerRect.left - 6;
+    var centerY = targetRect.top + targetRect.height / 2 - innerRect.top - 4;
+    floatingHelpBtn.style.left = centerX - 21 + 'px';
+    floatingHelpBtn.style.top = centerY - 21 + 'px';
+    var arrowWidth = 100;
+    var arrowHeight = 118;
+    var arrowTipX = 110;
+    var arrowTipY = 70;
+    var arrowStartX = 27;
+    var arrowTopGap = 12;
+    var textGap = 8;
+    var arrowLeft = centerX - arrowTipX;
+    var arrowTop = centerY - arrowTipY - arrowTopGap;
+    hintArrowEl.style.left = arrowLeft + 'px';
+    hintArrowEl.style.top = arrowTop + 'px';
+    hintArrowEl.style.width = arrowWidth + 'px';
+    hintArrowEl.style.height = arrowHeight + 'px';
+    var textWidth = hintTextEl.offsetWidth || 0;
+    var textHeight = hintTextEl.offsetHeight || 0;
+    var textLeft = arrowLeft + arrowStartX - textWidth / 2 - 6;
+    var textTop = arrowTop - textHeight - textGap;
+    hintTextEl.style.left = textLeft + 'px';
+    hintTextEl.style.top = textTop + 'px';
+  };
+  var helpBtn = instructionOverlayEl.querySelector('.hc-global-instruction-help');
+  if (helpBtn) {
+    helpBtn.addEventListener('click', function () {
+      clearInstructionOverlay();
+      if (targetHelpBtn && typeof targetHelpBtn.click === 'function') {
+        targetHelpBtn.click();
+        return;
+      }
+      navigate('/intro?fromDashboard=1');
+    });
+  }
+  embedRoot.appendChild(instructionOverlayEl);
+  instructionScrollEl = container;
+  window.addEventListener('resize', instructionRepositionHandler);
+  if (instructionScrollEl) {
+    instructionScrollEl.addEventListener('scroll', instructionRepositionHandler);
+  }
+  window.requestAnimationFrame(instructionRepositionHandler);
+}
+
 async function fetchDashboardPayload() {
   var freshUser = await api.fetchCurrentUser();
+  var profileUser = await api.getUserProfile().catch(function () {
+    return null;
+  });
+  var instructionComplete = isInstructionComplete(profileUser) || isInstructionComplete(freshUser);
   var userTier = pickUserTier(freshUser);
   var checkedItems;
   if (userTier && userTier.type === 'onboarding' && userTier.onboarding_status) {
@@ -481,6 +614,12 @@ async function fetchDashboardPayload() {
   var top = leaderboardList.slice(0, 10);
   var weeklyPoints = calculateWeeklyPoints(leaderboardRes, leaderboardList, freshUser && freshUser.id);
   var schoolHero = resolveSchoolHeroImage(freshUser);
+  var showInstructionOverlay =
+    !!userTier &&
+    !instructionComplete &&
+    userTier.type === 'onboarding' &&
+    userTier.current < (userTier.target || 3) &&
+    (!checkedItems.linkCard || !checkedItems.safariExtension || !checkedItems.firstPurchase);
 
   if (freshUser && freshUser.id) {
     try {
@@ -505,10 +644,12 @@ async function fetchDashboardPayload() {
     streakDays: 0,
     bannerUrl: schoolHero.url,
     schoolHeroIsLogo: schoolHero.isLogo,
+    showInstructionOverlay: showInstructionOverlay,
   };
 }
 
 function loadHome(container) {
+  clearInstructionOverlay();
   container.innerHTML = LoadingSpinner({
     text: 'Loading your activity...',
     className: 'hc-home-loading',
@@ -532,6 +673,13 @@ function loadHome(container) {
         : [];
       var currentSlide = 0;
       var totalSlides = 3;
+      var instructionCompleteSaved = false;
+
+      function markInstructionComplete() {
+        if (instructionCompleteSaved) return;
+        instructionCompleteSaved = true;
+        api.updateUserProfile({ is_instruction_complete: true }).catch(function () { });
+      }
 
       function updateDots() {
         introDots.forEach(function (dot, idx) {
@@ -551,6 +699,7 @@ function loadHome(container) {
 
       function openIntroModal() {
         if (!introModal) return;
+        markInstructionComplete();
         currentSlide = 0;
         introModal.classList.add('is-open');
         introModal.setAttribute('aria-hidden', 'false');
@@ -615,8 +764,14 @@ function loadHome(container) {
       window.addEventListener('resize', function () {
         updateSlidePosition(false);
       });
+      if (ctx.showInstructionOverlay) {
+        window.requestAnimationFrame(function () {
+          mountInstructionOverlay(container);
+        });
+      }
     })
     .catch(function (err) {
+      clearInstructionOverlay();
       container.innerHTML =
         '<div class="hc-alert-error hc-home-error">' +
         escapeHtml(err.message || 'Failed to load') +
