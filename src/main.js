@@ -134,7 +134,7 @@ onNativeMessage('homecrowd:configure', function (config) {
     if (configSchoolId) {
       schoolId = configSchoolId;
     }
-    applyAutologinToken(partnerToken, config.view || 'rewards', configSchoolId || schoolId).then(function (didLogin) {
+    applyAutologinToken(partnerToken, config.view || initialView || 'home', configSchoolId || schoolId).then(function (didLogin) {
       if (!didLogin) {
         navigate('/login');
       }
