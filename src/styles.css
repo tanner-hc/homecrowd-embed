@@ -6954,8 +6954,8 @@ body {
 
 .hc-profile-card {
   background: transparent;
-  padding: 8px;
-  margin: 1px 0 4px;
+  padding: 0 var(--hc-spacing-lg);
+  margin: 0 0 4px;
   min-height: 0;
   height: auto;
   border-radius: 8px;
@@ -7074,7 +7074,7 @@ body {
 
 @media (max-width: 400px) {
   .hc-profile-card {
-    margin: 10px 10px 10px;
+    margin: 0 0 10px;
     min-height: 0;
   }
 
