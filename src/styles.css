@@ -1040,6 +1040,14 @@ body {
   font-size: 9px;
 }
 
+.hc-reward-weekly-countdown {
+  font-family: var(--hc-font-book);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 300;
+  color: #666666;
+}
+
 .hc-reward-points-sep {
   font-size: 9px;
   font-weight: 300;
@@ -2250,11 +2258,9 @@ body {
 }
 
 .hc-content.hc-content--reward-detail .hc-carousel-img {
-  width: auto;
-  height: auto;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   aspect-ratio: unset;
 }
 
@@ -7179,4 +7185,377 @@ body {
   font-weight: 400;
   color: var(--hc-text-secondary);
   font-family: var(--hc-font);
+}
+
+.hc-weekly-reward-card {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 14px;
+  background: #f7fbff;
+  border: 1px solid rgba(0, 200, 255, 0.22);
+  border-radius: 16px;
+  padding: 14px;
+  margin: 18px 0 20px;
+  box-shadow: var(--hc-shadow);
+  cursor: default;
+}
+
+.hc-weekly-reward-card[data-weekly-reward-id] {
+  cursor: pointer;
+}
+
+.hc-weekly-reward-card[data-weekly-reward-id]:active {
+  opacity: 0.9;
+}
+
+.hc-weekly-reward-card--rewards {
+  margin: 0;
+}
+
+.hc-weekly-reward-card--home {
+  background: #f3faff;
+  border: 0;
+  border-radius: 12px;
+  padding: 14px;
+  margin: 12px 0 14px;
+  box-shadow: none;
+  align-items: center;
+}
+
+.hc-weekly-reward-card--home .hc-weekly-reward-copy {
+  padding-right: 10px;
+}
+
+.hc-weekly-reward-card--home .hc-weekly-reward-label {
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+
+.hc-weekly-reward-card--home .hc-weekly-reward-title {
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.hc-weekly-reward-card--home .hc-weekly-reward-subtitle {
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.hc-weekly-reward-card--home .hc-weekly-reward-image-wrap {
+  width: 56px;
+  min-height: 56px;
+  height: 56px;
+  border-radius: 10px;
+  background: #ddebf3;
+}
+
+.hc-weekly-reward-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.hc-weekly-reward-label {
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 700;
+  color: #00a9d6;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 6px;
+}
+
+.hc-weekly-reward-title {
+  font-size: 18px;
+  line-height: 22px;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 6px;
+}
+
+.hc-weekly-reward-subtitle {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 300;
+  color: #546e7a;
+}
+
+.hc-weekly-reward-image-wrap {
+  width: 96px;
+  min-height: 96px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: #e6f9ff;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00a9d6;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.hc-weekly-reward-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hc-weekly-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 18px 20px 0;
+}
+
+.hc-weekly-countdown-badge {
+  margin-top: 4px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #f3f7ff;
+  border: 1px solid #dce8ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hc-weekly-countdown-text {
+  font-size: 17px;
+  line-height: 22px;
+  font-weight: 700;
+  color: #111827;
+  text-align: center;
+}
+
+.hc-weekly-winner-badge-inline {
+  margin-top: 4px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #f3f7ff;
+  border: 1px solid #dce8ff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.hc-weekly-winner-inline-title {
+  font-size: 12px;
+  font-weight: 300;
+  color: #546e7a;
+  margin-bottom: 4px;
+}
+
+.hc-weekly-winner-inline-name {
+  font-size: 18px;
+  line-height: 22px;
+  font-weight: 700;
+  color: #111827;
+  text-align: center;
+}
+
+.hc-weekly-detail-card {
+  border-radius: 12px;
+  background: transparent;
+  padding: 0;
+  margin-bottom: 0;
+}
+
+.hc-weekly-detail-title {
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 10px;
+}
+
+.hc-weekly-detail-body {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 300;
+  color: #546e7a;
+}
+
+.hc-weekly-detail-leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hc-weekly-detail-leaderboard--home {
+  gap: 0;
+}
+
+.hc-weekly-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  border-radius: 12px;
+  background: #f8f8f8;
+  padding: 18px;
+}
+
+.hc-weekly-detail-row-left {
+  min-width: 0;
+}
+
+.hc-weekly-detail-name {
+  font-size: 15px;
+  line-height: 18px;
+  font-weight: 700;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-weekly-detail-points {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 300;
+  color: #6b7280;
+}
+
+.hc-weekly-detail-rank {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #00a9d6;
+}
+
+.hc-weekly-winner-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.hc-weekly-winner-confetti-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.hc-weekly-winner-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.hc-weekly-winner-card {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: 380px;
+  border-radius: 24px;
+  background: #fff;
+  padding: 22px 18px 20px;
+  text-align: center;
+  box-shadow: var(--hc-shadow-modal);
+}
+
+.hc-weekly-winner-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #eaf8ff;
+  padding: 6px 14px;
+  margin-bottom: 16px;
+  color: #00a9d6;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.hc-weekly-winner-eyebrow,
+.hc-weekly-winner-section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+.hc-weekly-winner-section-label {
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 6px;
+}
+
+.hc-weekly-winner-name {
+  font-size: 28px;
+  line-height: 32px;
+  font-weight: 700;
+  color: #000;
+  margin-top: 6px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.hc-weekly-winner-divider {
+  width: 48px;
+  height: 1px;
+  background: #e5e7eb;
+  margin: 18px auto;
+}
+
+.hc-weekly-winner-prize {
+  font-size: 18px;
+  line-height: 23px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 12px;
+}
+
+.hc-weekly-winner-points {
+  display: inline-flex;
+  border-radius: 999px;
+  background: #f3f7ff;
+  padding: 8px 14px;
+  margin-bottom: 22px;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.hc-weekly-winner-button {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 999px;
+  background: #00c8ff;
+  color: #000;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 360px) {
+  .hc-weekly-reward-card {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .hc-weekly-reward-image-wrap {
+    width: 82px;
+    min-height: 82px;
+  }
+
+  .hc-weekly-reward-title {
+    font-size: 16px;
+    line-height: 20px;
+  }
 }

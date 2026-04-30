@@ -1,7 +1,14 @@
 import * as api from '../api.js';
+import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { buildDashboardHalfCircleGaugeHtml } from '../base-components/DashboardHalfCircleGauge.js';
+import {
+  buildWeeklyRewardCardHtml,
+  buildWeeklyRewardContext,
+  connectWeeklyPrizeWebSocket,
+  showWeeklyWinnerModal,
+} from '../weekly-reward.js';
 import chartUpIconSvg from '../assets/icons/chart-up.svg?raw';
 import activityIconSvg from '../assets/icons/activity.svg?raw';
 import checkmarkIconSvg from '../assets/icons/checkmark.svg?raw';
@@ -18,6 +25,7 @@ var instructionTabBarEl = null;
 var instructionTabGuardHandler = null;
 var instructionRepositionHandler = null;
 var instructionScrollEl = null;
+var weeklySocketCleanup = null;
 var curvedArrowSvgHtml =
   '<svg class="hc-global-instruction-arrow-svg" viewBox="0 0 140 160" fill="none" aria-hidden="true">' +
   '<path d="M38 14 C28 45 25 85 45 105 C60 120 86 118 108 112" stroke="#00B8D4" stroke-width="13" stroke-opacity="0.35" stroke-linecap="round" stroke-linejoin="round"></path>' +
@@ -380,6 +388,7 @@ function buildHomeHtml(ctx) {
   var leaderboardTop = ctx.leaderboardTop;
   var leaderboardActive = ctx.leaderboardActive !== false;
   var lastWeekWinner = ctx.lastWeekWinner || null;
+  var weeklyReward = ctx.weeklyReward || null;
   var weeklyPts = ctx.weeklyPoints;
   var streak = ctx.streakDays;
   var bannerUrl = ctx.bannerUrl;
@@ -448,6 +457,7 @@ function buildHomeHtml(ctx) {
         : 'Leaderboard is not enabled for your school.',
     ) +
     '</div>' +
+    (leaderboardActive ? buildWeeklyRewardCardHtml(weeklyReward, 'hc-weekly-reward-card--home') : '') +
     (leaderboardActive ? buildLastWeekWinnerHtml(lastWeekWinner) : '') +
     '<div class="hc-home-lb-spacer"></div>' +
     buildLeaderboardRows(leaderboardTop, leaderboardActive) +
@@ -597,6 +607,7 @@ async function fetchDashboardPayload() {
   var leaderboardActive = true;
   var leaderboardList = [];
   var lastWeekWinner = null;
+  var weeklyReward = null;
   if (leaderboardRes && leaderboardRes.success) {
     leaderboardActive = leaderboardRes.leaderboard_active !== false;
     leaderboardList =
@@ -609,6 +620,7 @@ async function fetchDashboardPayload() {
           ? leaderboardRes.last_week_prize_winner
           : leaderboardRes.lastWeekPrizeWinner;
       lastWeekWinner = pickLastWeekWinner(rawWinner);
+      weeklyReward = await buildWeeklyRewardContext(leaderboardRes);
     }
   }
   var top = leaderboardList.slice(0, 10);
@@ -640,6 +652,7 @@ async function fetchDashboardPayload() {
     leaderboardTop: top,
     leaderboardActive: leaderboardActive,
     lastWeekWinner: lastWeekWinner,
+    weeklyReward: weeklyReward,
     weeklyPoints: weeklyPoints,
     streakDays: 0,
     bannerUrl: schoolHero.url,
@@ -650,6 +663,10 @@ async function fetchDashboardPayload() {
 
 function loadHome(container) {
   clearInstructionOverlay();
+  if (weeklySocketCleanup) {
+    weeklySocketCleanup();
+    weeklySocketCleanup = null;
+  }
   container.innerHTML = LoadingSpinner({
     text: 'Loading your activity...',
     className: 'hc-home-loading',
@@ -769,6 +786,21 @@ function loadHome(container) {
           mountInstructionOverlay(container);
         });
       }
+      var weeklyCard = container.querySelector('[data-weekly-reward-id]');
+      if (weeklyCard) {
+        weeklyCard.addEventListener('click', function () {
+          var rewardId = weeklyCard.getAttribute('data-weekly-reward-id');
+          if (rewardId) window.location.hash = '#/rewards/' + encodeURIComponent(rewardId) + '?weekly=1';
+        });
+      }
+      weeklySocketCleanup = connectWeeklyPrizeWebSocket({
+        enabled: ctx.leaderboardActive !== false,
+        onMessage: function (message) {
+          if (!message || message.type !== 'weekly_prize_finalized') return;
+          showWeeklyWinnerModal(message.weekly_prize || null, ctx.weeklyReward && ctx.weeklyReward.title);
+          loadHome(container);
+        },
+      });
     })
     .catch(function (err) {
       clearInstructionOverlay();

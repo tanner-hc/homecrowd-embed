@@ -400,7 +400,7 @@ export async function getFeaturedOffers(offerType) {
 }
 
 export async function getLeaderboard() {
-  return request('/api/users/leaderboard/');
+  return request(EMBED_BASE + '/rewards/leaderboard/');
 }
 
 export async function getUserPointsSummary(userId) {
