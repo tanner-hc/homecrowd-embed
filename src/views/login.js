@@ -195,6 +195,7 @@ export function renderLogin(container, onLoginSuccess, options) {
           password: password,
           password_confirm: passwordConfirm,
           accepted_terms_and_policies: acceptedTerms,
+          registration_source: 'homecrowd_embedded',
           school_id: schoolId || undefined,
         });
       } else {

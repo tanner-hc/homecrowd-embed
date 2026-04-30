@@ -5,7 +5,6 @@ import NavHeader from '../base-components/NavHeader.js';
 import SecondaryButtonWithSwitch from '../base-components/SecondaryButtonWithSwitch.js';
 import { escapeHtml } from '../base-components/html.js';
 import bellIconSvg from '../assets/icons/bell.svg?raw';
-import phoneIconSvg from '../assets/icons/phone.svg?raw';
 import mailIconSvg from '../assets/icons/mail.svg?raw';
 
 function svgAddClass(svgRaw, className) {
@@ -27,11 +26,10 @@ function loadNotifPrefs(userId) {
       var o = JSON.parse(raw);
       return {
         email: o.email !== false,
-        sms: !!o.sms,
       };
     }
   } catch (_e) { }
-  return { email: true, sms: false };
+  return { email: true };
 }
 
 function saveNotifPrefs(userId, prefs) {
@@ -81,7 +79,7 @@ async function loadNotificationSettings(container) {
   html += '<div class="hc-ns-banner-text">';
   html += '<div class="hc-ns-banner-title">Stay up to date!</div>';
   html +=
-    '<div class="hc-ns-banner-desc">Get Homecrowd updates by email or SMS. Push alerts are only in the mobile app.</div>';
+    '<div class="hc-ns-banner-desc">Get Homecrowd updates by email. Push alerts are only in the mobile app.</div>';
   html += '</div>';
   html += '</div>';
   html += '<div class="hc-profile-menu hc-ns-switches">';
@@ -91,13 +89,6 @@ async function loadNotificationSettings(container) {
     subtitle: 'Receive updates via email',
     value: prefs.email,
     switchId: 'hc-ns-email',
-  });
-  html += SecondaryButtonWithSwitch({
-    leftHtml: secondaryIconHtml(phoneIconSvg),
-    title: 'SMS notifications',
-    subtitle: 'Receive updates via text message',
-    value: prefs.sms,
-    switchId: 'hc-ns-sms',
   });
   html += '</div>';
   html += '</div>';
@@ -113,15 +104,11 @@ async function loadNotificationSettings(container) {
   }
 
   var emailSw = document.getElementById('hc-ns-email');
-  var smsSw = document.getElementById('hc-ns-sms');
   function persist() {
-    if (!emailSw || !smsSw) return;
-    saveNotifPrefs(userId, { email: !!emailSw.checked, sms: !!smsSw.checked });
+    if (!emailSw) return;
+    saveNotifPrefs(userId, { email: !!emailSw.checked });
   }
   if (emailSw) {
     emailSw.addEventListener('change', persist);
-  }
-  if (smsSw) {
-    smsSw.addEventListener('change', persist);
   }
 }

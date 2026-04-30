@@ -61,6 +61,49 @@ var initialView = (hostConfig && hostConfig.view) || params.get('view') || 'home
 
 var postLoginStripeThanksId = null;
 
+function lockEmbedZoom() {
+  var viewportContent =
+    'width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+  var viewport = document.querySelector('meta[name="viewport"]');
+  if (!viewport) {
+    viewport = document.createElement('meta');
+    viewport.setAttribute('name', 'viewport');
+    document.head.appendChild(viewport);
+  }
+  viewport.setAttribute('content', viewportContent);
+
+  var preventDefault = function (event) {
+    event.preventDefault();
+  };
+  var preventMultiTouch = function (event) {
+    if (event.touches && event.touches.length > 1) {
+      event.preventDefault();
+    }
+  };
+  var preventWheelZoom = function (event) {
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+    }
+  };
+  var lastTouchEnd = 0;
+  var preventDoubleTapZoom = function (event) {
+    var now = Date.now();
+    if (now - lastTouchEnd <= 300) {
+      event.preventDefault();
+    }
+    lastTouchEnd = now;
+  };
+
+  document.addEventListener('gesturestart', preventDefault, { passive: false });
+  document.addEventListener('gesturechange', preventDefault, { passive: false });
+  document.addEventListener('gestureend', preventDefault, { passive: false });
+  document.addEventListener('touchmove', preventMultiTouch, { passive: false });
+  document.addEventListener('wheel', preventWheelZoom, { passive: false });
+  document.addEventListener('touchend', preventDoubleTapZoom, { passive: false });
+}
+
+lockEmbedZoom();
+
 async function applySchoolConfig(nextSchoolId) {
   schoolId = nextSchoolId || '';
   if (!schoolId) {
