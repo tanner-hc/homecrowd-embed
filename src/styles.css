@@ -1329,8 +1329,23 @@ body {
 }
 
 /* Card Items (matches LinkedCardListScreen cardItem) */
+.hc-cards-page {
+  background: #ffffff;
+  min-height: 100%;
+  padding-bottom: 24px;
+}
+
+.hc-cards-page .hc-account-settings-nav {
+  top: calc(-1 * var(--hc-spacing-lg));
+  padding-top: var(--hc-spacing-lg);
+}
+
+.hc-cards-page .hc-security-banner {
+  margin: 0 24px 16px;
+}
+
 .hc-cards-section {
-  padding: 0 20px;
+  padding: 0 24px;
   margin-bottom: 0;
 }
 
@@ -1426,6 +1441,54 @@ body {
   opacity: 0.75;
 }
 
+.hc-cards-add-section {
+  padding: 8px 24px 0;
+}
+
+.hc-cards-card-type-row {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+.hc-cards-card-type-btn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #F8F8F8;
+  border-radius: 12px;
+  padding: 5px 18px 12px;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-cards-card-type-logo {
+  display: block;
+  object-fit: contain;
+}
+
+.hc-cards-card-type-logo--visa {
+  width: 60px;
+  height: 40px;
+}
+
+.hc-cards-card-type-logo--mastercard {
+  width: 40px;
+  height: 40px;
+}
+
+.hc-cards-card-type-text {
+  color: #666666;
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-size: 12px;
+  font-weight: 300;
+  line-height: 1.2;
+  text-align: center;
+}
+
 .hc-cards-empty {
   display: flex;
   flex-direction: column;
@@ -1510,6 +1573,39 @@ body {
   padding: 0 20px 24px;
   max-width: 600px;
   margin: 0 auto;
+}
+
+.hc-link-card-page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0 18px;
+}
+
+.hc-link-card-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: #000000;
+  font-family: var(--hc-font);
+  font-size: 30px;
+  line-height: 1;
+  width: 28px;
+  height: 32px;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-link-card-page-title {
+  color: #000000;
+  font-family: var(--hc-font);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.2;
 }
 
 .hc-link-card-preview-wrap {
