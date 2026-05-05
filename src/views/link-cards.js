@@ -1,6 +1,5 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
-import NavHeader from '../base-components/NavHeader.js';
 import MainButton from '../base-components/MainButton.js';
 import visaLogoUrl from '../assets/visa-logo.png';
 import mastercardLogoUrl from '../assets/mastercard-logo.png';
@@ -126,11 +125,12 @@ export function renderLinkCards(container) {
 
   var html = '';
   html += '<div class="hc-link-cards-page">';
-  html += '<div class="hc-account-settings-nav">';
-  html += NavHeader({ title: 'Link New Card', backButtonId: 'hc-link-cards-back' });
-  html += '</div>';
   html += '<div class="hc-link-cards-scroll">';
   html += '<div class="hc-link-cards-inner">';
+  html += '<div class="hc-link-card-page-header">';
+  html += '<button type="button" id="hc-link-cards-back" class="hc-link-card-back" aria-label="Back">‹</button>';
+  html += '<div class="hc-link-card-page-title">Link New Card</div>';
+  html += '</div>';
 
   html += '<div class="hc-link-card-preview-wrap">';
   html += '<div class="hc-link-card-preview">';

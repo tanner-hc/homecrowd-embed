@@ -7,6 +7,15 @@ import EmptyState from '../base-components/EmptyState.js';
 import Button from '../base-components/Button.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { getNavEpoch } from '../router.js';
+import {
+  buildWeeklyCountdownLabel,
+  buildWeeklyRewardContext,
+  connectWeeklyPrizeWebSocket,
+  showWeeklyWinnerModal,
+} from '../weekly-reward.js';
+
+var weeklySocketCleanup = null;
+var weeklyCountdownCleanup = null;
 
 function removeFloatingPointsOverlay() {
   var el = document.getElementById('hc-rewards-points-overlay');
@@ -280,7 +289,16 @@ function buildRewardCardHtml(item, section, cardLinkStatus, isEarlyRelease, getI
 
   if (!isEarlyRelease) {
     html += '<div class="hc-reward-points-row">';
-    if (item.redemption_type === 'card') {
+    if (item.redemption_type === 'weekly') {
+      html +=
+        '<span class="hc-reward-weekly-countdown"' +
+        (Number.isFinite(item.weeklyTargetMs)
+          ? ' data-weekly-target-ms="' + escapeAttr(String(item.weeklyTargetMs)) + '"'
+          : '') +
+        '>' +
+        escapeHtml(item.weeklyCountdownLabel || item.description || 'Weekly reward') +
+        '</span>';
+    } else if (item.redemption_type === 'card') {
       if (cashPriceLabel) {
         html += '<span class="hc-reward-cash-price">' + escapeHtml(cashPriceLabel) + '</span>';
       } else {
@@ -329,8 +347,86 @@ function buildRewardCardHtml(item, section, cardLinkStatus, isEarlyRelease, getI
   return html;
 }
 
+function buildWeeklyRewardListItem(weeklyReward) {
+  if (!weeklyReward || !weeklyReward.rewardId) return null;
+  return {
+    id: weeklyReward.rewardId,
+    title: weeklyReward.title || 'Weekly Reward',
+    description: weeklyReward.subtitle || '',
+    points_cost: 0,
+    cash_price_cents: null,
+    reward_type: 'weekly_reward',
+    redemption_type: 'weekly',
+    raffle_info: null,
+    auction_info: null,
+    images: [],
+    image_url: weeklyReward.imageUrl,
+    is_locked: false,
+    is_active: true,
+    weeklyCountdownLabel: buildWeeklyCountdownLabel(weeklyReward) || weeklyReward.subtitle || '',
+    weeklyTargetMs: weeklyReward.targetMs,
+  };
+}
+
+function formatWeeklyCountdownFromTarget(targetMs) {
+  if (!Number.isFinite(targetMs)) return '';
+  var delta = Math.max(0, targetMs - Date.now());
+  if (delta <= 0) return 'Weekly draw ended';
+  var days = Math.floor(delta / 86400000);
+  var hours = Math.floor((delta % 86400000) / 3600000);
+  var minutes = Math.floor((delta % 3600000) / 60000);
+  var seconds = Math.floor((delta % 60000) / 1000);
+  if (days > 0) return 'Ends in: ' + days + 'd ' + hours + 'h ' + minutes + 'm ' + seconds + 's';
+  if (hours > 0) return 'Ends in: ' + hours + 'h ' + minutes + 'm ' + seconds + 's';
+  if (minutes > 0) return 'Ends in: ' + minutes + 'm ' + seconds + 's';
+  return 'Ends in: ' + seconds + 's';
+}
+
+function attachWeeklyCountdown(container) {
+  if (weeklyCountdownCleanup) {
+    weeklyCountdownCleanup();
+    weeklyCountdownCleanup = null;
+  }
+  var nodes = Array.prototype.slice.call(container.querySelectorAll('[data-weekly-target-ms]'));
+  if (!nodes.length) return;
+
+  function update() {
+    if (!container.isConnected) {
+      if (weeklyCountdownCleanup) weeklyCountdownCleanup();
+      return;
+    }
+    nodes.forEach(function (node) {
+      var targetMs = Number(node.getAttribute('data-weekly-target-ms'));
+      var label = formatWeeklyCountdownFromTarget(targetMs);
+      if (label) node.textContent = label;
+    });
+  }
+
+  update();
+  var timer = window.setInterval(update, 1000);
+  weeklyCountdownCleanup = function () {
+    window.clearInterval(timer);
+    weeklyCountdownCleanup = null;
+  };
+  window.addEventListener(
+    'hashchange',
+    function () {
+      if (weeklyCountdownCleanup) weeklyCountdownCleanup();
+    },
+    { once: true },
+  );
+}
+
 async function loadRewards(container, routeEpoch) {
   removeFloatingPointsOverlay();
+  if (weeklySocketCleanup) {
+    weeklySocketCleanup();
+    weeklySocketCleanup = null;
+  }
+  if (weeklyCountdownCleanup) {
+    weeklyCountdownCleanup();
+    weeklyCountdownCleanup = null;
+  }
   try {
     var results = await Promise.all([
       api.getRewardsSummary(),
@@ -339,11 +435,15 @@ async function loadRewards(container, routeEpoch) {
       api.getCards().catch(function () {
         return null;
       }),
+      api.getLeaderboard().catch(function () {
+        return null;
+      }),
     ]);
     var summary = results[0];
     var catalogRaw = results[1];
     var currentUser = results[2];
     var paymentCards = results[3];
+    var leaderboardRes = results[4];
 
     var resolvedCardLinkStatus = resolveCardLinkStatus(currentUser, paymentCards);
     var cardLinkStatus = resolvedCardLinkStatus || 'unknown';
@@ -368,6 +468,8 @@ async function loadRewards(container, routeEpoch) {
       ? catalogRaw
       : (catalogRaw && catalogRaw.results) || [];
     var formattedRewards = catalog.map(normalizeReward);
+    var leaderboardActive = !leaderboardRes || leaderboardRes.leaderboard_active !== false;
+    var weeklyReward = leaderboardActive ? await buildWeeklyRewardContext(leaderboardRes) : null;
 
     var sections = organizeRewardsByDate(formattedRewards);
 
@@ -394,6 +496,26 @@ async function loadRewards(container, routeEpoch) {
         variant: 'primary',
         className: 'hc-rewards-link-card-btn',
       });
+      html += '</div>';
+    }
+
+    if (weeklyReward) {
+      var weeklyRewardItem = buildWeeklyRewardListItem(weeklyReward);
+      html += '<div class="hc-rewards-section hc-rewards-weekly-section">';
+      html += '<div class="hc-section-header hc-rewards-section-header">';
+      html += '<div class="hc-section-title">Weekly Reward</div>';
+      html += '</div>';
+      if (weeklyRewardItem) {
+        html += '<div class="hc-rewards-list">';
+        html += buildRewardCardHtml(
+          weeklyRewardItem,
+          { title: 'Weekly Reward', isPast: false },
+          cardLinkStatus,
+          isEarlyRelease,
+          getImageUrl,
+        );
+        html += '</div>';
+      }
       html += '</div>';
     }
 
@@ -460,7 +582,15 @@ async function loadRewards(container, routeEpoch) {
       document.body.appendChild(pointsOverlay);
     }
 
+    attachWeeklyCountdown(container);
+
     container.onclick = function (e) {
+      var weeklyRewardCard = e.target.closest('.hc-rewards-weekly-section [data-reward-id]');
+      if (weeklyRewardCard) {
+        var weeklyRewardId = weeklyRewardCard.getAttribute('data-reward-id');
+        if (weeklyRewardId) window.location.hash = '#/rewards/' + encodeURIComponent(weeklyRewardId) + '?weekly=1';
+        return;
+      }
       var card = e.target.closest('[data-reward-id]');
       if (!card) return;
       var rewardId = card.getAttribute('data-reward-id');
@@ -474,6 +604,14 @@ async function loadRewards(container, routeEpoch) {
         window.location.hash = '#/cards';
       };
     }
+    weeklySocketCleanup = connectWeeklyPrizeWebSocket({
+      enabled: leaderboardActive,
+      onMessage: function (message) {
+        if (!message || message.type !== 'weekly_prize_finalized') return;
+        showWeeklyWinnerModal(message.weekly_prize || null, weeklyReward && weeklyReward.title);
+        loadRewards(container, getNavEpoch());
+      },
+    });
   } catch (err) {
     removeFloatingPointsOverlay();
     if (routeEpoch !== getNavEpoch() || !container.isConnected) {

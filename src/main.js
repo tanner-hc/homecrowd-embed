@@ -5,6 +5,9 @@ import * as api from './api.js';
 import { postToNative, onNativeMessage } from './bridge.js';
 import { navigate, getRoute, onRouteChange, startRouter, nextNavEpoch } from './router.js';
 import { renderLogin } from './views/login.js';
+import { renderForgotPassword } from './views/forgot-password.js';
+import { renderResetPassword } from './views/reset-password.js';
+import { renderIntro } from './views/intro.js';
 import { renderHome } from './views/home.js';
 import { renderRewards } from './views/rewards.js';
 import logoUrl from './assets/header.png';
@@ -30,6 +33,7 @@ import { renderBrowserExtension } from './views/browser-extension.js';
 import { renderSupport } from './views/support.js';
 import LoadingSpinner from './base-components/LoadingSpinner.js';
 import { preloadMapKitForEmbed } from './mapkit-embed.js';
+import { buildWeeklyRewardContext } from './weekly-reward.js';
 import houseFilledSvg from './assets/icons/house-filled.svg?raw';
 import giftFilledSvg from './assets/icons/gift-filled.svg?raw';
 import bagSvg from './assets/icons/bag.svg?raw';
@@ -58,6 +62,49 @@ var partnerToken = (hostConfig && hostConfig.token) || params.get('token') || ''
 var initialView = (hostConfig && hostConfig.view) || params.get('view') || 'home';
 
 var postLoginStripeThanksId = null;
+
+function lockEmbedZoom() {
+  var viewportContent =
+    'width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+  var viewport = document.querySelector('meta[name="viewport"]');
+  if (!viewport) {
+    viewport = document.createElement('meta');
+    viewport.setAttribute('name', 'viewport');
+    document.head.appendChild(viewport);
+  }
+  viewport.setAttribute('content', viewportContent);
+
+  var preventDefault = function (event) {
+    event.preventDefault();
+  };
+  var preventMultiTouch = function (event) {
+    if (event.touches && event.touches.length > 1) {
+      event.preventDefault();
+    }
+  };
+  var preventWheelZoom = function (event) {
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+    }
+  };
+  var lastTouchEnd = 0;
+  var preventDoubleTapZoom = function (event) {
+    var now = Date.now();
+    if (now - lastTouchEnd <= 300) {
+      event.preventDefault();
+    }
+    lastTouchEnd = now;
+  };
+
+  document.addEventListener('gesturestart', preventDefault, { passive: false });
+  document.addEventListener('gesturechange', preventDefault, { passive: false });
+  document.addEventListener('gestureend', preventDefault, { passive: false });
+  document.addEventListener('touchmove', preventMultiTouch, { passive: false });
+  document.addEventListener('wheel', preventWheelZoom, { passive: false });
+  document.addEventListener('touchend', preventDoubleTapZoom, { passive: false });
+}
+
+lockEmbedZoom();
 
 async function applySchoolConfig(nextSchoolId) {
   schoolId = nextSchoolId || '';
@@ -133,7 +180,7 @@ onNativeMessage('homecrowd:configure', function (config) {
     if (configSchoolId) {
       schoolId = configSchoolId;
     }
-    applyAutologinToken(partnerToken, config.view || 'rewards', configSchoolId || schoolId).then(function (didLogin) {
+    applyAutologinToken(partnerToken, config.view || initialView || 'home', configSchoolId || schoolId).then(function (didLogin) {
       if (!didLogin) {
         navigate('/login');
       }
@@ -252,6 +299,16 @@ function routePathOnly(route) {
   return q >= 0 ? route.slice(0, q) : route;
 }
 
+function isPublicRoute(pathOnly) {
+  return (
+    pathOnly === '/login' ||
+    pathOnly === '/intro' ||
+    pathOnly === '/forgot-password' ||
+    pathOnly === '/reset-password' ||
+    /^\/reset-password\/[^/]+\/[^/]+$/.test(pathOnly)
+  );
+}
+
 function refreshProfileUserForTabs() {
   if (profileUserForTabsLoading || !user) return;
   profileUserForTabsLoading = true;
@@ -363,17 +420,18 @@ function cleanupOverlays() {
 
 function render(route) {
   var routeEpoch = nextNavEpoch();
+  var pathOnly = routePathOnly(route);
   removeRewardsPointsOverlay();
-  if (!user && route !== '/login') {
+  if (!user && !isPublicRoute(pathOnly)) {
     navigate('/login');
     return;
   }
-  if (user && route === '/login') {
+  if (user && (pathOnly === '/login' || pathOnly === '/forgot-password' || pathOnly === '/reset-password')) {
     navigate('/' + initialView);
     return;
   }
 
-  if (route === '/login') {
+  if (pathOnly === '/login') {
     appEl.innerHTML = '';
     renderLogin(appEl, async function (u) {
       if (schoolId) {
@@ -393,7 +451,24 @@ function render(route) {
     return;
   }
 
-  var pathOnly = routePathOnly(route);
+  if (pathOnly === '/forgot-password') {
+    appEl.innerHTML = '';
+    renderForgotPassword(appEl);
+    return;
+  }
+
+  if (pathOnly === '/reset-password' || /^\/reset-password\/[^/]+\/[^/]+$/.test(pathOnly)) {
+    appEl.innerHTML = '';
+    renderResetPassword(appEl, route);
+    return;
+  }
+
+  if (pathOnly === '/intro') {
+    var introContentEl = renderLayout(route);
+    renderIntro(introContentEl, route);
+    return;
+  }
+
   if (!profileUserForTabs && !profileUserForTabsLoading && user) {
     refreshProfileUserForTabs();
   }
@@ -423,6 +498,9 @@ function render(route) {
   var detailMatch = pathOnly.match(/^\/rewards\/([^/]+)$/);
   if (detailMatch) {
     var rewardId = detailMatch[1];
+    var detailQuery = route.indexOf('?') >= 0 ? route.slice(route.indexOf('?') + 1) : '';
+    var detailParams = new URLSearchParams(detailQuery);
+    var isWeeklyDetail = detailParams.get('weekly') === '1';
     var contentEl = renderLayout(route);
     contentEl.innerHTML = LoadingSpinner({ text: 'Loading reward...' });
     Promise.all([
@@ -434,12 +512,18 @@ function render(route) {
       api.getRaffleTicketsList().catch(function () {
         return null;
       }),
+      isWeeklyDetail
+        ? api.getLeaderboard().catch(function () {
+          return null;
+        })
+        : Promise.resolve(null),
     ])
       .then(function (parts) {
         var summary = parts[0];
         var currentUser = parts[1];
         var paymentCards = parts[2];
         var ticketsResponse = parts[3];
+        var leaderboardRes = parts[4];
         return api
           .getRewardDetail(rewardId)
           .catch(function () {
@@ -447,7 +531,7 @@ function render(route) {
           })
           .then(function (product) {
             if (product && product.id) {
-              return { summary: summary, product: product, currentUser: currentUser, paymentCards: paymentCards, ticketsResponse: ticketsResponse };
+              return { summary: summary, product: product, currentUser: currentUser, paymentCards: paymentCards, ticketsResponse: ticketsResponse, leaderboardRes: leaderboardRes };
             }
             return api.getRewardsCatalog().then(function (catalogRaw) {
               var list = Array.isArray(catalogRaw) ? catalogRaw : (catalogRaw && catalogRaw.results) || [];
@@ -460,14 +544,22 @@ function render(route) {
                 currentUser: currentUser,
                 paymentCards: paymentCards,
                 ticketsResponse: ticketsResponse,
+                leaderboardRes: leaderboardRes,
               };
             });
           });
       })
-      .then(function (ctx) {
+      .then(async function (ctx) {
         if (!ctx || !ctx.product || !ctx.product.id) {
           contentEl.innerHTML = '<div class="hc-alert-error">Reward not found</div>';
           return;
+        }
+        var weeklyReward = null;
+        if (isWeeklyDetail && ctx.leaderboardRes && ctx.leaderboardRes.leaderboard_active !== false) {
+          weeklyReward = await buildWeeklyRewardContext(ctx.leaderboardRes);
+          if (weeklyReward && weeklyReward.rewardId && String(weeklyReward.rewardId) !== String(ctx.product.id)) {
+            weeklyReward = null;
+          }
         }
         renderRewardDetail(contentEl, {
           product: ctx.product,
@@ -475,6 +567,7 @@ function render(route) {
           currentUser: ctx.currentUser,
           cardLinkStatus: resolveCardLinkStatus(ctx.currentUser, ctx.paymentCards) || 'unknown',
           ticketsResponse: ctx.ticketsResponse,
+          weeklyReward: weeklyReward,
         });
       })
       .catch(function (err) {
@@ -556,7 +649,7 @@ function renderLayout(route) {
     /^\/rewards\/[^/]+\/thanks$/.test(pathOnly);
   var isOfferDetailPage = /^\/offers\/[^/]+$/.test(pathOnly);
   var isContentDetailPage = /^\/content\/[^/]+$/.test(pathOnly);
-  var hideTabBar = isRewardDetailPage || isOfferDetailPage || isContentDetailPage;
+  var hideTabBar = isRewardDetailPage || isOfferDetailPage || isContentDetailPage || pathOnly === '/intro';
   var flushTopContentClass =
     pathOnly === '/invite-friend' || pathOnly === '/support' || pathOnly === '/cards/link'
       ? ' hc-content--flush-top'

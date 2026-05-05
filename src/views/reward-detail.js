@@ -8,17 +8,35 @@ import NavHeader from '../base-components/NavHeader.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
 import { writeRedemptionConfirmAndNavigate } from './redemption-confirmation.js';
+import {
+  buildWeeklyCountdownLabel,
+  buildWeeklyLeaderboardHtml,
+  connectWeeklyPrizeWebSocket,
+  showWeeklyWinnerModal,
+} from '../weekly-reward.js';
+
+var weeklyDetailSocketCleanup = null;
+var weeklyCountdownCleanup = null;
 
 export function renderRewardDetail(container, ctx) {
+  if (weeklyDetailSocketCleanup) {
+    weeklyDetailSocketCleanup();
+    weeklyDetailSocketCleanup = null;
+  }
+  if (weeklyCountdownCleanup) {
+    weeklyCountdownCleanup();
+    weeklyCountdownCleanup = null;
+  }
   var product = normalizeProduct(ctx.product);
   var summary = ctx.summary;
   var currentUser = ctx.currentUser || null;
   var cardLinkStatus = ctx.cardLinkStatus || 'unknown';
   var ticketsResponse = ctx.ticketsResponse;
+  var weeklyReward = ctx.weeklyReward || null;
 
-  var html = buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsResponse);
+  var html = buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsResponse, weeklyReward);
   container.innerHTML = html;
-  bindDetailEvents(container, product, summary, currentUser, cardLinkStatus, ticketsResponse);
+  bindDetailEvents(container, product, summary, currentUser, cardLinkStatus, ticketsResponse, weeklyReward);
 }
 
 function normalizeProduct(p) {
@@ -126,7 +144,7 @@ function collectImageUrls(product, getUrl) {
   return [];
 }
 
-function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsResponse) {
+function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsResponse, weeklyReward) {
   var getUrl = function (path) {
     if (!path) return null;
     if (typeof path === 'string' && path.indexOf('s3://') === 0) {
@@ -155,12 +173,13 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
     enabled: product.enabled,
     cashPriceCents: product.cash_price_cents,
     redemptionType: redemptionType,
-  });
+  }) && !weeklyReward;
   var isCardOnly = redemptionType === 'card';
   var detailCashOk =
     Number.isFinite(stripeCents) &&
     stripeCents >= 50 &&
-    (redemptionType === 'first' || redemptionType === 'card');
+    (redemptionType === 'first' || redemptionType === 'card') &&
+    !weeklyReward;
 
   var userId = currentUser && currentUser.id ? String(currentUser.id) : '';
   var raffleInfo = product.raffle_info;
@@ -245,13 +264,13 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
     escapeHtml(capitalize(product.reward_type || 'merchandise')) +
     '</div>';
 
-  if (!isEarlyRelease) {
+  if (!isEarlyRelease && !weeklyReward) {
     html += '<div class="hc-product-points-row">';
     if (redemptionType === 'card') {
       if (detailCashOk) {
         html +=
           '<span class="hc-product-cash">' + escapeHtml('$' + (stripeCents / 100).toFixed(2)) + '</span>';
-      } else {
+      } else if (!weeklyReward) {
         html += '<span class="hc-product-points-muted">Card price not set</span>';
       }
     } else {
@@ -335,6 +354,9 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
       html += '<div class="hc-detail-desc-text">' + nlToBr(escapeHtml(product.description)) + '</div>';
       html += '</div>';
     }
+    if (weeklyReward) {
+      html += buildWeeklyDetailHtml(weeklyReward);
+    }
     html += '</div>';
   }
 
@@ -388,10 +410,42 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
       auctionInfo &&
       auctionInfo.end_date &&
       new Date() >= new Date(auctionInfo.end_date),
+    weeklyReward: weeklyReward,
   });
 
   html += '</div>';
 
+  return html;
+}
+
+function buildWeeklyDetailHtml(weeklyReward) {
+  if (!weeklyReward) return '';
+  var html = '<div class="hc-weekly-detail-section">';
+  var countdownLabel = buildWeeklyCountdownLabel(weeklyReward);
+  if (countdownLabel) {
+    html += '<div class="hc-weekly-countdown-badge">';
+    html += '<span class="hc-weekly-countdown-text">' + escapeHtml(countdownLabel) + '</span>';
+    html += '</div>';
+  }
+  if (weeklyReward.winnerName) {
+    html += '<div class="hc-weekly-winner-badge-inline">';
+    html += '<div class="hc-weekly-winner-inline-title">Weekly Winner</div>';
+    html += '<div class="hc-weekly-winner-inline-name">' + escapeHtml(weeklyReward.winnerName) + '</div>';
+    html += '</div>';
+  }
+  if (weeklyReward.terms) {
+    html += '<div class="hc-weekly-detail-card">';
+    html += '<div class="hc-weekly-detail-title">Terms</div>';
+    html += '<div class="hc-weekly-detail-body">' + nlToBr(escapeHtml(weeklyReward.terms)) + '</div>';
+    html += '</div>';
+  }
+  if (weeklyReward.rows && weeklyReward.rows.length) {
+    html += '<div class="hc-weekly-detail-card">';
+    html += '<div class="hc-weekly-detail-title">Weekly leaderboard</div>';
+    html += buildWeeklyLeaderboardHtml(weeklyReward.rows, 10);
+    html += '</div>';
+  }
+  html += '</div>';
   return html;
 }
 
@@ -447,6 +501,9 @@ function buildAuctionPillHtml(auctionInfo) {
 function buildBottomBarHtml(o) {
   var product = o.product;
   var rt = o.redemptionType;
+  if (o.weeklyReward) {
+    return '<div class="hc-detail-bottom hc-detail-bottom--empty"></div>';
+  }
   var hideFooter =
     (o.completed && rt !== 'auction' && rt !== 'raffle') ||
     (rt === 'auction' && o.userWonAuction) ||
@@ -578,7 +635,7 @@ function buildBottomBarHtml(o) {
   return html;
 }
 
-function bindDetailEvents(container, product, summary, currentUser, cardLinkStatus, ticketsResponse) {
+function bindDetailEvents(container, product, summary, currentUser, cardLinkStatus, ticketsResponse, weeklyReward) {
   var backBtn = document.getElementById('hc-back-btn');
   if (backBtn) {
     backBtn.addEventListener('click', function () {
@@ -597,6 +654,39 @@ function bindDetailEvents(container, product, summary, currentUser, cardLinkStat
   initCarouselDots(container);
 
   attachRafflePillAuction(container);
+
+  if (weeklyReward) {
+    var countdownEl = container.querySelector('.hc-weekly-countdown-text');
+    if (countdownEl) {
+      var countdownTimer = window.setInterval(function () {
+        countdownEl.textContent = buildWeeklyCountdownLabel(weeklyReward);
+      }, 1000);
+      weeklyCountdownCleanup = function () {
+        window.clearInterval(countdownTimer);
+      };
+    }
+    weeklyDetailSocketCleanup = connectWeeklyPrizeWebSocket({
+      enabled: true,
+      onMessage: function (message) {
+        if (!message || message.type !== 'weekly_prize_finalized') return;
+        showWeeklyWinnerModal(message.weekly_prize || null, weeklyReward.title);
+      },
+    });
+    window.addEventListener(
+      'hashchange',
+      function () {
+        if (weeklyDetailSocketCleanup) {
+          weeklyDetailSocketCleanup();
+          weeklyDetailSocketCleanup = null;
+        }
+        if (weeklyCountdownCleanup) {
+          weeklyCountdownCleanup();
+          weeklyCountdownCleanup = null;
+        }
+      },
+      { once: true },
+    );
+  }
 
   var stripeCents = Number(product.cash_price_cents != null ? product.cash_price_cents : product.cashPriceCents);
   var cardLockedActive = !isEarlyReleaseUser(currentUser) && cardLinkStatus === 'unlinked';
@@ -746,7 +836,12 @@ function initCarouselDots(container) {
 
 function capitalize(s) {
   if (!s) return '';
-  return s.charAt(0).toUpperCase() + String(s).slice(1);
+  return String(s)
+    .split('_')
+    .map(function (part) {
+      return part ? part.charAt(0).toUpperCase() + part.slice(1) : '';
+    })
+    .join(' ');
 }
 
 function nlToBr(s) {

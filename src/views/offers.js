@@ -10,9 +10,30 @@ import { escapeHtml, escapeAttr } from '../base-components/html.js';
 
 var OFFER_LOC_KEY = 'hc_embed_offer_location';
 
+function readStoredOfferLocationRaw() {
+  try {
+    var localRaw = localStorage.getItem(OFFER_LOC_KEY);
+    if (localRaw) return localRaw;
+  } catch (e) {}
+  try {
+    return sessionStorage.getItem(OFFER_LOC_KEY);
+  } catch (e2) {}
+  return null;
+}
+
+function persistOfferLocation(lat, lng) {
+  var payload = JSON.stringify({ lat: lat, lng: lng });
+  try {
+    localStorage.setItem(OFFER_LOC_KEY, payload);
+  } catch (e) {}
+  try {
+    sessionStorage.setItem(OFFER_LOC_KEY, payload);
+  } catch (e2) {}
+}
+
 function getStoredOfferLocation() {
   try {
-    var raw = sessionStorage.getItem(OFFER_LOC_KEY);
+    var raw = readStoredOfferLocationRaw();
     if (!raw) return null;
     var o = JSON.parse(raw);
     if (o && o.lat != null && o.lng != null) {
@@ -29,11 +50,22 @@ export function renderOffers(container) {
   loadOffers(container, 'stores');
 }
 
+async function getOffersWithLocationRetry(page, pageSize, userLoc) {
+  try {
+    return await api.getOffers(page, pageSize, userLoc);
+  } catch (e) {
+    if (userLoc && userLoc.latitude != null && userLoc.longitude != null) {
+      return api.getOffers(page, pageSize);
+    }
+    throw e;
+  }
+}
+
 async function loadOffers(container, activeTab) {
   try {
     var userLoc = getStoredOfferLocation();
     var results = await Promise.all([
-      api.getOffers(1, 50, userLoc).catch(function () {
+      getOffersWithLocationRetry(1, 50, userLoc).catch(function () {
         return {};
       }),
       api.getWildfireOffers(1, 50).catch(function () {
@@ -44,9 +76,6 @@ async function loadOffers(container, activeTab) {
       }),
       api.getFeaturedOffers('click').catch(function () {
         return [];
-      }),
-      resolveMapKitTokenAsync().catch(function () {
-        return '';
       }),
     ]);
 
@@ -1092,7 +1121,7 @@ function initOffersMap(container, cardlinked) {
 
   function applyStoredLocation() {
     try {
-      var raw = sessionStorage.getItem(OFFER_LOC_KEY);
+      var raw = readStoredOfferLocationRaw();
       if (!raw) {
         showPromptUI();
         return;
@@ -1121,7 +1150,7 @@ function initOffersMap(container, cardlinked) {
         async function (pos) {
           var lat = pos.coords.latitude;
           var lng = pos.coords.longitude;
-          sessionStorage.setItem(OFFER_LOC_KEY, JSON.stringify({ lat: lat, lng: lng }));
+          persistOfferLocation(lat, lng);
           try {
             var raw = await api.getOffers(1, 50, { latitude: lat, longitude: lng });
             var list = raw.cardlinked || raw.results || (Array.isArray(raw) ? raw : []);

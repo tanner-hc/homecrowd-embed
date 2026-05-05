@@ -232,6 +232,20 @@ export async function changePassword(payload) {
   });
 }
 
+export async function forgotPassword(email) {
+  return request('/api/auth/forgot-password/', {
+    method: 'POST',
+    body: JSON.stringify({ email: email }),
+  });
+}
+
+export async function resetPassword(payload) {
+  return request('/api/auth/reset-password/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 // --- Rewards ---
 
 export async function getRewardsSummary() {
@@ -400,7 +414,7 @@ export async function getFeaturedOffers(offerType) {
 }
 
 export async function getLeaderboard() {
-  return request('/api/users/leaderboard/');
+  return request(EMBED_BASE + '/rewards/leaderboard/');
 }
 
 export async function getUserPointsSummary(userId) {

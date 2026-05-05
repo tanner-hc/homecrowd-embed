@@ -1,23 +1,17 @@
 import * as api from '../api.js';
+import { navigate } from '../router.js';
 import visaLogoUrl from '../assets/visa-logo.png';
 import mastercardLogoUrl from '../assets/mastercard-logo.png';
 import shieldIconUrl from '../assets/shield.svg';
 import cardFilledIconUrl from '../assets/card-filled.svg';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
-import ScreenTitle from '../base-components/ScreenTitle.js';
+import NavHeader from '../base-components/NavHeader.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
 
 export function renderCards(container) {
   container.innerHTML = LoadingSpinner({ text: 'Loading cards...' });
   loadCards(container);
-}
-
-function brandLogoUrl(brand) {
-  var b = String(brand || '').toLowerCase();
-  if (b === 'visa') return visaLogoUrl;
-  if (b === 'master' || b === 'mc' || b === 'mastercard') return mastercardLogoUrl;
-  return null;
 }
 
 async function loadCards(container) {
@@ -29,15 +23,12 @@ async function loadCards(container) {
 
     var html = '';
 
-    html += '<div class="hc-cards-screen-head">';
-    html += '<div class="hc-cards-screen-title">';
-    html += ScreenTitle({
-      title: 'My Cards',
-      subtitle: 'Manage your linked payment cards',
+    html += '<div class="hc-cards-page">';
+    html += '<div class="hc-account-settings-nav">';
+    html += NavHeader({
+      title: 'Linked Cards',
+      backButtonId: 'hc-cards-back',
     });
-    html += '</div>';
-    html +=
-      '<a href="#/cards/link" class="hc-cards-add-btn" aria-label="Link new card"><span class="hc-cards-add-icon">+</span></a>';
     html += '</div>';
 
     html += '<div class="hc-security-banner">';
@@ -52,19 +43,11 @@ async function loadCards(container) {
     if (activeCards.length > 0) {
       html += '<div class="hc-cards-section">';
       activeCards.forEach(function (card) {
-        var logo = brandLogoUrl(card.brand);
         html += '<div class="hc-card-item">';
         html += '<div class="hc-card-item-content">';
-        if (logo) {
-          html +=
-            '<div class="hc-card-item-icon hc-card-item-icon--brand"><img src="' +
-            logo +
-            '" alt="" width="28" height="18" /></div>';
-        } else {
-          html += '<div class="hc-card-item-icon"><img src="' + cardFilledIconUrl + '" width="20" height="15" alt="" /></div>';
-        }
+        html += '<div class="hc-card-item-icon"><img src="' + cardFilledIconUrl + '" width="20" height="20" alt="" /></div>';
         html += '<div class="hc-card-item-details">';
-        html += '<div class="hc-card-item-number">•••• •••• •••• ' + escapeHtml(card.last4) + '</div>';
+        html += '<div class="hc-card-item-number">*** ' + escapeHtml(card.last4) + '</div>';
         if (card.nickname) {
           html += '<div class="hc-card-item-nickname">' + escapeHtml(card.nickname) + '</div>';
         }
@@ -79,16 +62,20 @@ async function loadCards(container) {
         html += '</div>';
       });
       html += '</div>';
-    } else {
-      html += '<div class="hc-cards-empty">';
-      html += '<div class="hc-cards-empty-icon" aria-hidden="true">💳</div>';
-      html += '<div class="hc-cards-empty-title">No Cards Linked</div>';
-      html +=
-        '<div class="hc-cards-empty-sub">Link your payment cards to start earning rewards on every purchase</div>';
-      html +=
-        '<a href="#/cards/link" class="hc-btn hc-btn-primary hc-btn-large hc-cards-empty-cta">Link Your First Card</a>';
-      html += '</div>';
     }
+
+    html += '<div class="hc-cards-add-section">';
+    html += '<div class="hc-cards-card-type-row">';
+    html += '<a href="#/cards/link" class="hc-cards-card-type-btn" aria-label="Add Visa card">';
+    html += '<img src="' + visaLogoUrl + '" alt="" class="hc-cards-card-type-logo hc-cards-card-type-logo--visa" />';
+    html += '<span class="hc-cards-card-type-text">Add visa</span>';
+    html += '</a>';
+    html += '<a href="#/cards/link" class="hc-cards-card-type-btn" aria-label="Add Mastercard">';
+    html += '<img src="' + mastercardLogoUrl + '" alt="" class="hc-cards-card-type-logo hc-cards-card-type-logo--mastercard" />';
+    html += '<span class="hc-cards-card-type-text">Add Mastercard</span>';
+    html += '</a>';
+    html += '</div>';
+    html += '</div>';
 
     html += '<div id="hc-deactivate-modal" class="hc-modal-overlay" style="display:none">';
     html += '<div class="hc-deactivate-modal">';
@@ -100,10 +87,18 @@ async function loadCards(container) {
     html += '</div>';
     html += '</div>';
     html += '</div>';
+    html += '</div>';
 
     container.innerHTML = html;
 
     var deactivateTarget = null;
+
+    var backBtn = document.getElementById('hc-cards-back');
+    if (backBtn) {
+      backBtn.addEventListener('click', function () {
+        navigate('/profile');
+      });
+    }
 
     container.onclick = function (e) {
       var btn = e.target.closest('[data-deactivate-id]');
