@@ -43,7 +43,11 @@ async function loadChangePassword(container) {
   html += '</div>';
   html += '<div class="hc-pd-form">';
   html +=
-    '<p class="hc-cp-intro">Enter your current password and choose a new one.</p>';
+    '<p class="hc-cp-intro">' +
+    (needCurrent
+      ? 'Enter your current password and choose a new one.'
+      : 'No password is set for this account. Enter a new password to secure your account.') +
+    '</p>';
   if (needCurrent) {
     html += '<div class="hc-form-group hc-pd-field">';
     html += '<label class="hc-label" for="hc-cp-current">Current password</label>';

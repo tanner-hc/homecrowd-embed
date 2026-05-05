@@ -74,6 +74,9 @@ export function renderLogin(container, onLoginSuccess, options) {
     '<button type="button" id="hc-toggle-pw-confirm" class="hc-toggle-pw">Show</button>' +
     '</div>' +
     '</div>' +
+    '<div id="hc-forgot-password-wrap" class="hc-login-forgot-wrap">' +
+    '<a href="#/forgot-password" class="hc-login-forgot-link">Forgot your password?</a>' +
+    '</div>' +
     '<div id="hc-signup-terms-wrap" class="hc-form-group hc-login-terms" style="display:none">' +
     '<label class="hc-login-checkbox-label">' +
     '<input id="hc-accept-terms" type="checkbox" />' +
@@ -106,6 +109,7 @@ export function renderLogin(container, onLoginSuccess, options) {
   var signupNameRow = document.getElementById('hc-signup-name-row');
   var signupConfirmWrap = document.getElementById('hc-signup-password-confirm-wrap');
   var signupTermsWrap = document.getElementById('hc-signup-terms-wrap');
+  var forgotPasswordWrap = document.getElementById('hc-forgot-password-wrap');
   var firstNameInput = document.getElementById('hc-first-name');
   var lastNameInput = document.getElementById('hc-last-name');
   var passwordConfirmInput = document.getElementById('hc-password-confirm');
@@ -124,6 +128,7 @@ export function renderLogin(container, onLoginSuccess, options) {
     signupNameRow.style.display = isSignup ? '' : 'none';
     signupConfirmWrap.style.display = isSignup ? '' : 'none';
     signupTermsWrap.style.display = isSignup ? '' : 'none';
+    forgotPasswordWrap.style.display = isSignup ? 'none' : '';
     signupModeBtn.classList.toggle('active', isSignup);
     signinModeBtn.classList.toggle('active', !isSignup);
     if (titleEls[0]) {

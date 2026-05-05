@@ -708,6 +708,65 @@ body {
   margin-top: -4px;
 }
 
+.hc-login-forgot-wrap {
+  margin: -8px 0 18px;
+  text-align: right;
+}
+
+.hc-login-forgot-link,
+.hc-auth-link {
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 13px;
+  text-align: center;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.hc-login-forgot-link {
+  display: inline-block;
+}
+
+.hc-auth-link {
+  display: block;
+  margin: 20px auto 0;
+  padding: 0;
+}
+
+.hc-auth-card .hc-login-title {
+  font-size: 40px;
+  line-height: 1.2;
+}
+
+.hc-auth-description {
+  margin-bottom: 24px;
+}
+
+.hc-auth-success {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.hc-auth-success-title {
+  font-size: 15px;
+  line-height: 1.45;
+  margin-bottom: 16px;
+}
+
+.hc-auth-success-title strong {
+  color: #ffffff;
+  font-family: 'Baikal-Bold', var(--hc-font);
+}
+
+.hc-auth-success-copy {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  line-height: 1.4;
+  margin-bottom: 24px;
+}
+
 .hc-login-checkbox-label {
   display: flex;
   align-items: center;
@@ -7066,36 +7125,36 @@ body {
 .hc-profile-card {
   background: transparent;
   padding: 0 var(--hc-spacing-lg);
-  margin: 0 0 4px;
+  margin: 0 0 12px;
   min-height: 0;
   height: auto;
   border-radius: 8px;
   box-shadow: none;
-  overflow: hidden;
+  overflow: visible;
 }
 
 
 .hc-profile-card-inner {
   position: relative;
   background: #57c6fa;
-  padding: 42px 38px 42px;
+  padding: 15px 24px 24px;
   width: 100%;
-  min-height: 0;
-  height: auto;
+  min-height: 220px;
   border-radius: 8px;
   overflow: hidden;
   box-sizing: border-box;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .hc-profile-card-tagline {
   position: absolute;
   top: 16px;
   right: 16px;
-  font-size: 9px;
-  font-weight: 500;
+  font-size: 8px;
+  font-weight: 400;
   color: #000;
-  font-family: var(--hc-font);
-  max-width: 52%;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  max-width: 58%;
   text-align: right;
   line-height: 1.25;
 }
@@ -7103,27 +7162,27 @@ body {
 .hc-profile-card-body {
   display: flex;
   flex-direction: row;
-  justify-content: flex-start;
+  justify-content: space-between;
   align-items: flex-start;
-  padding-top: clamp(20px, 6vw, 28px);
+  padding-top: 0;
   position: relative;
   z-index: 1;
-  min-height: clamp(88px, 28vw, 120px);
+  min-height: 0;
 }
 
 .hc-profile-card-user {
   flex: 1;
   min-width: 0;
-  max-width: 72%;
+  max-width: calc(100% - 110px);
   padding-right: 8px;
 }
 
 .hc-profile-card-name {
-  font-size: clamp(16px, 4.2vw + 2px, 20px);
+  font-size: 20px;
   font-weight: 700;
   color: #000;
-  font-family: var(--hc-font);
-  margin-bottom: clamp(12px, 4vw, 24px);
+  font-family: 'Baikal-Bold', var(--hc-font);
+  margin-bottom: 24px;
   line-height: 1.2;
 }
 
@@ -7135,29 +7194,30 @@ body {
 
 .hc-profile-card-stat-label {
   font-size: 8px;
-  font-weight: 500;
+  font-weight: 300;
   color: #000;
   letter-spacing: 0.5px;
-  font-family: var(--hc-font);
+  font-family: 'Baikal-Book', var(--hc-font);
 }
 
 .hc-profile-card-stat-value {
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 300;
   color: #000;
-  font-family: var(--hc-font);
+  font-family: 'Baikal-Book', var(--hc-font);
 }
 
 .hc-profile-card-stat-value--bold {
   font-weight: 700;
+  font-family: 'Baikal-Bold', var(--hc-font);
 }
 
 .hc-profile-card-logo-wrap {
   position: absolute;
-  right: clamp(-40px, -11vw, -52px);
-  bottom: clamp(-36px, -11vw, -48px);
-  width: clamp(110px, 42vw, 200px);
-  height: clamp(110px, 42vw, 200px);
+  right: -40px;
+  bottom: -40px;
+  width: 200px;
+  height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -7175,8 +7235,8 @@ body {
 
 .hc-profile-card-member {
   position: absolute;
-  bottom: clamp(10px, 3vw, 16px);
-  left: clamp(14px, 5vw, 24px);
+  bottom: 16px;
+  left: 24px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -7185,30 +7245,31 @@ body {
 
 @media (max-width: 400px) {
   .hc-profile-card {
-    margin: 0 0 10px;
+    margin-top: 0;
+    margin-bottom: 12px;
     min-height: 0;
   }
 
   .hc-profile-card-inner {
-    padding: 22px 18px 26px;
-    min-height: 0;
+    padding: 15px 24px 24px;
+    min-height: 220px;
   }
 
   .hc-profile-card-tagline {
-    top: 10px;
-    right: 10px;
-    max-width: 46%;
+    top: 16px;
+    right: 16px;
+    max-width: 58%;
     font-size: 8px;
   }
 
   .hc-profile-card-body {
-    padding-top: 20px;
-    min-height: 140px;
+    padding-top: 0;
+    min-height: 0;
   }
 
   .hc-profile-card-user {
-    max-width: 68%;
-    padding-right: 4px;
+    max-width: calc(100% - 110px);
+    padding-right: 8px;
   }
 
   .hc-profile-card-stat-value {
@@ -7223,20 +7284,20 @@ body {
   }
 
   .hc-profile-card-inner {
-    min-height: 0;
-    padding: 18px 14px 22px;
+    min-height: 220px;
+    padding: 15px 24px 24px;
   }
 
   .hc-profile-card-logo-wrap {
-    width: 100px;
-    height: 100px;
-    right: -14px;
-    bottom: -20px;
+    width: 200px;
+    height: 200px;
+    right: -40px;
+    bottom: -40px;
   }
 
   .hc-profile-card-name {
-    font-size: 15px;
-    margin-bottom: 10px;
+    font-size: 20px;
+    margin-bottom: 24px;
   }
 }
 

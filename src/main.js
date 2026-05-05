@@ -5,6 +5,8 @@ import * as api from './api.js';
 import { postToNative, onNativeMessage } from './bridge.js';
 import { navigate, getRoute, onRouteChange, startRouter, nextNavEpoch } from './router.js';
 import { renderLogin } from './views/login.js';
+import { renderForgotPassword } from './views/forgot-password.js';
+import { renderResetPassword } from './views/reset-password.js';
 import { renderIntro } from './views/intro.js';
 import { renderHome } from './views/home.js';
 import { renderRewards } from './views/rewards.js';
@@ -297,6 +299,16 @@ function routePathOnly(route) {
   return q >= 0 ? route.slice(0, q) : route;
 }
 
+function isPublicRoute(pathOnly) {
+  return (
+    pathOnly === '/login' ||
+    pathOnly === '/intro' ||
+    pathOnly === '/forgot-password' ||
+    pathOnly === '/reset-password' ||
+    /^\/reset-password\/[^/]+\/[^/]+$/.test(pathOnly)
+  );
+}
+
 function refreshProfileUserForTabs() {
   if (profileUserForTabsLoading || !user) return;
   profileUserForTabsLoading = true;
@@ -410,11 +422,11 @@ function render(route) {
   var routeEpoch = nextNavEpoch();
   var pathOnly = routePathOnly(route);
   removeRewardsPointsOverlay();
-  if (!user && pathOnly !== '/login' && pathOnly !== '/intro') {
+  if (!user && !isPublicRoute(pathOnly)) {
     navigate('/login');
     return;
   }
-  if (user && pathOnly === '/login') {
+  if (user && (pathOnly === '/login' || pathOnly === '/forgot-password' || pathOnly === '/reset-password')) {
     navigate('/' + initialView);
     return;
   }
@@ -436,6 +448,18 @@ function render(route) {
       refreshProfileUserForTabs();
       navigate('/' + initialView);
     }, { schoolId: schoolId });
+    return;
+  }
+
+  if (pathOnly === '/forgot-password') {
+    appEl.innerHTML = '';
+    renderForgotPassword(appEl);
+    return;
+  }
+
+  if (pathOnly === '/reset-password' || /^\/reset-password\/[^/]+\/[^/]+$/.test(pathOnly)) {
+    appEl.innerHTML = '';
+    renderResetPassword(appEl, route);
     return;
   }
 
