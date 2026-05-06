@@ -666,7 +666,9 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 40px;
+  position: relative;
+  width: 100%;
 }
 
 .hc-login-switch {
@@ -729,6 +731,49 @@ body {
   display: inline-block;
 }
 
+.hc-login-signup-prompt {
+  margin: -4px 0 18px;
+  color: rgba(255, 255, 255, 0.82);
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.hc-login-signup-link {
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 13px;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.hc-signup-back-btn {
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  height: 34px;
+  justify-content: center;
+  left: 0;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  top: 2px;
+  width: 34px;
+}
+
+.hc-signup-back-arrow {
+  font-size: 16px;
+  line-height: 1;
+}
+
 .hc-auth-link {
   display: block;
   margin: 20px auto 0;
@@ -781,12 +826,12 @@ body {
 
 .hc-login-title {
   font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
-  font-size: 42px;
+  font-size: 50px;
   font-weight: normal;
   text-align: center;
   color: white;
   margin-bottom: 0;
-  line-height: 1.05;
+  line-height: 65px;
 }
 
 .hc-login-card--signup .hc-login-title {
@@ -810,6 +855,12 @@ body {
   font-size: 13px;
   font-weight: 300;
   color: rgba(255, 255, 255, 0.5);
+}
+
+.hc-login-submit-btn {
+  margin-top: 20px;
+  max-width: 400px;
+  width: 100%;
 }
 
 /* Login-specific form overrides */
@@ -866,7 +917,7 @@ body {
 .hc-rewards-loading {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   flex: 1;
   min-height: 280px;
@@ -877,7 +928,6 @@ body {
 .hc-rewards-loading .hc-spinner,
 .hc-rewards-loading .hc-bc-loading-spinner-wheel {
   min-height: unset;
-  display: block;
 }
 
 .hc-rewards-loading-text,
@@ -1995,11 +2045,14 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  min-width: 40px;
   min-height: 200px;
 }
 
 .hc-spinner::after {
   content: '';
+  flex: 0 0 40px;
   width: 40px;
   height: 40px;
   border: 3px solid var(--hc-border);
@@ -4368,13 +4421,23 @@ body {
 .hc-bc-loading-spinner {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   min-height: 160px;
 }
 
 .hc-bc-loading-spinner-wheel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 100%;
   min-height: 0;
+  min-width: 0;
   padding: 24px;
 }
 
@@ -4382,6 +4445,7 @@ body {
   margin-top: 16px;
   font-size: 16px;
   color: var(--hc-text-secondary);
+  text-align: center;
 }
 
 .hc-bc-empty-subtitle {
@@ -5463,6 +5527,14 @@ body {
 
 .hc-dash-checkbox-wrap {
   padding: 5px 15px 15px;
+}
+
+.hc-dash-checkbox-help-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  padding-bottom: 6px;
 }
 
 .hc-dash-checkbox-item {
