@@ -1,7 +1,6 @@
 import * as api from '../api.js';
 import logoUrl from '../assets/header.png';
 import Input from '../base-components/Input.js';
-import Button from '../base-components/Button.js';
 
 export function renderLogin(container, onLoginSuccess, options) {
   var schoolId = options && options.schoolId ? String(options.schoolId).trim() : '';
@@ -16,15 +15,13 @@ export function renderLogin(container, onLoginSuccess, options) {
     '" alt="Homecrowd" class="hc-login-logo-img" />' +
     '</div>' +
     '<div class="hc-login-card">' +
-    '<div class="hc-login-switch">' +
-    '<button type="button" id="hc-auth-mode-signin" class="hc-login-switch-btn active">Sign In</button>' +
-    '<button type="button" id="hc-auth-mode-signup" class="hc-login-switch-btn">Sign Up</button>' +
-    '</div>' +
     '<div class="hc-login-heading">' +
+    '<button type="button" id="hc-signup-back-btn" class="hc-signup-back-btn" style="display:none" aria-label="Back to login">' +
+    '<span class="hc-signup-back-arrow">&larr;</span>' +
+    '</button>' +
     '<h1 class="hc-login-title">Shop Smarter.</h1>' +
     '<h1 class="hc-login-title">Cheer Louder.</h1>' +
     '</div>' +
-    '<p class="hc-login-subtitle">Sign in to access your rewards</p>' +
     '<div id="hc-login-error" class="hc-alert-error" style="display:none"></div>' +
     '<form id="hc-login-form">' +
     '<div id="hc-signup-name-row" class="hc-login-signup-row" style="display:none">' +
@@ -55,15 +52,13 @@ export function renderLogin(container, onLoginSuccess, options) {
       id: 'hc-email',
       name: 'email',
       type: 'email',
-      label: 'Email',
-      placeholder: 'you@example.com',
+      placeholder: 'Email',
       autocomplete: 'email',
       value: '',
     }) +
     '<div class="hc-form-group">' +
-    '<label class="hc-label" for="hc-password">Password</label>' +
     '<div style="position:relative">' +
-    '<input id="hc-password" class="hc-input" type="password" placeholder="Enter your password" autocomplete="current-password" />' +
+    '<input id="hc-password" class="hc-input" type="password" placeholder="Password" autocomplete="current-password" />' +
     '<button type="button" id="hc-toggle-pw" class="hc-toggle-pw">Show</button>' +
     '</div>' +
     '</div>' +
@@ -77,22 +72,20 @@ export function renderLogin(container, onLoginSuccess, options) {
     '<div id="hc-forgot-password-wrap" class="hc-login-forgot-wrap">' +
     '<a href="#/forgot-password" class="hc-login-forgot-link">Forgot your password?</a>' +
     '</div>' +
+    '<p id="hc-login-signup-prompt" class="hc-login-signup-prompt">' +
+    'Log in to your account to get access to your dashboard. New to the app? ' +
+    '<button type="button" id="hc-login-signup-link" class="hc-login-signup-link">Sign up</button>' +
+    '</p>' +
     '<div id="hc-signup-terms-wrap" class="hc-form-group hc-login-terms" style="display:none">' +
     '<label class="hc-login-checkbox-label">' +
     '<input id="hc-accept-terms" type="checkbox" />' +
     '<span>I agree to Terms and Privacy Policy</span>' +
     '</label>' +
     '</div>' +
-    Button({
-      id: 'hc-login-btn',
-      title: 'Sign In',
-      type: 'submit',
-      variant: 'primary',
-      className: 'hc-btn-large hc-login-submit-btn',
-    }) +
     '</form>' +
     '<div class="hc-login-footer">Powered by Homecrowd</div>' +
     '</div>' +
+    '<button class="hc-btn hc-btn-primary hc-btn-large hc-login-submit-btn" id="hc-login-btn" type="submit" form="hc-login-form">Log In</button>' +
     '</div>' +
     '</div>' +
     '</div>';
@@ -110,6 +103,9 @@ export function renderLogin(container, onLoginSuccess, options) {
   var signupConfirmWrap = document.getElementById('hc-signup-password-confirm-wrap');
   var signupTermsWrap = document.getElementById('hc-signup-terms-wrap');
   var forgotPasswordWrap = document.getElementById('hc-forgot-password-wrap');
+  var signupPrompt = document.getElementById('hc-login-signup-prompt');
+  var signupPromptBtn = document.getElementById('hc-login-signup-link');
+  var signupBackBtn = document.getElementById('hc-signup-back-btn');
   var firstNameInput = document.getElementById('hc-first-name');
   var lastNameInput = document.getElementById('hc-last-name');
   var passwordConfirmInput = document.getElementById('hc-password-confirm');
@@ -129,8 +125,14 @@ export function renderLogin(container, onLoginSuccess, options) {
     signupConfirmWrap.style.display = isSignup ? '' : 'none';
     signupTermsWrap.style.display = isSignup ? '' : 'none';
     forgotPasswordWrap.style.display = isSignup ? 'none' : '';
-    signupModeBtn.classList.toggle('active', isSignup);
-    signinModeBtn.classList.toggle('active', !isSignup);
+    signupPrompt.style.display = isSignup ? 'none' : '';
+    signupBackBtn.style.display = isSignup ? 'inline-flex' : 'none';
+    if (signupModeBtn) {
+      signupModeBtn.classList.toggle('active', isSignup);
+    }
+    if (signinModeBtn) {
+      signinModeBtn.classList.toggle('active', !isSignup);
+    }
     if (titleEls[0]) {
       titleEls[0].textContent = isSignup ? 'Create Account' : 'Shop Smarter.';
     }
@@ -138,10 +140,10 @@ export function renderLogin(container, onLoginSuccess, options) {
       titleEls[1].textContent = isSignup ? '' : 'Cheer Louder.';
       titleEls[1].style.display = isSignup ? 'none' : '';
     }
-    subtitleEl.textContent = isSignup
-      ? 'Create a Homecrowd account to continue'
-      : 'Sign in to access your rewards';
-    submitBtn.textContent = isSignup ? 'Create Account' : 'Sign In';
+    if (subtitleEl) {
+      subtitleEl.textContent = isSignup ? 'Create a Homecrowd account to continue' : '';
+    }
+    submitBtn.textContent = isSignup ? 'Create Account' : 'Log In';
     passwordInput.setAttribute('autocomplete', isSignup ? 'new-password' : 'current-password');
     errorEl.style.display = 'none';
   }
@@ -156,10 +158,20 @@ export function renderLogin(container, onLoginSuccess, options) {
     passwordConfirmInput.type = isPassword ? 'text' : 'password';
     toggleConfirmBtn.textContent = isPassword ? 'Hide' : 'Show';
   });
-  signupModeBtn.addEventListener('click', function () {
+  if (signupModeBtn) {
+    signupModeBtn.addEventListener('click', function () {
+      applyMode('signup');
+    });
+  }
+  if (signinModeBtn) {
+    signinModeBtn.addEventListener('click', function () {
+      applyMode('signin');
+    });
+  }
+  signupPromptBtn.addEventListener('click', function () {
     applyMode('signup');
   });
-  signinModeBtn.addEventListener('click', function () {
+  signupBackBtn.addEventListener('click', function () {
     applyMode('signin');
   });
 
@@ -188,7 +200,7 @@ export function renderLogin(container, onLoginSuccess, options) {
     }
 
     submitBtn.disabled = true;
-    submitBtn.textContent = isSignup ? 'Creating account...' : 'Signing in...';
+    submitBtn.textContent = isSignup ? 'Creating account...' : 'Logging in...';
     errorEl.style.display = 'none';
 
     try {
@@ -212,7 +224,7 @@ export function renderLogin(container, onLoginSuccess, options) {
       errorEl.textContent = err.message || 'Login failed';
       errorEl.style.display = 'block';
       submitBtn.disabled = false;
-      submitBtn.textContent = isSignup ? 'Create Account' : 'Sign In';
+      submitBtn.textContent = isSignup ? 'Create Account' : 'Log In';
     }
   });
 

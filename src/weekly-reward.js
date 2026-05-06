@@ -4,7 +4,11 @@ import confettiAnimation from './assets/Confetti.json';
 import { escapeHtml, escapeAttr } from './base-components/html.js';
 
 function normalizeMediaUrl(url) {
-  if (!url) return null;
+  if (url == null || url === '') return null;
+  if (typeof url === 'string') {
+    url = url.trim();
+    if (!url) return null;
+  }
   if (typeof url === 'string' && url.indexOf('s3://app.gethomecrowd.com/') === 0) {
     return url.replace('s3://app.gethomecrowd.com/', 'https://app.gethomecrowd.com/');
   }
@@ -148,8 +152,10 @@ export async function buildWeeklyRewardContext(leaderboardRes) {
   var prize = pickPrize(leaderboardRes);
   if (!prize) return null;
   if (typeof prize === 'string') {
+    var stringTitle = prize.trim();
+    if (!stringTitle) return null;
     return {
-      title: prize,
+      title: stringTitle,
       subtitle: 'Top points earner in your school wins this week',
       rewardId: null,
       imageUrl: null,
@@ -187,6 +193,10 @@ export async function buildWeeklyRewardContext(leaderboardRes) {
   var targetMs = resolveTargetMs(weekEndsAt, prize);
   var afterCutoff = Number.isFinite(targetMs) && Date.now() >= targetMs;
   var winnerInfo = resolveWinnerInfo(leaderboardRes, rows, prize);
+
+  var rewardIdStr = rewardId != null ? String(rewardId).trim() : '';
+  var imageUrlStr = imageUrl != null ? String(imageUrl).trim() : '';
+  if (!rewardIdStr && !imageUrlStr) return null;
 
   return {
     title: prize.cover_title || prize.coverTitle || prize.title || prize.name || 'Weekly reward',

@@ -499,23 +499,21 @@ async function loadRewards(container, routeEpoch) {
       html += '</div>';
     }
 
-    if (weeklyReward) {
-      var weeklyRewardItem = buildWeeklyRewardListItem(weeklyReward);
+    var weeklyRewardItem = weeklyReward ? buildWeeklyRewardListItem(weeklyReward) : null;
+    if (weeklyRewardItem) {
       html += '<div class="hc-rewards-section hc-rewards-weekly-section">';
       html += '<div class="hc-section-header hc-rewards-section-header">';
       html += '<div class="hc-section-title">Weekly Reward</div>';
       html += '</div>';
-      if (weeklyRewardItem) {
-        html += '<div class="hc-rewards-list">';
-        html += buildRewardCardHtml(
-          weeklyRewardItem,
-          { title: 'Weekly Reward', isPast: false },
-          cardLinkStatus,
-          isEarlyRelease,
-          getImageUrl,
-        );
-        html += '</div>';
-      }
+      html += '<div class="hc-rewards-list">';
+      html += buildRewardCardHtml(
+        weeklyRewardItem,
+        { title: 'Weekly Reward', isPast: false },
+        cardLinkStatus,
+        isEarlyRelease,
+        getImageUrl,
+      );
+      html += '</div>';
       html += '</div>';
     }
 

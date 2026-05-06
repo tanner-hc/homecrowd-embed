@@ -193,9 +193,16 @@ function buildCheckboxSection(userTier, checkedItems) {
   ];
   var showIntroHelp = !checkedItems.linkCard || !checkedItems.safariExtension || !checkedItems.firstPurchase;
   var html = '<div class="hc-dash-checkbox-wrap">';
+  if (showIntroHelp) {
+    html += '<div class="hc-dash-checkbox-help-row">';
+    html +=
+      '<button type="button" class="hc-dash-help-btn" data-intro-open="1" aria-label="Open onboarding help">' +
+      '<span class="hc-dash-help-icon" aria-hidden="true"></span>' +
+      '</button>';
+    html += '</div>';
+  }
   rows.forEach(function (row) {
     var done = !!checkedItems[row.key];
-    var showHelpIcon = row.key === 'linkCard' && showIntroHelp;
     html += '<div class="hc-dash-checkbox-item">';
     html += '<div class="hc-dash-checkbox-row">';
     html +=
@@ -219,12 +226,6 @@ function buildCheckboxSection(userTier, checkedItems) {
         '</a>';
     } else {
       html += '<span class="hc-dash-go-placeholder"></span>';
-    }
-    if (showHelpIcon) {
-      html +=
-        '<button type="button" class="hc-dash-help-btn" data-intro-open="1" aria-label="Open onboarding help">' +
-        '<span class="hc-dash-help-icon" aria-hidden="true"></span>' +
-        '</button>';
     }
     html += '</div></div>';
   });
@@ -439,6 +440,21 @@ function buildHomeHtml(ctx) {
     '</div>' +
     '</div>';
 
+  var leaderboardSubHtml = '';
+  if (!leaderboardActive) {
+    leaderboardSubHtml =
+      '<div class="hc-home-lb-sub">' +
+      escapeHtml('Leaderboard is not enabled for your school.') +
+      '</div>';
+  } else if (weeklyReward) {
+    leaderboardSubHtml =
+      '<div class="hc-home-lb-sub">' +
+      escapeHtml(
+        'Weekly prize winner is determined each Saturday at 4:00 PM MT for your school.',
+      ) +
+      '</div>';
+  }
+
   return (
     '<div class="hc-home">' +
     '<div class="hc-home-page-pad">' +
@@ -450,13 +466,7 @@ function buildHomeHtml(ctx) {
     combined +
     stats +
     '<div class="hc-home-lb-title">Weekly leaderboard</div>' +
-    '<div class="hc-home-lb-sub">' +
-    escapeHtml(
-      leaderboardActive
-        ? 'Weekly prize winner is determined each Saturday at 4:00 PM MT for your school.'
-        : 'Leaderboard is not enabled for your school.',
-    ) +
-    '</div>' +
+    leaderboardSubHtml +
     (leaderboardActive ? buildWeeklyRewardCardHtml(weeklyReward, 'hc-weekly-reward-card--home') : '') +
     (leaderboardActive ? buildLastWeekWinnerHtml(lastWeekWinner) : '') +
     '<div class="hc-home-lb-spacer"></div>' +
