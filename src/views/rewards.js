@@ -1,4 +1,5 @@
 import * as api from '../api.js';
+import * as analytics from '../analytics.js';
 import { resolveCardLinkStatus } from '../cardLinkStatus.js';
 import { formatDisplayNumber } from '../formatNumber.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
@@ -382,6 +383,30 @@ function formatWeeklyCountdownFromTarget(targetMs) {
   return 'Ends in: ' + seconds + 's';
 }
 
+function lookupRewardForClick(rewardIdStr, formattedRewards, weeklyRewardItem) {
+  var idStr = rewardIdStr != null ? String(rewardIdStr) : '';
+  if (!idStr) return null;
+  if (
+    weeklyRewardItem &&
+    weeklyRewardItem.id != null &&
+    String(weeklyRewardItem.id) === idStr
+  ) {
+    return weeklyRewardItem;
+  }
+  var found =
+    formattedRewards &&
+    formattedRewards.find(function (r) {
+      return String(r.id) === idStr;
+    });
+  if (found) return found;
+  return {
+    id: idStr,
+    title: '',
+    redemption_type: null,
+    points_cost: null,
+  };
+}
+
 function attachWeeklyCountdown(container) {
   if (weeklyCountdownCleanup) {
     weeklyCountdownCleanup();
@@ -586,13 +611,24 @@ async function loadRewards(container, routeEpoch) {
       var weeklyRewardCard = e.target.closest('.hc-rewards-weekly-section [data-reward-id]');
       if (weeklyRewardCard) {
         var weeklyRewardId = weeklyRewardCard.getAttribute('data-reward-id');
-        if (weeklyRewardId) window.location.hash = '#/rewards/' + encodeURIComponent(weeklyRewardId) + '?weekly=1';
+        if (weeklyRewardId) {
+          analytics.trackEmbedRewardClick(
+            lookupRewardForClick(weeklyRewardId, formattedRewards, weeklyRewardItem),
+            currentUser,
+          );
+          window.location.hash =
+            '#/rewards/' + encodeURIComponent(weeklyRewardId) + '?weekly=1';
+        }
         return;
       }
       var card = e.target.closest('[data-reward-id]');
       if (!card) return;
       var rewardId = card.getAttribute('data-reward-id');
-      window.location.hash = '#/rewards/' + rewardId;
+      analytics.trackEmbedRewardClick(
+        lookupRewardForClick(rewardId, formattedRewards, weeklyRewardItem),
+        currentUser,
+      );
+      window.location.hash = '#/rewards/' + encodeURIComponent(rewardId);
     };
 
     var linkBtn = container.querySelector('.hc-rewards-link-card-btn');

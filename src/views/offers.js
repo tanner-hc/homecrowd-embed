@@ -1,4 +1,5 @@
 import * as api from '../api.js';
+import * as analytics from '../analytics.js';
 import { resolveMapKitTokenAsync, ensureMapKitLoaded, mapKitAuthFailureWasReported } from '../mapkit-embed.js';
 import { postToNative } from '../bridge.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
@@ -1181,9 +1182,22 @@ function initOffersMap(container, cardlinked) {
 function bindSearch(inputId, gridId, allMerchants) {
   var input = document.getElementById(inputId);
   if (!input) return;
+  var searchAnalyticsTimer = null;
   input.addEventListener('input', function () {
     var q = this.value.toLowerCase().trim();
     var grid = document.getElementById(gridId);
+    if (searchAnalyticsTimer) {
+      clearTimeout(searchAnalyticsTimer);
+      searchAnalyticsTimer = null;
+    }
+    var trimmed = (this.value || '').trim();
+    if (trimmed.length >= 2) {
+      var marketplaceTab = inputId.indexOf('online') >= 0 ? 'online' : 'stores';
+      var qt = trimmed.slice(0, 200);
+      searchAnalyticsTimer = setTimeout(function () {
+        analytics.trackEmbedSearch(qt, marketplaceTab);
+      }, 700);
+    }
     if (!q) {
       grid.innerHTML = '';
       allMerchants.forEach(function (m) {
@@ -1352,6 +1366,12 @@ async function handleOffersMarketplaceCardClick(card) {
       var trackUrl = trackResult && (trackResult.tracking_url || trackResult.trackingUrl);
       if (trackUrl) {
         if (trackUrl.indexOf('http') !== 0) trackUrl = 'https://' + trackUrl;
+        analytics.trackEmbedOfferLinkClick({
+          entry_point: 'embed_marketplace',
+          flow: 'olive_tracking',
+          offer_id: offerId,
+          offer_source: 'olive',
+        });
         openExternalUrl(trackUrl);
         return;
       }
@@ -1377,6 +1397,12 @@ async function handleOffersMarketplaceCardClick(card) {
       var trackUrl = trackResult && (trackResult.tracking_url || trackResult.website);
       if (trackUrl) {
         if (trackUrl.indexOf('http') !== 0) trackUrl = 'https://' + trackUrl;
+        analytics.trackEmbedOfferLinkClick({
+          entry_point: 'embed_marketplace',
+          flow: 'wildfire_tracking',
+          merchant_id: merchantId,
+          offer_source: 'wildfire',
+        });
         openExternalUrl(trackUrl);
         return;
       }

@@ -24,6 +24,11 @@ function resolveApiBaseUrl() {
 
 var baseUrl = resolveApiBaseUrl();
 var accessToken = null;
+
+function embedClientContext() {
+  return { client_surface: 'embed', platform: 'web' };
+}
+
 var refreshToken = null;
 var wildfireAppId = '';
 
@@ -145,7 +150,10 @@ export async function login(email, password) {
   var token = 'email:' + email + ':' + password;
   var data = await request(EMBED_BASE + '/auth/login/', {
     method: 'POST',
-    body: JSON.stringify({ token: token }),
+    body: JSON.stringify({
+      token: token,
+      client_context: embedClientContext(),
+    }),
   });
   setTokens(data.access, data.refresh);
   return data;
@@ -174,7 +182,7 @@ export async function loginWithPartnerToken(token) {
 }
 
 export async function loginWithPartnerTokenAndSchool(token, schoolId) {
-  var payload = { token: token };
+  var payload = { token: token, client_context: embedClientContext() };
   if (schoolId) {
     payload.schoolId = schoolId;
   }
@@ -479,5 +487,17 @@ export async function incrementContentView(contentId) {
   return request('/api/content/' + encodeURIComponent(contentId) + '/increment_view_count/', {
     method: 'POST',
     body: JSON.stringify({}),
+  });
+}
+
+export async function postAnalyticsEvents(events) {
+  var list = Array.isArray(events) ? events : [];
+  if (!list.length) return { accepted: 0 };
+  return request('/api/analytics/events/', {
+    method: 'POST',
+    body: JSON.stringify({
+      events: list,
+      client_surface: 'embed',
+    }),
   });
 }

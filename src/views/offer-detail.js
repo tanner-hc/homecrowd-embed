@@ -1,4 +1,5 @@
 import * as api from '../api.js';
+import * as analytics from '../analytics.js';
 import { postToNative } from '../bridge.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
@@ -136,6 +137,8 @@ async function loadOfferDetail(container, offerId) {
 
     container.innerHTML = html;
 
+    analytics.trackEmbedOfferDetailView(offer);
+
     // Back button
     document.getElementById('hc-back-btn').addEventListener('click', function () {
       window.location.hash = '#/offers';
@@ -151,6 +154,13 @@ async function loadOfferDetail(container, offerId) {
           // Try to get tracking URL first
           var trackResult = await api.trackOfferClick(offer.offerId || offer.id).catch(function () { return null; });
           var url = (trackResult && trackResult.tracking_url) || shopUrl;
+          var flowUsed = trackResult && trackResult.tracking_url ? 'olive_tracking' : 'direct_or_fallback';
+          analytics.trackEmbedOfferLinkClick(
+            Object.assign({}, analytics.offerEmbedPayload(offer), {
+              entry_point: 'embed_offer_detail_shop',
+              flow: flowUsed,
+            }),
+          );
           if (url) {
             if (url.indexOf('http') !== 0) url = 'https://' + url;
             openExternalUrl(url);
