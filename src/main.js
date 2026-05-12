@@ -13,6 +13,7 @@ import { renderCards } from './views/cards.js';
 import { renderLinkCards } from './views/link-cards.js';
 import { renderRewardDetail } from './views/reward-detail.js';
 import { resolveCardLinkStatus } from './cardLinkStatus.js';
+import { buildOverallRewardContext, buildWeeklyRewardContext } from './weekly-reward.js';
 import { renderOffers } from './views/offers.js';
 import { renderOfferDetail } from './views/offer-detail.js';
 import { renderRedemptionConfirmation } from './views/redemption-confirmation.js';
@@ -467,6 +468,32 @@ function render(route) {
           });
       })
       .then(function (ctx) {
+        if (!ctx || !ctx.product || !ctx.product.id) return Promise.resolve(ctx);
+        var qIdx = route.indexOf('?');
+        var params = new URLSearchParams(qIdx >= 0 ? route.slice(qIdx + 1) : '');
+        var wantWeekly = params.get('weekly') === '1';
+        var wantOverall = params.get('overall') === '1';
+        if (!wantWeekly && !wantOverall) return Promise.resolve(ctx);
+        return api
+          .getLeaderboard()
+          .catch(function () {
+            return null;
+          })
+          .then(function (lb) {
+            if (!lb) return ctx;
+            if (wantWeekly) {
+              return buildWeeklyRewardContext(lb).then(function (w) {
+                if (w && String(w.rewardId) === String(rewardId)) ctx.weeklyReward = w;
+                return ctx;
+              });
+            }
+            return buildOverallRewardContext(lb).then(function (o) {
+              if (o && String(o.rewardId) === String(rewardId)) ctx.weeklyReward = o;
+              return ctx;
+            });
+          });
+      })
+      .then(function (ctx) {
         if (!ctx || !ctx.product || !ctx.product.id) {
           contentEl.innerHTML = '<div class="hc-alert-error">Reward not found</div>';
           return;
@@ -478,6 +505,7 @@ function render(route) {
           currentUser: ctx.currentUser,
           cardLinkStatus: resolveCardLinkStatus(ctx.currentUser, ctx.paymentCards) || 'unknown',
           ticketsResponse: ctx.ticketsResponse,
+          weeklyReward: ctx.weeklyReward || null,
         });
       })
       .catch(function (err) {

@@ -7591,6 +7591,238 @@ body {
   font-family: var(--hc-font);
 }
 
+.hc-weekly-reward-home-tile {
+  display: block;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: center;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-weekly-reward-home-tile:active .hc-weekly-reward-home-tile-card {
+  opacity: 0.88;
+}
+
+.hc-weekly-reward-home-tile-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 22px 18px;
+  border: 1px solid #f0f0f0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+}
+
+.hc-weekly-reward-home-tile-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 14px;
+}
+
+.hc-weekly-reward-home-tile-trophy {
+  display: block;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+}
+
+.hc-weekly-reward-home-tile-eyebrow {
+  display: block;
+  font-size: 13px;
+  font-weight: 400;
+  color: #999999;
+  font-family: var(--hc-font);
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.hc-weekly-reward-home-tile-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 700;
+  color: #000000;
+  font-family: var(--hc-font);
+  text-align: center;
+  line-height: 1.25;
+  margin-bottom: 8px;
+  max-width: 100%;
+}
+
+.hc-weekly-reward-home-tile-subtitle {
+  display: block;
+  font-size: 14px;
+  font-weight: 400;
+  color: #999999;
+  font-family: var(--hc-font);
+  text-align: center;
+}
+
+.hc-home-reward-tiles-row {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.hc-weekly-reward-home-tile--half {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  margin-bottom: 0;
+}
+
+.hc-weekly-reward-home-tile--half .hc-weekly-reward-home-tile-card {
+  min-height: 200px;
+  padding: 16px 10px 14px;
+  justify-content: flex-start;
+}
+
+.hc-weekly-reward-home-tile-icon-wrap--half {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 8px;
+}
+
+.hc-weekly-reward-home-tile--half .hc-weekly-reward-home-tile-trophy {
+  width: 34px;
+  height: 34px;
+}
+
+.hc-weekly-reward-home-tile--half .hc-weekly-reward-home-tile-title {
+  -webkit-line-clamp: 2;
+}
+
+.hc-weekly-lb-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  font-family: var(--hc-font);
+  box-sizing: border-box;
+}
+
+.hc-weekly-lb-modal-header {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  padding: max(12px, env(safe-area-inset-top, 0px)) 16px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  gap: 12px;
+}
+
+.hc-weekly-lb-modal-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 8px 8px 8px 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 17px;
+  color: #000000;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-weekly-lb-modal-back-icon {
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 300;
+  margin-right: 2px;
+}
+
+.hc-weekly-lb-modal-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hc-weekly-lb-modal-inner {
+  padding: 4px 20px 32px;
+  box-sizing: border-box;
+}
+
+.hc-weekly-lb-reward-hero {
+  align-self: stretch;
+  margin-bottom: 24px;
+  padding: 22px 18px;
+  background: #ffffff;
+  border-radius: 24px;
+  border: 1px solid #f0f0f0;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+}
+
+.hc-weekly-lb-image-frame {
+  width: 100%;
+  height: 240px;
+  border-radius: 18px;
+  margin-bottom: 18px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.hc-weekly-lb-reward-image {
+  width: 94%;
+  height: 94%;
+  object-fit: contain;
+  display: block;
+}
+
+.hc-weekly-lb-reward-title {
+  font-size: 21px;
+  font-weight: 600;
+  color: #000000;
+  font-family: var(--hc-font);
+  text-align: center;
+  margin-bottom: 12px;
+  line-height: 1.25;
+}
+
+.hc-weekly-lb-reward-desc {
+  font-size: 15px;
+  font-weight: 400;
+  color: #666666;
+  font-family: var(--hc-font);
+  text-align: center;
+  line-height: 23px;
+  padding: 0 2px;
+}
+
+.hc-weekly-lb-empty {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 400;
+  color: #666666;
+  font-family: var(--hc-font);
+  text-align: center;
+  padding: 24px 0;
+}
+
 .hc-weekly-reward-card {
   display: flex;
   align-items: stretch;

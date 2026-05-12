@@ -4,7 +4,14 @@ import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { buildDashboardHalfCircleGaugeHtml } from '../base-components/DashboardHalfCircleGauge.js';
-import { connectWeeklyPrizeWebSocket, showWeeklyWinnerModal } from '../weekly-reward.js';
+import {
+  buildOverallRewardContext,
+  buildWeeklyRewardContext,
+  buildWeeklyRewardHomeTileHtml,
+  connectWeeklyPrizeWebSocket,
+  openWeeklyLeaderboardModal,
+  showWeeklyWinnerModal,
+} from '../weekly-reward.js';
 import chartUpIconSvg from '../assets/icons/chart-up.svg?raw';
 import activityIconSvg from '../assets/icons/activity.svg?raw';
 import checkmarkIconSvg from '../assets/icons/checkmark.svg?raw';
@@ -22,6 +29,7 @@ var instructionTabGuardHandler = null;
 var instructionRepositionHandler = null;
 var instructionScrollEl = null;
 var weeklySocketCleanup = null;
+var overallSocketCleanup = null;
 var curvedArrowSvgHtml =
   '<svg class="hc-global-instruction-arrow-svg" viewBox="0 0 140 160" fill="none" aria-hidden="true">' +
   '<path d="M38 14 C28 45 25 85 45 105 C60 120 86 118 108 112" stroke="#00B8D4" stroke-width="13" stroke-opacity="0.35" stroke-linecap="round" stroke-linejoin="round"></path>' +
@@ -540,6 +548,28 @@ function buildHomeHtml(ctx) {
   var checkedItems = ctx.checkedItems;
   var weeklyPts = ctx.weeklyPoints;
   var streak = ctx.streakDays;
+  var showWeeklyTile = ctx.leaderboardSectionActive && ctx.weeklyReward && ctx.weeklyReward.rewardId;
+  var showOverallTile = ctx.leaderboardSectionActive && ctx.overallReward && ctx.overallReward.rewardId;
+  var bothRewardTiles = showWeeklyTile && showOverallTile;
+  var rewardTilesHtml = '';
+  if (showWeeklyTile || showOverallTile) {
+    rewardTilesHtml = '<div class="hc-home-reward-tiles-row">';
+    if (showWeeklyTile) {
+      rewardTilesHtml += buildWeeklyRewardHomeTileHtml(
+        ctx.weeklyReward.title,
+        ctx.weeklyReward.rewardId,
+        { eyebrow: 'Weekly reward', halfWidth: bothRewardTiles, tileKind: 'weekly' },
+      );
+    }
+    if (showOverallTile) {
+      rewardTilesHtml += buildWeeklyRewardHomeTileHtml(
+        ctx.overallReward.title,
+        ctx.overallReward.rewardId,
+        { eyebrow: 'Overall reward', halfWidth: bothRewardTiles, tileKind: 'overall' },
+      );
+    }
+    rewardTilesHtml += '</div>';
+  }
   var bannerUrl = ctx.bannerUrl;
   var schoolHeroIsLogo = ctx.schoolHeroIsLogo;
   var schoolCashback =
@@ -624,6 +654,7 @@ function buildHomeHtml(ctx) {
     welcomeContribHtml +
     '</div>' +
     combined +
+    rewardTilesHtml +
     stats +
     recentActivityHtml +
     '</div>' +
@@ -816,6 +847,26 @@ async function fetchDashboardPayload() {
     } catch (_e) { }
   }
 
+  var leaderboardSectionActive = !!(
+    leaderboardRes &&
+    leaderboardRes.success &&
+    leaderboardRes.leaderboard_active !== false
+  );
+  var weeklyReward = null;
+  var overallReward = null;
+  if (leaderboardSectionActive) {
+    try {
+      weeklyReward = await buildWeeklyRewardContext(leaderboardRes);
+    } catch (_e) {
+      weeklyReward = null;
+    }
+    try {
+      overallReward = await buildOverallRewardContext(leaderboardRes);
+    } catch (_e2) {
+      overallReward = null;
+    }
+  }
+
   return {
     user: freshUser,
     userTier: userTier,
@@ -827,6 +878,10 @@ async function fetchDashboardPayload() {
     showInstructionOverlay: showInstructionOverlay,
     schoolCashback: schoolCashback,
     transactions: transactionsForList,
+    leaderboardSectionActive: leaderboardSectionActive,
+    weeklyReward: weeklyReward,
+    overallReward: overallReward,
+    leaderboardRows: leaderboardList,
   };
 }
 
@@ -835,6 +890,10 @@ function loadHome(container) {
   if (weeklySocketCleanup) {
     weeklySocketCleanup();
     weeklySocketCleanup = null;
+  }
+  if (overallSocketCleanup) {
+    overallSocketCleanup();
+    overallSocketCleanup = null;
   }
   container.innerHTML = LoadingSpinner({
     text: 'Loading your activity...',
@@ -956,14 +1015,61 @@ function loadHome(container) {
           mountInstructionOverlay(container);
         });
       }
+      container._hcWeeklyLbPayload =
+        ctx.leaderboardSectionActive && ctx.weeklyReward && ctx.weeklyReward.rewardId
+          ? {
+            rows: ctx.leaderboardRows || [],
+            rewardTitle: ctx.weeklyReward.title || '',
+            rewardDescription: ctx.weeklyReward.description || '',
+            rewardImageUrl: ctx.weeklyReward.imageUrl || null,
+          }
+          : null;
+      container._hcOverallLbPayload =
+        ctx.leaderboardSectionActive && ctx.overallReward && ctx.overallReward.rewardId
+          ? {
+            rows: (ctx.overallReward && ctx.overallReward.rows) || [],
+            rewardTitle: ctx.overallReward.title || '',
+            rewardDescription: ctx.overallReward.description || '',
+            rewardImageUrl: ctx.overallReward.imageUrl || null,
+          }
+          : null;
+      var weeklyLbBtn = container.querySelector('[data-home-lb-tile="weekly"]');
+      if (weeklyLbBtn) {
+        weeklyLbBtn.addEventListener('click', function () {
+          var payload = container._hcWeeklyLbPayload;
+          if (payload) openWeeklyLeaderboardModal(payload);
+        });
+      }
+      var overallLbBtn = container.querySelector('[data-home-lb-tile="overall"]');
+      if (overallLbBtn) {
+        overallLbBtn.addEventListener('click', function () {
+          var payload = container._hcOverallLbPayload;
+          if (payload) openWeeklyLeaderboardModal(payload);
+        });
+      }
       mountHomeRecentActivity(container);
       var activeSchool = ctx.user && (ctx.user.activeSchool || ctx.user.active_school);
       var hasSchoolId = !!(activeSchool && activeSchool.id != null);
+      var weeklyPrizeTitle = ctx.weeklyReward && ctx.weeklyReward.title ? ctx.weeklyReward.title : null;
+      var overallPrizeTitle = ctx.overallReward && ctx.overallReward.title ? ctx.overallReward.title : null;
       weeklySocketCleanup = connectWeeklyPrizeWebSocket({
         enabled: hasSchoolId,
+        prizeType: 'weekly',
         onMessage: function (message) {
           if (!message || message.type !== 'weekly_prize_finalized') return;
-          showWeeklyWinnerModal(message.weekly_prize || null, null);
+          showWeeklyWinnerModal(message.weekly_prize || null, weeklyPrizeTitle, { prizeKind: 'weekly' });
+          loadHome(container);
+        },
+      });
+      overallSocketCleanup = connectWeeklyPrizeWebSocket({
+        enabled: hasSchoolId,
+        prizeType: 'overall',
+        onMessage: function (message) {
+          if (!message || message.type !== 'overall_prize_finalized') return;
+          showWeeklyWinnerModal(message.overall_prize || null, overallPrizeTitle, {
+            prizeKind: 'overall',
+            winnerBadgeLabel: 'Overall Winner',
+          });
           loadHome(container);
         },
       });
