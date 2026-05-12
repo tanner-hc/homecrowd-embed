@@ -1157,7 +1157,74 @@ function initOffersMap(container, cardlinked) {
     }
   }
 
+  function applyFreshLocation(lat, lng) {
+    if (lat == null || lng == null) return;
+    persistOfferLocation(lat, lng);
+    api
+      .getOffers(1, 50, { latitude: lat, longitude: lng })
+      .then(function (raw) {
+        var list = raw.cardlinked || raw.results || (Array.isArray(raw) ? raw : []);
+        container._hcCardlinkedStores = list;
+        var grid = document.getElementById('hc-stores-grid');
+        if (grid) {
+          var gridHtml = '';
+          list.forEach(function (m) {
+            gridHtml += renderMerchantCard(m);
+          });
+          grid.innerHTML = gridHtml;
+        }
+        rebindStoresSearchClean(list);
+      })
+      .catch(function () {})
+      .then(function () {
+        showMapUI();
+        renderMap(lat, lng);
+      });
+  }
+
+  function rebindStoresSearchClean(list) {
+    var oldInput = document.getElementById('hc-search-stores');
+    if (oldInput && oldInput.parentNode) {
+      var fresh = oldInput.cloneNode(true);
+      oldInput.parentNode.replaceChild(fresh, oldInput);
+    }
+    bindSearch('hc-search-stores', 'hc-stores-grid', list);
+  }
+
+  function kickOffParallelGpsRequest() {
+    if (!navigator.geolocation) return;
+    function doRequest() {
+      try {
+        navigator.geolocation.getCurrentPosition(
+          function (pos) {
+            applyFreshLocation(pos.coords.latitude, pos.coords.longitude);
+          },
+          function () {},
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+        );
+      } catch (e) {}
+    }
+    if (navigator.permissions && typeof navigator.permissions.query === 'function') {
+      try {
+        navigator.permissions
+          .query({ name: 'geolocation' })
+          .then(function (status) {
+            if (status && status.state === 'denied') return;
+            doRequest();
+          })
+          .catch(function () {
+            doRequest();
+          });
+      } catch (e) {
+        doRequest();
+      }
+    } else {
+      doRequest();
+    }
+  }
+
   applyStoredLocation();
+  kickOffParallelGpsRequest();
 
   if (btn) {
     btn.addEventListener('click', function () {
@@ -1166,27 +1233,9 @@ function initOffersMap(container, cardlinked) {
       }
       btn.disabled = true;
       navigator.geolocation.getCurrentPosition(
-        async function (pos) {
-          var lat = pos.coords.latitude;
-          var lng = pos.coords.longitude;
-          persistOfferLocation(lat, lng);
-          try {
-            var raw = await api.getOffers(1, 50, { latitude: lat, longitude: lng });
-            var list = raw.cardlinked || raw.results || (Array.isArray(raw) ? raw : []);
-            container._hcCardlinkedStores = list;
-            var grid = document.getElementById('hc-stores-grid');
-            if (grid) {
-              var gridHtml = '';
-              list.forEach(function (m) {
-                gridHtml += renderMerchantCard(m);
-              });
-              grid.innerHTML = gridHtml;
-            }
-            bindSearch('hc-search-stores', 'hc-stores-grid', list);
-          } catch (e) {}
+        function (pos) {
           btn.disabled = false;
-          showMapUI();
-          renderMap(lat, lng);
+          applyFreshLocation(pos.coords.latitude, pos.coords.longitude);
         },
         function () {
           btn.disabled = false;
