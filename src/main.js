@@ -316,12 +316,12 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
     '<span class="hc-tab-icon-wrap">' +
     tabSvgInline(houseFilledSvg) +
     '</span><span class="hc-tab-label">Home</span></a>' +
-    '<a href="#/rewards" class="hc-tab-link' +
-    rewardsActive +
+    '<a href="#/offers" class="hc-tab-link' +
+    offersActive +
     '">' +
     '<span class="hc-tab-icon-wrap">' +
-    tabSvgInline(giftFilledSvg) +
-    '</span><span class="hc-tab-label">Rewards</span></a>';
+    tabSvgInline(bagSvg) +
+    '</span><span class="hc-tab-label">Offers</span></a>';
 
   if (contentTabEnabled) {
     html +=
@@ -334,12 +334,12 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
   }
 
   html +=
-    '<a href="#/offers" class="hc-tab-link' +
-    offersActive +
+    '<a href="#/rewards" class="hc-tab-link' +
+    rewardsActive +
     '">' +
     '<span class="hc-tab-icon-wrap">' +
-    tabSvgInline(bagSvg) +
-    '</span><span class="hc-tab-label">Offers</span></a>' +
+    tabSvgInline(giftFilledSvg) +
+    '</span><span class="hc-tab-label">Rewards</span></a>' +
     '<a href="#/profile" class="hc-tab-link' +
     profileActive +
     '">' +

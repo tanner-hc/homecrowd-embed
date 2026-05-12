@@ -1,5 +1,6 @@
 import * as api from '../api.js';
 import * as analytics from '../analytics.js';
+import { mountBrowserExtensionInline } from './browser-extension.js';
 import { resolveMapKitTokenAsync, ensureMapKitLoaded, mapKitAuthFailureWasReported } from '../mapkit-embed.js';
 import { postToNative } from '../bridge.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
@@ -107,13 +108,17 @@ async function loadOffers(container, activeTab) {
 
     html += '<div class="hc-offers-tabs">';
     html +=
-      '<button class="hc-offers-tab' +
+      '<button type="button" class="hc-offers-tab' +
       (activeTab === 'stores' ? ' active' : '') +
-      '" data-tab="stores">Stores</button>';
+      '" data-tab="stores">In-person</button>';
     html +=
-      '<button class="hc-offers-tab' +
+      '<button type="button" class="hc-offers-tab' +
       (activeTab === 'online' ? ' active' : '') +
-      '" data-tab="online">Online</button>';
+      '" data-tab="online">In-app</button>';
+    html +=
+      '<button type="button" class="hc-offers-tab' +
+      (activeTab === 'extension' ? ' active' : '') +
+      '" data-tab="extension">Online</button>';
     html += '</div>';
 
     html +=
@@ -196,6 +201,14 @@ async function loadOffers(container, activeTab) {
     html += '<div style="height:80px"></div>';
     html += '</div>';
 
+    html +=
+      '<div id="hc-tab-extension" class="hc-tab-content"' +
+      (activeTab !== 'extension' ? ' style="display:none"' : '') +
+      '>';
+    html += '<div id="hc-offers-extension-panel" class="hc-offers-extension-panel"></div>';
+    html += '<div style="height:80px"></div>';
+    html += '</div>';
+
     html += '</div>';
 
     container.innerHTML = html;
@@ -210,6 +223,11 @@ async function loadOffers(container, activeTab) {
         this.classList.add('active');
         document.getElementById('hc-tab-stores').style.display = targetTab === 'stores' ? '' : 'none';
         document.getElementById('hc-tab-online').style.display = targetTab === 'online' ? '' : 'none';
+        document.getElementById('hc-tab-extension').style.display = targetTab === 'extension' ? '' : 'none';
+        if (targetTab === 'extension') {
+          var extPanel = document.getElementById('hc-offers-extension-panel');
+          mountBrowserExtensionInline(extPanel);
+        }
       });
     });
 

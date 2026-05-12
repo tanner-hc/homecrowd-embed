@@ -6457,12 +6457,37 @@ body {
   min-height: 100%;
 }
 
+.hc-browser-extension--inline {
+  min-height: 0;
+  padding-bottom: 0;
+}
+
+.hc-offers-extension-panel {
+  min-height: 120px;
+}
+
 .hc-be-body {
   padding: 20px 24px 24px;
 }
 
 .hc-be-content {
   padding-top: 20px;
+}
+
+.hc-be-enabled-badge {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: rgba(76, 175, 80, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--hc-success);
+  line-height: 1;
+  font-family: var(--hc-font);
 }
 
 .hc-be-title {
