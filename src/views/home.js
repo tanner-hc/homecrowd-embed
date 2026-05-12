@@ -4,12 +4,7 @@ import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { buildDashboardHalfCircleGaugeHtml } from '../base-components/DashboardHalfCircleGauge.js';
-import {
-  buildWeeklyRewardCardHtml,
-  buildWeeklyRewardContext,
-  connectWeeklyPrizeWebSocket,
-  showWeeklyWinnerModal,
-} from '../weekly-reward.js';
+import { connectWeeklyPrizeWebSocket, showWeeklyWinnerModal } from '../weekly-reward.js';
 import chartUpIconSvg from '../assets/icons/chart-up.svg?raw';
 import activityIconSvg from '../assets/icons/activity.svg?raw';
 import checkmarkIconSvg from '../assets/icons/checkmark.svg?raw';
@@ -97,32 +92,244 @@ function getOnboardingChecks(tier) {
   };
 }
 
-function formatLeaderboardName(fullName) {
-  var parts = String(fullName || '')
-    .trim()
-    .split(/\s+/);
-  if (parts.length === 0) return '';
-  if (parts.length === 1) return parts[0];
-  return parts[0] + ' ' + parts[parts.length - 1].charAt(0) + '.';
+var STATEMENT_PREFIXES = [
+  /^pos\s+purchase\s+/i,
+  /^purchase\s+/i,
+  /^pos\s+debit\s+/i,
+  /^pos\s+credit\s+/i,
+  /^pos\s+/i,
+  /^debit\s+/i,
+  /^credit\s+/i,
+  /^checkcard\s+/i,
+  /^ach\s+payment\s+/i,
+  /^ach\s+/i,
+];
+
+function stripStatementPrefixes(value) {
+  if (!value || typeof value !== 'string') return '';
+  var s = value.trim();
+  var changed = true;
+  while (changed) {
+    changed = false;
+    var i;
+    for (i = 0; i < STATEMENT_PREFIXES.length; i++) {
+      var re = STATEMENT_PREFIXES[i];
+      var next = s.replace(re, '').trim();
+      if (next !== s) {
+        s = next;
+        changed = true;
+      }
+    }
+  }
+  return s;
 }
 
-function rankSuffix(rank) {
-  var r = Number(rank);
-  if (r === 1) return 'st';
-  if (r === 2) return 'nd';
-  if (r === 3) return 'rd';
-  return 'th';
+function titleCaseIfAllCapsShouting(value) {
+  var t = value.trim();
+  if (t.length < 2 || t.length > 80) return t;
+  if (!/^[A-Z0-9\s&.'*-]+$/.test(t)) return t;
+  return t
+    .split(/\s+/)
+    .map(function (word) {
+      if (!word) return word;
+      if (/^\d+$/.test(word)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
 }
 
-function calculateWeeklyPoints(leaderboardRes, leaderboardList, userId) {
-  if (leaderboardRes && leaderboardRes.user_stats && leaderboardRes.user_stats.points != null) {
+function transactionMerchantDisplayName(transaction) {
+  if (!transaction) return '';
+  var m = transaction.merchant;
+  var raw =
+    (m && m.name) ||
+    transaction.merchant_name ||
+    transaction.wildfire_merchant_name ||
+    transaction.olive_merchant_name ||
+    transaction.reward_name ||
+    (typeof transaction.description === 'string' ? transaction.description.trim() : '') ||
+    (typeof transaction.raw_descriptor === 'string' ? transaction.raw_descriptor.trim() : '') ||
+    '';
+  var stripped = stripStatementPrefixes(raw);
+  return titleCaseIfAllCapsShouting(stripped);
+}
+
+function getTransactionsArray(transactionsRes) {
+  if (!transactionsRes) return [];
+  var txns = transactionsRes.transactions || transactionsRes.results || transactionsRes;
+  return Array.isArray(txns) ? txns : [];
+}
+
+function filterTransactionsByDate(transactions, filter) {
+  var now = new Date();
+  var startOfWeek = new Date(now);
+  var startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  var day = startOfWeek.getDay();
+  var diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+  startOfWeek.setDate(diff);
+  startOfWeek.setHours(0, 0, 0, 0);
+  if (!Array.isArray(transactions)) return [];
+  return transactions.filter(function (transaction) {
+    var d = transaction.transaction_date || transaction.transactionDate;
+    var transactionDate = new Date(d);
+    if (filter === 'This week') return transactionDate >= startOfWeek;
+    if (filter === 'This month') return transactionDate >= startOfMonth;
+    return true;
+  });
+}
+
+function calculateWeeklyPoints(leaderboardRes, leaderboardList, userId, transactions) {
+  var lbOn =
+    leaderboardRes &&
+    leaderboardRes.success &&
+    leaderboardRes.leaderboard_active !== false;
+  if (lbOn && leaderboardRes.user_stats && leaderboardRes.user_stats.points != null) {
     return Number(leaderboardRes.user_stats.points) || 0;
   }
-  if (!userId || !Array.isArray(leaderboardList)) return 0;
-  var me = leaderboardList.find(function (item) {
-    return String(item.id) === String(userId);
+  if (lbOn && leaderboardRes.userStats && leaderboardRes.userStats.points != null) {
+    return Number(leaderboardRes.userStats.points) || 0;
+  }
+  if (userId && Array.isArray(leaderboardList)) {
+    var me = leaderboardList.find(function (item) {
+      return String(item.id) === String(userId);
+    });
+    if (me && me.points != null) return Number(me.points) || 0;
+  }
+  var weekTxns = filterTransactionsByDate(transactions || [], 'This week');
+  var sum = 0;
+  var j;
+  for (j = 0; j < weekTxns.length; j++) {
+    var t = weekTxns[j];
+    sum += Number(t.points_earned != null ? t.points_earned : t.pointsEarned) || 0;
+  }
+  return sum;
+}
+
+function formatTransactionDateHome(dateString) {
+  var date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+}
+
+function getPaymentMethodHome(transaction) {
+  if (transaction.wildfire_merchant_id || transaction.wildfire_merchant_name) return 'Online';
+  if (transaction.card_nickname) return transaction.card_nickname;
+  var methods = ['Visa', 'Amex', 'Master Card'];
+  var hash = 0;
+  var transactionId = transaction.id || (transaction.merchant && transaction.merchant.name) || '0';
+  var s = String(transactionId);
+  var i;
+  for (i = 0; i < s.length; i++) {
+    var char = s.charCodeAt(i);
+    hash = hash * 31 + char;
+    hash = hash % 2147483647;
+  }
+  return methods[Math.abs(hash) % methods.length];
+}
+
+function filterRecentTransactions(transactions, searchText) {
+  var list = Array.isArray(transactions) ? transactions.slice() : [];
+  var q = String(searchText || '').trim().toLowerCase();
+  if (!q) return list;
+  return list.filter(function (t) {
+    var blob = [
+      transactionMerchantDisplayName(t),
+      t.merchant_name,
+      t.wildfire_merchant_name,
+      t.olive_merchant_name,
+      t.reward_name,
+      t.raw_descriptor,
+      t.description,
+      String(t.amount != null ? t.amount : ''),
+      String(t.points_earned != null ? t.points_earned : t.pointsEarned != null ? t.pointsEarned : ''),
+      getPaymentMethodHome(t),
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return blob.indexOf(q) >= 0;
   });
-  return me && me.points != null ? Number(me.points) : 0;
+}
+
+function buildHomeTransactionRowHtml(t) {
+  var merchantLabel = transactionMerchantDisplayName(t);
+  var dateRaw = t.transaction_date || t.transactionDate;
+  var payInfo =
+    escapeHtml(getPaymentMethodHome(t)) + ' • ' + escapeHtml(formatTransactionDateHome(dateRaw));
+  var isStripe = !!(t.isStripeRewardPurchase || t.is_stripe_reward_purchase);
+  var amt =
+    t.amount != null && String(t.amount).trim() !== ''
+      ? parseFloat(t.amount)
+      : NaN;
+  var amtStr = Number.isFinite(amt) ? amt.toFixed(2) : '0.00';
+  var ptsRaw = Number(t.points_earned != null ? t.points_earned : t.pointsEarned);
+  var ptsNum = Number.isFinite(ptsRaw) ? ptsRaw : 0;
+  var ptsLine =
+    ptsNum > 0
+      ? '+' + String(ptsNum)
+      : String(ptsNum || 0) + ' pts';
+  var rightHtml = isStripe
+    ? '<div class="hc-home-tx-stripe-only">$' + escapeHtml(amtStr) + '</div>'
+    : '<div class="hc-home-tx-points">' +
+      escapeHtml(ptsLine) +
+      '</div>' +
+      '<div class="hc-home-tx-amount">$' +
+      escapeHtml(amtStr) +
+      '</div>';
+  return (
+    '<div class="hc-home-tx-row">' +
+    '<div class="hc-home-tx-left">' +
+    '<div class="hc-home-tx-merchant">' +
+    escapeHtml(merchantLabel || 'Purchase') +
+    '</div>' +
+    '<div class="hc-home-tx-meta">' +
+    payInfo +
+    '</div>' +
+    '</div>' +
+    '<div class="hc-home-tx-right">' +
+    rightHtml +
+    '</div>' +
+    '</div>'
+  );
+}
+
+function buildHomeRecentActivityBodyHtml(transactions, searchText) {
+  var filtered = filterRecentTransactions(transactions, searchText);
+  if (!transactions.length) {
+    return (
+      '<div class="hc-home-activity-empty">' +
+      '<div class="hc-home-activity-empty-title">No purchases yet</div>' +
+      '<div class="hc-home-activity-empty-sub">When you shop with a linked card, your transactions will show up here.</div>' +
+      '</div>'
+    );
+  }
+  if (!filtered.length) {
+    return (
+      '<div class="hc-home-activity-empty">' +
+      '<div class="hc-home-activity-empty-title">No matches</div>' +
+      '<div class="hc-home-activity-empty-sub">Try a different store name, amount, or keyword.</div>' +
+      '</div>'
+    );
+  }
+  var html = '';
+  var i;
+  for (i = 0; i < filtered.length; i++) {
+    html += buildHomeTransactionRowHtml(filtered[i]);
+  }
+  return html;
+}
+
+function mountHomeRecentActivity(container) {
+  var txs = container._hcHomeRecentTransactions;
+  if (!Array.isArray(txs)) txs = [];
+  var searchEl = container.querySelector('#hc-home-activity-search');
+  var bodyEl = container.querySelector('#hc-home-activity-body');
+  if (!searchEl || !bodyEl) return;
+  function sync() {
+    bodyEl.innerHTML = buildHomeRecentActivityBodyHtml(txs, searchEl.value);
+  }
+  searchEl.addEventListener('input', sync);
+  sync();
 }
 
 function buildGaugeBlock(user, userTier) {
@@ -327,87 +534,10 @@ function resolveSchoolHeroImage(user) {
   return { url: '', isLogo: false };
 }
 
-function pickLastWeekWinner(raw) {
-  if (!raw || typeof raw !== 'object') return null;
-  var name =
-    raw.display_name != null && String(raw.display_name).trim()
-      ? String(raw.display_name).trim()
-      : raw.displayName != null && String(raw.displayName).trim()
-        ? String(raw.displayName).trim()
-        : raw.name != null && String(raw.name).trim()
-          ? String(raw.name).trim()
-          : '';
-  if (!name) return null;
-  var pts = raw.points != null ? Number(raw.points) : 0;
-  return { name: name, points: Number.isFinite(pts) ? pts : 0 };
-}
-
-function buildLastWeekWinnerHtml(winner) {
-  if (!winner) return '';
-  var ptsLine =
-    winner.points === 1 ? '1 point' : String(winner.points || 0) + ' points';
-  return (
-    '<div class="hc-home-lb-winner">' +
-    '<div class="hc-home-lb-winner-label">Last week\'s winner</div>' +
-    '<div class="hc-home-lb-winner-name">' +
-    escapeHtml(winner.name) +
-    '</div>' +
-    '<div class="hc-home-lb-winner-meta">' +
-    escapeHtml(ptsLine) +
-    '</div>' +
-    '</div>'
-  );
-}
-
-function buildLeaderboardRows(items, leaderboardActive) {
-  if (!leaderboardActive) {
-    return (
-      '<div class="hc-home-empty">' +
-      '<div class="hc-home-empty-title">Leaderboard unavailable</div>' +
-      '<div class="hc-home-empty-sub">Your school has turned off the weekly leaderboard.</div>' +
-      '</div>'
-    );
-  }
-  if (!items.length) {
-    return (
-      '<div class="hc-home-empty">' +
-      '<div class="hc-home-empty-title">No points earned yet this week</div>' +
-      '<div class="hc-home-empty-sub">Be the first at your school to earn points this week!</div>' +
-      '</div>'
-    );
-  }
-  var html = '';
-  items.forEach(function (item) {
-    var top = item.rank === 1 ? ' hc-home-lb-row--top' : '';
-    html += '<div class="hc-home-lb-row' + top + '">';
-    html += '<div class="hc-home-lb-left">';
-    html += '<div class="hc-home-lb-name">' + escapeHtml(formatLeaderboardName(item.name)) + '</div>';
-    html +=
-      '<div class="hc-home-lb-points">' +
-      escapeHtml(String(item.points)) +
-      ' ' +
-      (item.points === 1 ? 'point' : 'points') +
-      '</div>';
-    html += '</div>';
-    html += '<div class="hc-home-lb-right">';
-    html +=
-      '<div class="hc-home-lb-rank">' +
-      escapeHtml(String(item.rank)) +
-      escapeHtml(rankSuffix(item.rank)) +
-      ' Place</div>';
-    html += '</div></div>';
-  });
-  return html;
-}
-
 function buildHomeHtml(ctx) {
   var user = ctx.user;
   var userTier = ctx.userTier;
   var checkedItems = ctx.checkedItems;
-  var leaderboardTop = ctx.leaderboardTop;
-  var leaderboardActive = ctx.leaderboardActive !== false;
-  var lastWeekWinner = ctx.lastWeekWinner || null;
-  var weeklyReward = ctx.weeklyReward || null;
   var weeklyPts = ctx.weeklyPoints;
   var streak = ctx.streakDays;
   var bannerUrl = ctx.bannerUrl;
@@ -446,11 +576,10 @@ function buildHomeHtml(ctx) {
     '<span class="hc-home-stat-icon-inner hc-home-stat-icon-inner--week" aria-hidden="true">' +
     svgAddClass(chartUpIconSvg, 'hc-home-stat-svg') +
     '</span></div>' +
-    '<div class="hc-home-stat-value ' +
-    (leaderboardActive ? 'hc-home-stat-value--pos' : 'hc-home-stat-value--muted') +
-    '">' +
-    (leaderboardActive ? '+ ' + escapeHtml(String(weeklyPts)) + ' pts' : '—') +
-    '</div>' +
+    '<div class="hc-home-stat-value hc-home-stat-value--pos">' +
+    '+ ' +
+    escapeHtml(String(weeklyPts)) +
+    ' pts</div>' +
     '</div>' +
     '<div class="hc-home-stat-tile">' +
     '<div class="hc-home-stat-label">Streak</div>' +
@@ -464,20 +593,12 @@ function buildHomeHtml(ctx) {
     '</div>' +
     '</div>';
 
-  var leaderboardSubHtml = '';
-  if (!leaderboardActive) {
-    leaderboardSubHtml =
-      '<div class="hc-home-lb-sub">' +
-      escapeHtml('Leaderboard is not enabled for your school.') +
-      '</div>';
-  } else if (weeklyReward) {
-    leaderboardSubHtml =
-      '<div class="hc-home-lb-sub">' +
-      escapeHtml(
-        'Weekly prize winner is determined each Saturday at 4:00 PM MT for your school.',
-      ) +
-      '</div>';
-  }
+  var recentActivityHtml =
+    '<div class="hc-home-activity">' +
+    '<div class="hc-home-activity-title">Recent activity</div>' +
+    '<input type="search" id="hc-home-activity-search" class="hc-home-activity-search" placeholder="Search transactions" autocomplete="off" />' +
+    '<div id="hc-home-activity-body" class="hc-home-activity-body"></div>' +
+    '</div>';
 
   var welcomeContribHtml = '';
   if (showSchoolContrib) {
@@ -504,12 +625,7 @@ function buildHomeHtml(ctx) {
     '</div>' +
     combined +
     stats +
-    '<div class="hc-home-lb-title">Weekly leaderboard</div>' +
-    leaderboardSubHtml +
-    (leaderboardActive ? buildWeeklyRewardCardHtml(weeklyReward, 'hc-weekly-reward-card--home') : '') +
-    (leaderboardActive ? buildLastWeekWinnerHtml(lastWeekWinner) : '') +
-    '<div class="hc-home-lb-spacer"></div>' +
-    buildLeaderboardRows(leaderboardTop, leaderboardActive) +
+    recentActivityHtml +
     '</div>' +
     buildIntroModalHtml() +
     '</div>'
@@ -631,13 +747,25 @@ async function fetchDashboardPayload() {
     api.getOliveTransactions().catch(function () {
       return null;
     }),
+    api.getUserProfile().catch(function () {
+      return null;
+    }),
+    api.getLeaderboard().catch(function () {
+      return null;
+    }),
   ]);
   var freshUser = dashPair[0];
   var oliveTransactionsRes = dashPair[1];
+  var profileUser = dashPair[2];
+  var leaderboardRes = dashPair[3];
   var schoolCashback = computeSchoolCashback(oliveTransactionsRes);
-  var profileUser = await api.getUserProfile().catch(function () {
-    return null;
+  var rawTx = getTransactionsArray(oliveTransactionsRes);
+  var sortedTx = rawTx.slice().sort(function (a, b) {
+    var ta = new Date(a.transaction_date || a.transactionDate || 0).getTime();
+    var tb = new Date(b.transaction_date || b.transactionDate || 0).getTime();
+    return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0);
   });
+  var transactionsForList = sortedTx.slice(0, 100);
   var instructionComplete = isInstructionComplete(profileUser) || isInstructionComplete(freshUser);
   var userTier = pickUserTier(freshUser);
   var checkedItems;
@@ -658,30 +786,16 @@ async function fetchDashboardPayload() {
     checkedItems = getOnboardingChecks(userTier);
   }
 
-  var leaderboardRes = await api.getLeaderboard().catch(function () {
-    return null;
-  });
-  var leaderboardActive = true;
   var leaderboardList = [];
-  var lastWeekWinner = null;
-  var weeklyReward = null;
-  if (leaderboardRes && leaderboardRes.success) {
-    leaderboardActive = leaderboardRes.leaderboard_active !== false;
-    leaderboardList =
-      leaderboardActive && Array.isArray(leaderboardRes.leaderboard)
-        ? leaderboardRes.leaderboard
-        : [];
-    if (leaderboardActive) {
-      var rawWinner =
-        leaderboardRes.last_week_prize_winner != null
-          ? leaderboardRes.last_week_prize_winner
-          : leaderboardRes.lastWeekPrizeWinner;
-      lastWeekWinner = pickLastWeekWinner(rawWinner);
-      weeklyReward = await buildWeeklyRewardContext(leaderboardRes);
-    }
+  if (leaderboardRes && leaderboardRes.success && leaderboardRes.leaderboard_active !== false) {
+    leaderboardList = Array.isArray(leaderboardRes.leaderboard) ? leaderboardRes.leaderboard : [];
   }
-  var top = leaderboardList.slice(0, 10);
-  var weeklyPoints = calculateWeeklyPoints(leaderboardRes, leaderboardList, freshUser && freshUser.id);
+  var weeklyPoints = calculateWeeklyPoints(
+    leaderboardRes,
+    leaderboardList,
+    freshUser && freshUser.id,
+    rawTx
+  );
   var schoolHero = resolveSchoolHeroImage(freshUser);
   var showInstructionOverlay =
     !!userTier &&
@@ -706,16 +820,13 @@ async function fetchDashboardPayload() {
     user: freshUser,
     userTier: userTier,
     checkedItems: checkedItems,
-    leaderboardTop: top,
-    leaderboardActive: leaderboardActive,
-    lastWeekWinner: lastWeekWinner,
-    weeklyReward: weeklyReward,
     weeklyPoints: weeklyPoints,
     streakDays: 0,
     bannerUrl: schoolHero.url,
     schoolHeroIsLogo: schoolHero.isLogo,
     showInstructionOverlay: showInstructionOverlay,
     schoolCashback: schoolCashback,
+    transactions: transactionsForList,
   };
 }
 
@@ -731,6 +842,7 @@ function loadHome(container) {
   });
   fetchDashboardPayload()
     .then(function (ctx) {
+      container._hcHomeRecentTransactions = ctx.transactions || [];
       container.innerHTML = buildHomeHtml(ctx);
       var introModal = container.querySelector('#hc-intro-modal');
       var embedRoot = container.closest('.hc-embed');
@@ -844,18 +956,14 @@ function loadHome(container) {
           mountInstructionOverlay(container);
         });
       }
-      var weeklyCard = container.querySelector('[data-weekly-reward-id]');
-      if (weeklyCard) {
-        weeklyCard.addEventListener('click', function () {
-          var rewardId = weeklyCard.getAttribute('data-weekly-reward-id');
-          if (rewardId) window.location.hash = '#/rewards/' + encodeURIComponent(rewardId) + '?weekly=1';
-        });
-      }
+      mountHomeRecentActivity(container);
+      var activeSchool = ctx.user && (ctx.user.activeSchool || ctx.user.active_school);
+      var hasSchoolId = !!(activeSchool && activeSchool.id != null);
       weeklySocketCleanup = connectWeeklyPrizeWebSocket({
-        enabled: ctx.leaderboardActive !== false,
+        enabled: hasSchoolId,
         onMessage: function (message) {
           if (!message || message.type !== 'weekly_prize_finalized') return;
-          showWeeklyWinnerModal(message.weekly_prize || null, ctx.weeklyReward && ctx.weeklyReward.title);
+          showWeeklyWinnerModal(message.weekly_prize || null, null);
           loadHome(container);
         },
       });
