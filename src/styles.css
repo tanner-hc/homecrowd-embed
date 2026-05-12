@@ -5414,6 +5414,41 @@ body {
 .hc-home-welcome-block {
   margin-top: 10px;
   margin-bottom: 20px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.hc-home-welcome-left {
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.hc-home-welcome-contrib {
+  flex-shrink: 0;
+  max-width: 45%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.hc-home-welcome-contrib-amt {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #000;
+  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
+}
+
+.hc-home-welcome-contrib-label {
+  font-size: 11px;
+  color: #666;
+  margin-top: 2px;
+  line-height: 14px;
+  font-family: 'Baikal-Regular', var(--hc-font);
 }
 
 .hc-home-welcome-hi {
@@ -5449,8 +5484,11 @@ body {
   position: absolute;
   top: 15px;
   right: 12px;
-  text-align: right;
   z-index: 2;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .hc-dash-tier-badge-text {
@@ -5460,6 +5498,14 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-family: var(--hc-font);
+}
+
+.hc-dash-tier-badge-img {
+  width: 36px;
+  height: 36px;
+  margin-left: 8px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .hc-dash-gauge-svg-wrap {
@@ -6972,30 +7018,6 @@ body {
   background: #ffffff;
   padding-top: 2px;
   padding-bottom: 10px;
-}
-
-.hc-al-school-card {
-  border-radius: 12px;
-  border: 1px solid #e9ecef;
-  padding: 16px 20px;
-  margin-bottom: 16px;
-  text-align: center;
-}
-
-.hc-al-school-amount {
-  font-size: 36px;
-  font-weight: 900;
-  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
-  color: #000;
-  line-height: 1.1;
-}
-
-.hc-al-school-label {
-  font-size: 13px;
-  color: #6b7280;
-  margin-top: 4px;
-  line-height: 1.35;
-  font-family: 'Baikal-Regular', var(--hc-font);
 }
 
 .hc-al-search-wrap {

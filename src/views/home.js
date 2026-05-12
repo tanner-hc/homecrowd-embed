@@ -1,4 +1,5 @@
 import * as api from '../api.js';
+import { computeSchoolCashback, pickSchoolName } from '../school-contribution.js';
 import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
@@ -38,10 +39,25 @@ function svgAddClass(svgRaw, className) {
   return String(svgRaw).replace(/^<svg\s/i, '<svg class="' + className + '" ');
 }
 
+var TIER_BADGE_BASE_URL = 'https://app.gethomecrowd.com/assets/badge-images';
+
+function tierBadgeUrlFromName(name) {
+  if (!name || typeof name !== 'string') return null;
+  var slug = String(name)
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+  if (!slug) return null;
+  return TIER_BADGE_BASE_URL + '/badge-' + slug + '.png';
+}
+
 function pickUserTier(u) {
   if (!u || typeof u !== 'object') return null;
   var t = u.currentTier != null ? u.currentTier : u.current_tier != null ? u.current_tier : null;
   if (!t || typeof t !== 'object') return null;
+  var rawBadge = t.badge_url != null ? t.badge_url : t.badgeUrl;
+  var badgeUrl =
+    rawBadge != null && String(rawBadge).trim() !== '' ? String(rawBadge).trim() : tierBadgeUrlFromName(t.name);
   return {
     level: t.level,
     name: t.name,
@@ -52,6 +68,7 @@ function pickUserTier(u) {
     next_tier: t.next_tier != null ? t.next_tier : t.nextTier,
     is_max: !!(t.is_max || t.isMax),
     onboarding_status: t.onboarding_status || t.onboardingStatus,
+    badge_url: badgeUrl || null,
   };
 }
 
@@ -160,6 +177,7 @@ function buildGaugeBlock(user, userTier) {
     trackColor: '#D2D2D2',
     strokeWidth: 9,
     currentTierName: (userTier && userTier.name) || '',
+    currentTierBadgeUrl: (userTier && userTier.badge_url) || '',
   });
 }
 
@@ -394,6 +412,12 @@ function buildHomeHtml(ctx) {
   var streak = ctx.streakDays;
   var bannerUrl = ctx.bannerUrl;
   var schoolHeroIsLogo = ctx.schoolHeroIsLogo;
+  var schoolCashback =
+    typeof ctx.schoolCashback === 'number' && Number.isFinite(ctx.schoolCashback)
+      ? ctx.schoolCashback
+      : 0;
+  var showSchoolContrib = schoolCashback > 0;
+  var schoolName = pickSchoolName(user);
 
   var first = user && (user.firstName || user.first_name) ? user.firstName || user.first_name : '';
   var last = user && (user.lastName || user.last_name) ? user.lastName || user.last_name : '';
@@ -455,14 +479,29 @@ function buildHomeHtml(ctx) {
       '</div>';
   }
 
+  var welcomeContribHtml = '';
+  if (showSchoolContrib) {
+    welcomeContribHtml =
+      '<div class="hc-home-welcome-contrib">' +
+      '<div class="hc-home-welcome-contrib-amt">$' +
+      schoolCashback.toFixed(2) +
+      '</div>' +
+      '<div class="hc-home-welcome-contrib-label">Contributed to ' +
+      escapeHtml(schoolName) +
+      '</div></div>';
+  }
+
   return (
     '<div class="hc-home">' +
     '<div class="hc-home-page-pad">' +
     '<div class="hc-home-welcome-block">' +
+    '<div class="hc-home-welcome-left">' +
     '<div class="hc-home-welcome-hi">Welcome back!</div>' +
     '<div class="hc-home-welcome-name">' +
     escapeHtml(displayName) +
     '</div></div>' +
+    welcomeContribHtml +
+    '</div>' +
     combined +
     stats +
     '<div class="hc-home-lb-title">Weekly leaderboard</div>' +
@@ -587,7 +626,15 @@ function mountInstructionOverlay(container) {
 }
 
 async function fetchDashboardPayload() {
-  var freshUser = await api.fetchCurrentUser();
+  var dashPair = await Promise.all([
+    api.fetchCurrentUser(),
+    api.getOliveTransactions().catch(function () {
+      return null;
+    }),
+  ]);
+  var freshUser = dashPair[0];
+  var oliveTransactionsRes = dashPair[1];
+  var schoolCashback = computeSchoolCashback(oliveTransactionsRes);
   var profileUser = await api.getUserProfile().catch(function () {
     return null;
   });
@@ -668,6 +715,7 @@ async function fetchDashboardPayload() {
     bannerUrl: schoolHero.url,
     schoolHeroIsLogo: schoolHero.isLogo,
     showInstructionOverlay: showInstructionOverlay,
+    schoolCashback: schoolCashback,
   };
 }
 

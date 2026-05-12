@@ -1,4 +1,4 @@
-import { escapeHtml } from './html.js';
+import { escapeHtml, escapeAttr } from './html.js';
 
 function clamp01(n) {
   return Math.max(0, Math.min(1, n));
@@ -39,8 +39,12 @@ export function buildDashboardHalfCircleGaugeHtml(o) {
   var arcTopPadding = o.arcTopPadding != null ? Number(o.arcTopPadding) : 6;
   var gapPx = o.gapPx != null ? Number(o.gapPx) : 6;
   var svgHeight = o.svgHeight != null ? Number(o.svgHeight) : 200;
-  var centerTextTop = o.centerTextTop != null ? Number(o.centerTextTop) : 60;
+  var centerTextTop = o.centerTextTop != null ? Number(o.centerTextTop) : 92;
   var currentTierName = o.currentTierName != null ? String(o.currentTierName) : '';
+  var currentTierBadgeUrl =
+    o.currentTierBadgeUrl != null && String(o.currentTierBadgeUrl).trim() !== ''
+      ? String(o.currentTierBadgeUrl).trim()
+      : '';
 
   var t = clamp01(percentage / 100);
   var W = 340;
@@ -68,7 +72,7 @@ export function buildDashboardHalfCircleGaugeHtml(o) {
     centerText = value.toLocaleString();
   }
 
-  var padTop = currentTierName ? 30 : 10;
+  var padTop = !currentTierName ? 10 : currentTierBadgeUrl ? 52 : 34;
   var padBottom = 15;
 
   var svgInner = '';
@@ -100,7 +104,13 @@ export function buildDashboardHalfCircleGaugeHtml(o) {
     tierBadge =
       '<div class="hc-dash-tier-badge"><span class="hc-dash-tier-badge-text">' +
       escapeHtml(currentTierName) +
-      '</span></div>';
+      '</span>' +
+      (currentTierBadgeUrl
+        ? '<img class="hc-dash-tier-badge-img" src="' +
+          escapeAttr(currentTierBadgeUrl) +
+          '" alt="" loading="lazy" decoding="async" onerror="this.style.display=\'none\'"/>'
+        : '') +
+      '</div>';
   }
 
   return (
