@@ -420,6 +420,7 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
 
 function buildWeeklyDetailHtml(weeklyReward) {
   if (!weeklyReward) return '';
+  var isOverall = weeklyReward.periodKind === 'overall';
   var html = '<div class="hc-weekly-detail-section">';
   var countdownLabel = buildWeeklyCountdownLabel(weeklyReward);
   if (countdownLabel) {
@@ -429,7 +430,10 @@ function buildWeeklyDetailHtml(weeklyReward) {
   }
   if (weeklyReward.winnerName) {
     html += '<div class="hc-weekly-winner-badge-inline">';
-    html += '<div class="hc-weekly-winner-inline-title">Weekly Winner</div>';
+    html +=
+      '<div class="hc-weekly-winner-inline-title">' +
+      escapeHtml(isOverall ? 'Overall Winner' : 'Weekly Winner') +
+      '</div>';
     html += '<div class="hc-weekly-winner-inline-name">' + escapeHtml(weeklyReward.winnerName) + '</div>';
     html += '</div>';
   }
@@ -441,7 +445,10 @@ function buildWeeklyDetailHtml(weeklyReward) {
   }
   if (weeklyReward.rows && weeklyReward.rows.length) {
     html += '<div class="hc-weekly-detail-card">';
-    html += '<div class="hc-weekly-detail-title">Weekly leaderboard</div>';
+    html +=
+      '<div class="hc-weekly-detail-title">' +
+      escapeHtml(isOverall ? 'Overall leaderboard' : 'Weekly leaderboard') +
+      '</div>';
     html += buildWeeklyLeaderboardHtml(weeklyReward.rows, 10);
     html += '</div>';
   }
@@ -665,11 +672,21 @@ function bindDetailEvents(container, product, summary, currentUser, cardLinkStat
         window.clearInterval(countdownTimer);
       };
     }
+    var prizeKind = weeklyReward.periodKind === 'overall' ? 'overall' : 'weekly';
     weeklyDetailSocketCleanup = connectWeeklyPrizeWebSocket({
       enabled: true,
+      prizeType: prizeKind,
       onMessage: function (message) {
-        if (!message || message.type !== 'weekly_prize_finalized') return;
-        showWeeklyWinnerModal(message.weekly_prize || null, weeklyReward.title);
+        if (prizeKind === 'overall') {
+          if (!message || message.type !== 'overall_prize_finalized') return;
+          showWeeklyWinnerModal(message.overall_prize || null, weeklyReward.title, {
+            prizeKind: 'overall',
+            winnerBadgeLabel: 'Overall Winner',
+          });
+        } else {
+          if (!message || message.type !== 'weekly_prize_finalized') return;
+          showWeeklyWinnerModal(message.weekly_prize || null, weeklyReward.title, { prizeKind: 'weekly' });
+        }
       },
     });
     window.addEventListener(

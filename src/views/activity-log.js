@@ -30,31 +30,6 @@ function formatDateLabel(dateString) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function pickSchoolName(user) {
-  if (!user || typeof user !== 'object') return 'your school';
-  var s = user.active_school || user.activeSchool;
-  if (s && typeof s === 'object' && s.name) return String(s.name);
-  return 'your school';
-}
-
-function computeSchoolCashback(transactionsRes) {
-  if (!transactionsRes) return 0;
-  var txns =
-    transactionsRes.transactions || transactionsRes.results || transactionsRes;
-  if (!Array.isArray(txns)) return 0;
-  var total = 0;
-  var i;
-  for (i = 0; i < txns.length; i++) {
-    var t = txns[i];
-    var commission = parseFloat(t.commission_amount) || 0;
-    var split = parseFloat(t.school_commission_split) || 0;
-    if (commission > 0) {
-      total += commission * split;
-    }
-  }
-  return total;
-}
-
 function getDisplayTitle(entry) {
   if (entry.redemption && entry.redemption.reward_title) {
     return entry.redemption.reward_title;
@@ -267,21 +242,8 @@ export function renderActivityLog(container) {
 
 async function loadActivityLog(container) {
   var activityData = [];
-  var schoolCashback = 0;
-  var schoolName = 'your school';
   try {
-    var results = await Promise.all([
-      api.getUserActivityLog(),
-      api.getOliveTransactions().catch(function () {
-        return null;
-      }),
-      api.fetchCurrentUser().catch(function () {
-        return null;
-      }),
-    ]);
-    activityData = results[0] || [];
-    schoolCashback = computeSchoolCashback(results[1]);
-    schoolName = pickSchoolName(results[2]);
+    activityData = await api.getUserActivityLog();
   } catch (err) {
     container.innerHTML =
       '<div class="hc-alert-error">' + escapeHtml(err.message || 'Failed to load') + '</div>';
@@ -304,13 +266,6 @@ async function loadActivityLog(container) {
   html += '</div>';
   html += '<div class="hc-al-body">';
   html += '<div class="hc-al-sticky-block">';
-  html += '<div class="hc-al-school-card">';
-  html += '<div class="hc-al-school-amount">$' + schoolCashback.toFixed(2) + '</div>';
-  html +=
-    '<div class="hc-al-school-label">Total you\'ve contributed to ' +
-    escapeHtml(schoolName) +
-    ' over time through your shopping</div>';
-  html += '</div>';
   html += '<div class="hc-al-search-wrap">';
   html +=
     '<input type="search" id="hc-al-search" class="hc-input hc-al-search" placeholder="Search activity" autocomplete="off" />';
