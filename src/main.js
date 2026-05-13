@@ -13,7 +13,11 @@ import { renderCards } from './views/cards.js';
 import { renderLinkCards } from './views/link-cards.js';
 import { renderRewardDetail } from './views/reward-detail.js';
 import { resolveCardLinkStatus } from './cardLinkStatus.js';
-import { buildOverallRewardContext, buildWeeklyRewardContext } from './weekly-reward.js';
+import {
+  buildOverallRewardContext,
+  buildWeeklyRewardContext,
+  leaderboardContextToEmbedProduct,
+} from './weekly-reward.js';
 import { renderOffers } from './views/offers.js';
 import { renderOfferDetail } from './views/offer-detail.js';
 import { renderRedemptionConfirmation } from './views/redemption-confirmation.js';
@@ -443,55 +447,68 @@ function render(route) {
         var currentUser = parts[1];
         var paymentCards = parts[2];
         var ticketsResponse = parts[3];
-        return api
-          .getRewardDetail(rewardId)
-          .catch(function () {
-            return null;
-          })
-          .then(function (product) {
-            if (product && product.id) {
-              return { summary: summary, product: product, currentUser: currentUser, paymentCards: paymentCards, ticketsResponse: ticketsResponse };
-            }
-            return api.getRewardsCatalog().then(function (catalogRaw) {
-              var list = Array.isArray(catalogRaw) ? catalogRaw : (catalogRaw && catalogRaw.results) || [];
-              var found = list.find(function (r) {
-                return String(r.id) === rewardId;
-              });
-              return {
-                summary: summary,
-                product: found,
-                currentUser: currentUser,
-                paymentCards: paymentCards,
-                ticketsResponse: ticketsResponse,
-              };
-            });
-          });
-      })
-      .then(function (ctx) {
-        if (!ctx || !ctx.product || !ctx.product.id) return Promise.resolve(ctx);
         var qIdx = route.indexOf('?');
         var params = new URLSearchParams(qIdx >= 0 ? route.slice(qIdx + 1) : '');
         var wantWeekly = params.get('weekly') === '1';
         var wantOverall = params.get('overall') === '1';
-        if (!wantWeekly && !wantOverall) return Promise.resolve(ctx);
-        return api
-          .getLeaderboard()
-          .catch(function () {
-            return null;
-          })
-          .then(function (lb) {
-            if (!lb) return ctx;
-            if (wantWeekly) {
-              return buildWeeklyRewardContext(lb).then(function (w) {
-                if (w && String(w.rewardId) === String(rewardId)) ctx.weeklyReward = w;
-                return ctx;
-              });
-            }
-            return buildOverallRewardContext(lb).then(function (o) {
-              if (o && String(o.rewardId) === String(rewardId)) ctx.weeklyReward = o;
-              return ctx;
+
+        function emptyCtx(product, weeklyReward) {
+          return {
+            summary: summary,
+            product: product,
+            currentUser: currentUser,
+            paymentCards: paymentCards,
+            ticketsResponse: ticketsResponse,
+            weeklyReward: weeklyReward || null,
+          };
+        }
+
+        function loadCatalogFallback() {
+          return api.getRewardsCatalog().then(function (catalogRaw) {
+            var list = Array.isArray(catalogRaw) ? catalogRaw : (catalogRaw && catalogRaw.results) || [];
+            var found = list.find(function (r) {
+              return String(r.id) === rewardId;
             });
+            return emptyCtx(found, null);
           });
+        }
+
+        function loadStandardProduct() {
+          return api
+            .getRewardDetail(rewardId)
+            .catch(function () {
+              return null;
+            })
+            .then(function (product) {
+              if (product && product.id) {
+                return emptyCtx(product, null);
+              }
+              return loadCatalogFallback();
+            });
+        }
+
+        if (wantWeekly || wantOverall) {
+          return api
+            .getLeaderboard()
+            .catch(function () {
+              return null;
+            })
+            .then(function (lb) {
+              if (!lb) return loadStandardProduct();
+              var pCtx = wantWeekly ? buildWeeklyRewardContext(lb) : buildOverallRewardContext(lb);
+              return pCtx.then(function (w) {
+                if (w && String(w.rewardId) === String(rewardId)) {
+                  var prod = leaderboardContextToEmbedProduct(w);
+                  if (prod && prod.id) {
+                    return emptyCtx(prod, w);
+                  }
+                }
+                return loadStandardProduct();
+              });
+            });
+        }
+
+        return loadStandardProduct();
       })
       .then(function (ctx) {
         if (!ctx || !ctx.product || !ctx.product.id) {
