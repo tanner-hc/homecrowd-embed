@@ -437,6 +437,13 @@ export async function getRaffleEntriesSummary() {
   return request('/api/rewards/raffle-entries/summary/');
 }
 
+export async function recordDailyVisit() {
+  console.log('🎯 [embed] POST /api/rewards/daily-login/');
+  return request('/api/rewards/daily-login/', {
+    method: 'POST',
+  });
+}
+
 export async function getReferralCampaign() {
   return request('/api/users/users/referral-campaign/');
 }

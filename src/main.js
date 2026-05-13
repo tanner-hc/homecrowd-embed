@@ -48,6 +48,8 @@ var profileUserForTabs = null;
 var profileUserForTabsLoading = false;
 var lastAutologinTokenApplied = '';
 var suppressPartnerAutologinAfterLogout = false;
+var dailyVisitCheckInProgress = false;
+var dailyVisitForegroundReady = false;
 
 var hostConfig =
   typeof window.__HC_EMBED_HOST_CONFIG__ === 'object' && window.__HC_EMBED_HOST_CONFIG__ !== null
@@ -110,6 +112,7 @@ async function applyAutologinToken(token, view, nextSchoolId) {
     lastAutologinTokenApplied = token;
     postToNative('homecrowd:login', { user: user });
     preloadMapKitForEmbed();
+    scheduleDailyVisitCheck();
     navigate('/' + (view || initialView));
     return true;
   } catch (e) {
@@ -190,6 +193,125 @@ function handleStripeReturnQuery() {
   }
 }
 
+function getDailyVisitStorageKey() {
+  var userKey = user && (user.id || user.user_id || user.email);
+  return 'last_daily_visit_check:' + String(userKey || 'anonymous');
+}
+
+function getDailyVisitStorageValue(key) {
+  try {
+    return window.localStorage.getItem(key);
+  } catch (_e) {
+    return null;
+  }
+}
+
+function setDailyVisitStorageValue(key, value) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (_e) { }
+}
+
+function removeDailyVisitStorageValue(key) {
+  try {
+    window.localStorage.removeItem(key);
+  } catch (_e) { }
+}
+
+function showDailyBonus(dailyBonus) {
+  console.log('🎯 [embed] Daily visit bonus received:', dailyBonus);
+  if (!dailyBonus) {
+    console.log('🎯 [embed] No daily bonus in response');
+    return;
+  }
+  if (dailyBonus.tickets_awarded && dailyBonus.tickets_awarded > 0) {
+    console.log('🎯 [embed] Showing daily ticket bonus modal');
+    window.alert(
+      'Daily Bonus!\n' +
+      (dailyBonus.message ||
+        'You earned ' +
+        dailyBonus.tickets_awarded +
+        ' raffle ticket' +
+        (dailyBonus.tickets_awarded > 1 ? 's' : '') +
+        '!')
+    );
+  } else if (dailyBonus.points_awarded && dailyBonus.points_awarded > 0) {
+    console.log('🎯 [embed] Showing daily points bonus modal');
+    window.alert(
+      'Daily Bonus!\n' +
+      (dailyBonus.message || 'You earned ' + dailyBonus.points_awarded + ' points!')
+    );
+  } else {
+    console.log('🎯 [embed] Daily bonus had no awarded tickets or points:', dailyBonus);
+  }
+}
+
+async function checkDailyVisit() {
+  console.log('🎯 [embed] checkDailyVisit called, user:', user && user.email);
+  if (!user) {
+    console.log('🎯 [embed] No user, skipping daily visit check');
+    return;
+  }
+
+  if (dailyVisitCheckInProgress) {
+    console.log('🎯 [embed] Daily visit check already in progress, skipping');
+    return;
+  }
+
+  var today = new Date().toDateString();
+  var storageKey = getDailyVisitStorageKey();
+  var lastCheck = getDailyVisitStorageValue(storageKey);
+  console.log('🎯 [embed] Daily visit storage key:', storageKey);
+  console.log('🎯 [embed] Last daily visit check:', lastCheck, 'Today:', today);
+
+  if (lastCheck === today) {
+    console.log('🎯 [embed] Already checked daily visit today, skipping');
+    return;
+  }
+
+  dailyVisitCheckInProgress = true;
+
+  try {
+    setDailyVisitStorageValue(storageKey, today);
+    console.log('🎯 [embed] Recording daily visit...');
+    var response = await api.recordDailyVisit();
+    console.log('🎯 [embed] Daily visit response:', response);
+    if (response && response.daily_bonus) {
+      showDailyBonus(response.daily_bonus);
+    } else {
+      console.log('🎯 [embed] No daily_bonus in daily visit response');
+    }
+  } catch (error) {
+    console.error('🎯 [embed] Failed to record daily visit:', error);
+    removeDailyVisitStorageValue(storageKey);
+  } finally {
+    dailyVisitCheckInProgress = false;
+  }
+}
+
+function scheduleDailyVisitCheck() {
+  console.log('🎯 [embed] Scheduling daily visit check');
+  window.setTimeout(function () {
+    checkDailyVisit();
+  }, 2000);
+}
+
+function setupDailyVisitForegroundCheck() {
+  dailyVisitForegroundReady = true;
+  document.addEventListener('visibilitychange', function () {
+    console.log('🎯 [embed] visibilitychange:', document.visibilityState);
+    if (document.visibilityState === 'visible' && user && dailyVisitForegroundReady) {
+      checkDailyVisit();
+    }
+  });
+  window.addEventListener('focus', function () {
+    console.log('🎯 [embed] window focus');
+    if (user && dailyVisitForegroundReady) {
+      checkDailyVisit();
+    }
+  });
+}
+
 async function init() {
   handleStripeReturnQuery();
   var injected = window.__HC_EMBED_HOST_CONFIG__;
@@ -213,6 +335,7 @@ async function init() {
       user = await api.fetchCurrentUser();
       postToNative('homecrowd:login', { user: user });
       preloadMapKitForEmbed();
+      scheduleDailyVisitCheck();
     } catch (e) {
       api.clearTokens();
       user = null;
@@ -240,6 +363,7 @@ async function init() {
     api.logout().catch(function () { });
   });
   startRouter();
+  setupDailyVisitForegroundCheck();
 
   if (!user && getRoute() !== '/login') {
     navigate('/login');
@@ -394,6 +518,7 @@ function render(route) {
       suppressPartnerAutologinAfterLogout = false;
       postToNative('homecrowd:login', { user: u });
       preloadMapKitForEmbed();
+      scheduleDailyVisitCheck();
       refreshProfileUserForTabs();
       navigate('/' + initialView);
     }, { schoolId: schoolId });

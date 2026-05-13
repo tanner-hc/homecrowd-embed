@@ -6,6 +6,7 @@ import MainButton from '../base-components/MainButton.js';
 import { escapeHtml } from '../base-components/html.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
 import mailIconSvg from '../assets/icons/mail.svg?raw';
+import { getReferralReward } from '../referral-reward.js';
 
 function svgAddClass(svgRaw, className) {
   return String(svgRaw).replace(/^<svg\s/i, '<svg class="' + className + '" ');
@@ -72,46 +73,16 @@ function buildAppReferralShareText(referralAppUrl, code) {
     url +
     '\nUse my referral code when you sign up: ' +
     c +
-    '\nVerify your email in the app for the code to count'
+    '\nVerify your email in the app for the referral reward to count'
   );
 }
 
-function referralIncentiveParts(campaign) {
-  if (!campaign) {
-    return { amount: null, rewardTextYou: 'points' };
-  }
-  var type = campaign.incentive_type || 'points';
-  var raw = campaign.incentive_value;
-  var value = null;
-  if (raw !== null && raw !== undefined) {
-    if (typeof raw === 'number' && Number.isFinite(raw)) {
-      value = raw;
-    } else {
-      var parsed = parseInt(String(raw), 10);
-      value = Number.isFinite(parsed) ? parsed : null;
-    }
-  }
-  var amount = value != null ? value : type === 'points' ? 0 : 1;
-  var singular = amount === 1;
-  var text;
-  if (type === 'points') {
-    text = amount + ' point' + (singular ? '' : 's');
-  } else if (type === 'raffle_entry') {
-    text = amount + ' raffle ' + (singular ? 'entry' : 'entries');
-  } else if (type === 'raffle_ticket') {
-    text = amount + ' raffle ' + (singular ? 'ticket' : 'tickets');
-  } else {
-    text = amount + ' ' + type;
-  }
-  return { amount: value, rewardTextYou: text };
-}
-
 function inviteHeroTitle(campaign) {
-  var parts = referralIncentiveParts(campaign);
-  if (parts.amount != null) {
+  var reward = getReferralReward(campaign);
+  if (reward.hasCampaign) {
     return (
       'Invite your friends and earn ' +
-      parts.rewardTextYou +
+      reward.lowerText +
       ' for each friend who joins Homecrowd!'
     );
   }
@@ -119,8 +90,8 @@ function inviteHeroTitle(campaign) {
 }
 
 function inviteHeroSubtitle(campaign) {
-  var parts = referralIncentiveParts(campaign);
-  if (parts.amount != null) {
+  var reward = getReferralReward(campaign);
+  if (reward.hasCampaign) {
     return (
       "Enter your friend's email and we'll send them an invite. Rewards will be awarded only after your friend verifies their email and joins Homecrowd."
     );
