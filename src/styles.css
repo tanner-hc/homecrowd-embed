@@ -3427,6 +3427,24 @@ body {
   font-family: 'Baikal-Regular', var(--hc-font);
 }
 
+.hc-offer-payment-methods {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hc-offer-payment-logo {
+  width: 42px;
+  height: 24px;
+  object-fit: contain;
+  display: block;
+}
+
+.hc-offer-payment-text {
+  display: inline-block;
+}
+
 .hc-offer-desc-text {
   font-size: 14px;
   font-weight: 400;

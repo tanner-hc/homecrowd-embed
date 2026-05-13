@@ -13,7 +13,11 @@ import { renderCards } from './views/cards.js';
 import { renderLinkCards } from './views/link-cards.js';
 import { renderRewardDetail } from './views/reward-detail.js';
 import { resolveCardLinkStatus } from './cardLinkStatus.js';
-import { buildOverallRewardContext, buildWeeklyRewardContext } from './weekly-reward.js';
+import {
+  buildOverallRewardContext,
+  buildWeeklyRewardContext,
+  leaderboardContextToEmbedProduct,
+} from './weekly-reward.js';
 import { renderOffers } from './views/offers.js';
 import { renderOfferDetail } from './views/offer-detail.js';
 import { renderRedemptionConfirmation } from './views/redemption-confirmation.js';
@@ -44,6 +48,8 @@ var profileUserForTabs = null;
 var profileUserForTabsLoading = false;
 var lastAutologinTokenApplied = '';
 var suppressPartnerAutologinAfterLogout = false;
+var dailyVisitCheckInProgress = false;
+var dailyVisitForegroundReady = false;
 
 var hostConfig =
   typeof window.__HC_EMBED_HOST_CONFIG__ === 'object' && window.__HC_EMBED_HOST_CONFIG__ !== null
@@ -106,6 +112,7 @@ async function applyAutologinToken(token, view, nextSchoolId) {
     lastAutologinTokenApplied = token;
     postToNative('homecrowd:login', { user: user });
     preloadMapKitForEmbed();
+    scheduleDailyVisitCheck();
     navigate('/' + (view || initialView));
     return true;
   } catch (e) {
@@ -186,6 +193,125 @@ function handleStripeReturnQuery() {
   }
 }
 
+function getDailyVisitStorageKey() {
+  var userKey = user && (user.id || user.user_id || user.email);
+  return 'last_daily_visit_check:' + String(userKey || 'anonymous');
+}
+
+function getDailyVisitStorageValue(key) {
+  try {
+    return window.localStorage.getItem(key);
+  } catch (_e) {
+    return null;
+  }
+}
+
+function setDailyVisitStorageValue(key, value) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (_e) { }
+}
+
+function removeDailyVisitStorageValue(key) {
+  try {
+    window.localStorage.removeItem(key);
+  } catch (_e) { }
+}
+
+function showDailyBonus(dailyBonus) {
+  console.log('🎯 [embed] Daily visit bonus received:', dailyBonus);
+  if (!dailyBonus) {
+    console.log('🎯 [embed] No daily bonus in response');
+    return;
+  }
+  if (dailyBonus.tickets_awarded && dailyBonus.tickets_awarded > 0) {
+    console.log('🎯 [embed] Showing daily ticket bonus modal');
+    window.alert(
+      'Daily Bonus!\n' +
+      (dailyBonus.message ||
+        'You earned ' +
+        dailyBonus.tickets_awarded +
+        ' raffle ticket' +
+        (dailyBonus.tickets_awarded > 1 ? 's' : '') +
+        '!')
+    );
+  } else if (dailyBonus.points_awarded && dailyBonus.points_awarded > 0) {
+    console.log('🎯 [embed] Showing daily points bonus modal');
+    window.alert(
+      'Daily Bonus!\n' +
+      (dailyBonus.message || 'You earned ' + dailyBonus.points_awarded + ' points!')
+    );
+  } else {
+    console.log('🎯 [embed] Daily bonus had no awarded tickets or points:', dailyBonus);
+  }
+}
+
+async function checkDailyVisit() {
+  console.log('🎯 [embed] checkDailyVisit called, user:', user && user.email);
+  if (!user) {
+    console.log('🎯 [embed] No user, skipping daily visit check');
+    return;
+  }
+
+  if (dailyVisitCheckInProgress) {
+    console.log('🎯 [embed] Daily visit check already in progress, skipping');
+    return;
+  }
+
+  var today = new Date().toDateString();
+  var storageKey = getDailyVisitStorageKey();
+  var lastCheck = getDailyVisitStorageValue(storageKey);
+  console.log('🎯 [embed] Daily visit storage key:', storageKey);
+  console.log('🎯 [embed] Last daily visit check:', lastCheck, 'Today:', today);
+
+  if (lastCheck === today) {
+    console.log('🎯 [embed] Already checked daily visit today, skipping');
+    return;
+  }
+
+  dailyVisitCheckInProgress = true;
+
+  try {
+    setDailyVisitStorageValue(storageKey, today);
+    console.log('🎯 [embed] Recording daily visit...');
+    var response = await api.recordDailyVisit();
+    console.log('🎯 [embed] Daily visit response:', response);
+    if (response && response.daily_bonus) {
+      showDailyBonus(response.daily_bonus);
+    } else {
+      console.log('🎯 [embed] No daily_bonus in daily visit response');
+    }
+  } catch (error) {
+    console.error('🎯 [embed] Failed to record daily visit:', error);
+    removeDailyVisitStorageValue(storageKey);
+  } finally {
+    dailyVisitCheckInProgress = false;
+  }
+}
+
+function scheduleDailyVisitCheck() {
+  console.log('🎯 [embed] Scheduling daily visit check');
+  window.setTimeout(function () {
+    checkDailyVisit();
+  }, 2000);
+}
+
+function setupDailyVisitForegroundCheck() {
+  dailyVisitForegroundReady = true;
+  document.addEventListener('visibilitychange', function () {
+    console.log('🎯 [embed] visibilitychange:', document.visibilityState);
+    if (document.visibilityState === 'visible' && user && dailyVisitForegroundReady) {
+      checkDailyVisit();
+    }
+  });
+  window.addEventListener('focus', function () {
+    console.log('🎯 [embed] window focus');
+    if (user && dailyVisitForegroundReady) {
+      checkDailyVisit();
+    }
+  });
+}
+
 async function init() {
   handleStripeReturnQuery();
   var injected = window.__HC_EMBED_HOST_CONFIG__;
@@ -209,6 +335,7 @@ async function init() {
       user = await api.fetchCurrentUser();
       postToNative('homecrowd:login', { user: user });
       preloadMapKitForEmbed();
+      scheduleDailyVisitCheck();
     } catch (e) {
       api.clearTokens();
       user = null;
@@ -236,6 +363,7 @@ async function init() {
     api.logout().catch(function () { });
   });
   startRouter();
+  setupDailyVisitForegroundCheck();
 
   if (!user && getRoute() !== '/login') {
     navigate('/login');
@@ -390,6 +518,7 @@ function render(route) {
       suppressPartnerAutologinAfterLogout = false;
       postToNative('homecrowd:login', { user: u });
       preloadMapKitForEmbed();
+      scheduleDailyVisitCheck();
       refreshProfileUserForTabs();
       navigate('/' + initialView);
     }, { schoolId: schoolId });
@@ -443,55 +572,68 @@ function render(route) {
         var currentUser = parts[1];
         var paymentCards = parts[2];
         var ticketsResponse = parts[3];
-        return api
-          .getRewardDetail(rewardId)
-          .catch(function () {
-            return null;
-          })
-          .then(function (product) {
-            if (product && product.id) {
-              return { summary: summary, product: product, currentUser: currentUser, paymentCards: paymentCards, ticketsResponse: ticketsResponse };
-            }
-            return api.getRewardsCatalog().then(function (catalogRaw) {
-              var list = Array.isArray(catalogRaw) ? catalogRaw : (catalogRaw && catalogRaw.results) || [];
-              var found = list.find(function (r) {
-                return String(r.id) === rewardId;
-              });
-              return {
-                summary: summary,
-                product: found,
-                currentUser: currentUser,
-                paymentCards: paymentCards,
-                ticketsResponse: ticketsResponse,
-              };
-            });
-          });
-      })
-      .then(function (ctx) {
-        if (!ctx || !ctx.product || !ctx.product.id) return Promise.resolve(ctx);
         var qIdx = route.indexOf('?');
         var params = new URLSearchParams(qIdx >= 0 ? route.slice(qIdx + 1) : '');
         var wantWeekly = params.get('weekly') === '1';
         var wantOverall = params.get('overall') === '1';
-        if (!wantWeekly && !wantOverall) return Promise.resolve(ctx);
-        return api
-          .getLeaderboard()
-          .catch(function () {
-            return null;
-          })
-          .then(function (lb) {
-            if (!lb) return ctx;
-            if (wantWeekly) {
-              return buildWeeklyRewardContext(lb).then(function (w) {
-                if (w && String(w.rewardId) === String(rewardId)) ctx.weeklyReward = w;
-                return ctx;
-              });
-            }
-            return buildOverallRewardContext(lb).then(function (o) {
-              if (o && String(o.rewardId) === String(rewardId)) ctx.weeklyReward = o;
-              return ctx;
+
+        function emptyCtx(product, weeklyReward) {
+          return {
+            summary: summary,
+            product: product,
+            currentUser: currentUser,
+            paymentCards: paymentCards,
+            ticketsResponse: ticketsResponse,
+            weeklyReward: weeklyReward || null,
+          };
+        }
+
+        function loadCatalogFallback() {
+          return api.getRewardsCatalog().then(function (catalogRaw) {
+            var list = Array.isArray(catalogRaw) ? catalogRaw : (catalogRaw && catalogRaw.results) || [];
+            var found = list.find(function (r) {
+              return String(r.id) === rewardId;
             });
+            return emptyCtx(found, null);
           });
+        }
+
+        function loadStandardProduct() {
+          return api
+            .getRewardDetail(rewardId)
+            .catch(function () {
+              return null;
+            })
+            .then(function (product) {
+              if (product && product.id) {
+                return emptyCtx(product, null);
+              }
+              return loadCatalogFallback();
+            });
+        }
+
+        if (wantWeekly || wantOverall) {
+          return api
+            .getLeaderboard()
+            .catch(function () {
+              return null;
+            })
+            .then(function (lb) {
+              if (!lb) return loadStandardProduct();
+              var pCtx = wantWeekly ? buildWeeklyRewardContext(lb) : buildOverallRewardContext(lb);
+              return pCtx.then(function (w) {
+                if (w && String(w.rewardId) === String(rewardId)) {
+                  var prod = leaderboardContextToEmbedProduct(w);
+                  if (prod && prod.id) {
+                    return emptyCtx(prod, w);
+                  }
+                }
+                return loadStandardProduct();
+              });
+            });
+        }
+
+        return loadStandardProduct();
       })
       .then(function (ctx) {
         if (!ctx || !ctx.product || !ctx.product.id) {

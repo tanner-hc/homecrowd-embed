@@ -32,7 +32,32 @@ function pickPrize(leaderboardRes) {
 
 function pickRewardId(prize) {
   if (!prize || typeof prize !== 'object') return null;
-  return prize.reward_id || prize.rewardId || null;
+  var r = prize.reward_id || prize.rewardId || prize.reward;
+  if (r == null) return null;
+  return typeof r === 'object' && r != null && r.id != null ? r.id : r;
+}
+
+export function leaderboardContextToEmbedProduct(ctx) {
+  if (!ctx || ctx.rewardId == null) return null;
+  var rid = ctx.rewardId;
+  var idStr = typeof rid === 'object' && rid != null && rid.id != null ? String(rid.id) : String(rid);
+  if (!idStr) return null;
+  var isOverall = ctx.periodKind === 'overall';
+  return {
+    id: idStr,
+    title: ctx.title,
+    description: ctx.description,
+    points_cost: 0,
+    pointsCost: 0,
+    reward_type: isOverall ? 'overall_reward' : 'weekly_reward',
+    redemption_type: isOverall ? 'overall' : 'weekly',
+    is_active: true,
+    enabled: true,
+    is_locked: false,
+    image_url: ctx.imageUrl,
+    imageUrl: ctx.imageUrl,
+    images: [],
+  };
 }
 
 function pickRows(leaderboardRes) {

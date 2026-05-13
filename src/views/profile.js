@@ -13,6 +13,7 @@ import activityIconSvg from '../assets/icons/activity.svg?raw';
 import extensionIconSvg from '../assets/icons/extension.svg?raw';
 import referralIconSvg from '../assets/icons/referral.svg?raw';
 import chevronRightIconSvg from '../assets/icons/chevron-right.svg?raw';
+import { getReferralReward } from '../referral-reward.js';
 
 function svgAddClass(svgRaw, className) {
   return String(svgRaw).replace(/^<svg\s/i, '<svg class="' + className + '" ');
@@ -165,6 +166,7 @@ async function loadProfile(container) {
   var school = pickActiveSchool(prefsUser);
   var isEarlyRelease = schoolEarlyRelease(school);
   var showInvite = isReferralCampaignActive(referralCampaign, isEarlyRelease);
+  var referralReward = getReferralReward(referralCampaign);
   var showActivity = !isEarlyRelease;
   var emailUnverified = !!(
     prefsUser &&
@@ -197,7 +199,7 @@ async function loadProfile(container) {
       title: 'Invite a Friend',
       subtitle: isEarlyRelease
         ? 'Invite friends to join Homecrowd'
-        : 'Send an invite to a friend and earn points',
+        : referralReward.profileSubtitle,
       rightHtml: chevronRightHtml(),
       id: 'hc-profile-invite',
     });
