@@ -5,6 +5,8 @@ import { showWebviewOverlay } from '../webview-overlay.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import Button from '../base-components/Button.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
+import mastercardLogoUrl from '../assets/mastercard-logo.png';
+import visaLogoUrl from '../assets/visa-logo.png';
 
 export function renderOfferDetail(container, offerId) {
   container.innerHTML = LoadingSpinner({ text: 'Loading offer...' });
@@ -106,9 +108,7 @@ async function loadOfferDetail(container, offerId) {
 
     // Payment methods
     var schemes = getPaymentMethods(offer);
-    if (schemes) {
-      html += '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Payment</span><span class="hc-offer-term-value">' + escapeHtml(schemes) + '</span></div>';
-    }
+    html += '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Payment</span><span class="hc-offer-term-value">' + renderPaymentMethods(schemes) + '</span></div>';
 
     html += '</div>';
 
@@ -224,6 +224,30 @@ function getPaymentMethods(offer) {
     return schemes.join(', ');
   }
   return null;
+}
+
+function renderPaymentMethods(schemes) {
+  if (!schemes) {
+    return '<span class="hc-offer-payment-text">Store did not specify</span>';
+  }
+  var list = Array.isArray(schemes) ? schemes : String(schemes).split(',');
+  var html = '<span class="hc-offer-payment-methods">';
+  list.forEach(function (scheme) {
+    var name = String(scheme || '').trim();
+    var lowerName = name.toLowerCase();
+    if (!name) return;
+    if (lowerName === 'visa') {
+      html += '<img class="hc-offer-payment-logo" src="' + escapeAttr(visaLogoUrl) + '" alt="Visa" />';
+      return;
+    }
+    if (lowerName.indexOf('master') >= 0) {
+      html += '<img class="hc-offer-payment-logo" src="' + escapeAttr(mastercardLogoUrl) + '" alt="Mastercard" />';
+      return;
+    }
+    html += '<span class="hc-offer-payment-text">' + escapeHtml(name) + '</span>';
+  });
+  html += '</span>';
+  return html;
 }
 
 function getDaysOfWeek(days) {
