@@ -480,6 +480,19 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
   return '<div class="hc-tab-bar-shell">' + html + '</div>';
 }
 
+function lockStaticChromeDrag() {
+  var chromeEls = appEl.querySelectorAll('.hc-sticky-top, .hc-tab-bar-shell');
+  chromeEls.forEach(function (chromeEl) {
+    chromeEl.addEventListener(
+      'touchmove',
+      function (event) {
+        event.preventDefault();
+      },
+      { passive: false }
+    );
+  });
+}
+
 function removeRewardsPointsOverlay() {
   var el = document.getElementById('hc-rewards-points-overlay');
   if (el && el.parentNode) {
@@ -755,6 +768,8 @@ function renderLayout(route) {
     '"></main>' +
     tabBarHtml +
     '</div>';
+
+  lockStaticChromeDrag();
 
   return document.getElementById('hc-content');
 }
