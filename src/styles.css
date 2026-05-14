@@ -1466,11 +1466,6 @@ body {
   padding-bottom: 24px;
 }
 
-.hc-cards-page .hc-account-settings-nav {
-  top: calc(-1 * var(--hc-spacing-lg));
-  padding-top: var(--hc-spacing-lg);
-}
-
 .hc-cards-page .hc-security-banner {
   margin: 0 24px 16px;
 }
@@ -1671,7 +1666,6 @@ body {
 .hc-link-cards-page .hc-account-settings-nav {
   z-index: 120;
   isolation: isolate;
-  padding-top: 0;
   padding-bottom: 12px;
   margin-bottom: 0;
   border-bottom: 1px solid #f0f0f0;
@@ -2205,22 +2199,6 @@ body {
 }
 
 /* Reward Detail (matches ProductDetailScreen) */
-.hc-detail-nav {
-  padding: 0 20px;
-  margin-bottom: 8px;
-}
-
-.hc-back-btn {
-  background: none;
-  border: none;
-  font-family: var(--hc-font);
-  font-size: 16px;
-  font-weight: 400;
-  color: #000;
-  cursor: pointer;
-  padding: 8px 0;
-}
-
 .hc-detail-image-wrap {
   width: 100%;
   margin-bottom: 0;
@@ -2366,6 +2344,7 @@ body {
   top: 0;
   z-index: 90;
   background-color: #fff;
+  padding-top: var(--hc-spacing-lg);
 }
 
 .hc-content.hc-content--reward-detail .hc-product-detail-nav-sticky {
@@ -4226,7 +4205,7 @@ body {
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 0 20px 20px;
+  padding: 8px 20px 20px;
 }
 
 .hc-bc-nav-header-back {
@@ -6630,7 +6609,6 @@ body {
 .hc-invite-friend .hc-account-settings-nav {
   z-index: 120;
   isolation: isolate;
-  padding-top: 0;
   padding-bottom: 12px;
   margin-top: 0;
   margin-bottom: 0;
@@ -6899,7 +6877,6 @@ body {
 .hc-support-page .hc-account-settings-nav {
   z-index: 120;
   isolation: isolate;
-  padding-top: 0;
   padding-bottom: 12px;
   margin-bottom: 0;
   border-bottom: 1px solid #f0f0f0;
@@ -7314,11 +7291,6 @@ body {
   padding-bottom: 24px;
   background: #ffffff;
   min-height: 100%;
-}
-
-.hc-activity-log .hc-account-settings-nav {
-  top: calc(-1 * var(--hc-spacing-lg));
-  padding-top: var(--hc-spacing-lg);
 }
 
 .hc-al-body {
@@ -7865,7 +7837,7 @@ body {
   justify-content: space-between;
   gap: 16px;
   margin-top: 16px;
-  margin-bottom: 8px;
+  margin-bottom: 14px;
 }
 
 .hc-weekly-lb-modal {
@@ -7882,6 +7854,10 @@ body {
 .hc-weekly-lb-modal-header {
   flex-shrink: 0;
   padding-top: env(safe-area-inset-top, 0px);
+}
+
+.hc-weekly-lb-modal-header .hc-bc-nav-header {
+  padding-top: 28px;
 }
 
 .hc-weekly-lb-modal-scroll {
@@ -7903,7 +7879,6 @@ body {
   background: #ffffff;
   border-radius: 24px;
   border: 1px solid #f0f0f0;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
 }
 
 .hc-weekly-lb-image-frame {
@@ -7927,7 +7902,7 @@ body {
 
 .hc-weekly-lb-reward-title {
   font-size: 21px;
-  font-weight: 600;
+  font-weight: 400;
   color: #000000;
   font-family: var(--hc-font);
   text-align: center;

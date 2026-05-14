@@ -4,6 +4,7 @@ import { postToNative } from '../bridge.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import Button from '../base-components/Button.js';
+import NavHeader from '../base-components/NavHeader.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import mastercardLogoUrl from '../assets/mastercard-logo.png';
 import visaLogoUrl from '../assets/visa-logo.png';
@@ -49,10 +50,10 @@ async function loadOfferDetail(container, offerId) {
 
     var html = '';
 
-    // Back button
-    html += '<div class="hc-detail-nav">';
-    html += '<button id="hc-back-btn" class="hc-back-btn">\u2190 Offers</button>';
-    html += '</div>';
+    html += NavHeader({
+      title: 'Offers',
+      backButtonId: 'hc-back-btn',
+    });
 
     // Brand section — logo + name
     var logoUrl = offer.logoUrl || offer.logo || '';
@@ -173,7 +174,7 @@ async function loadOfferDetail(container, offerId) {
       });
     }
   } catch (err) {
-    container.innerHTML = '<div class="hc-detail-nav"><button id="hc-back-btn" class="hc-back-btn">\u2190 Offers</button></div><div class="hc-alert-error">Failed to load offer: ' + escapeHtml(err.message) + '</div>';
+    container.innerHTML = NavHeader({ title: 'Offers', backButtonId: 'hc-back-btn' }) + '<div class="hc-alert-error">Failed to load offer: ' + escapeHtml(err.message) + '</div>';
     var backBtn = document.getElementById('hc-back-btn');
     if (backBtn) backBtn.addEventListener('click', function () { window.location.hash = '#/offers'; });
   }

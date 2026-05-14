@@ -2,6 +2,7 @@ import * as api from './api.js';
 import lottie from 'lottie-web';
 import confettiAnimation from './assets/Confetti.json';
 import trophyIconSvg from './assets/icons/trophy.svg?raw';
+import headerLogoUrl from './assets/header.png';
 import { escapeHtml, escapeAttr } from './base-components/html.js';
 import NavHeader from './base-components/NavHeader.js';
 
@@ -539,6 +540,9 @@ export function openWeeklyLeaderboardModal(options) {
   overlay.setAttribute('aria-modal', 'true');
   overlay.innerHTML =
     '<div class="hc-weekly-lb-modal-header">' +
+    '<div class="hc-header"><img src="' +
+    escapeAttr(headerLogoUrl) +
+    '" alt="Homecrowd" class="hc-header-logo" /></div>' +
     NavHeader({ title: 'Home', backButtonId: 'hc-weekly-lb-back' }) +
     '</div>' +
     '<div class="hc-weekly-lb-modal-scroll">' +
