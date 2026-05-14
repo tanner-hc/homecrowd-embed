@@ -4,6 +4,7 @@ import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { buildDashboardHalfCircleGaugeHtml } from '../base-components/DashboardHalfCircleGauge.js';
+import { buildTiersModalHtml } from '../base-components/TiersModal.js';
 import {
   buildOverallRewardContext,
   buildWeeklyRewardContext,
@@ -643,6 +644,12 @@ function buildHomeHtml(ctx) {
       '</div></div>';
   }
 
+  var tiersModalHtml = buildTiersModalHtml({
+    tiers: Array.isArray(ctx.tierConfigTiers) ? ctx.tierConfigTiers : [],
+    currentTierName: userTier && userTier.name,
+    currentTierLevel: userTier && userTier.level,
+  });
+
   return (
     '<div class="hc-home">' +
     '<div class="hc-home-page-pad">' +
@@ -660,6 +667,7 @@ function buildHomeHtml(ctx) {
     recentActivityHtml +
     '</div>' +
     buildIntroModalHtml() +
+    tiersModalHtml +
     '</div>'
   );
 }
@@ -868,6 +876,12 @@ async function fetchDashboardPayload() {
     }
   }
 
+  var profileSchool = profileUser && (profileUser.active_school || profileUser.activeSchool);
+  var tierConfigTiers =
+    profileSchool && profileSchool.tier_config && Array.isArray(profileSchool.tier_config.tiers)
+      ? profileSchool.tier_config.tiers
+      : [];
+
   return {
     user: freshUser,
     userTier: userTier,
@@ -883,6 +897,7 @@ async function fetchDashboardPayload() {
     weeklyReward: weeklyReward,
     overallReward: overallReward,
     leaderboardRows: leaderboardList,
+    tierConfigTiers: tierConfigTiers,
   };
 }
 
@@ -908,6 +923,21 @@ function loadHome(container) {
       var embedRoot = container.closest('.hc-embed');
       if (introModal && embedRoot && introModal.parentNode !== embedRoot) {
         embedRoot.appendChild(introModal);
+      }
+
+      var tiersModal = container.querySelector('#hc-tiers-modal');
+      if (tiersModal) {
+        var tierBadgeBtn = container.querySelector('[data-action="open-tiers-modal"]');
+        if (tierBadgeBtn) {
+          tierBadgeBtn.addEventListener('click', function () {
+            tiersModal.style.display = 'flex';
+          });
+        }
+        tiersModal.addEventListener('click', function (e) {
+          if (e.target.closest('[data-tiers-close="1"]')) {
+            tiersModal.style.display = 'none';
+          }
+        });
       }
       var introSliderWrap = introModal ? introModal.querySelector('.hc-intro-slider-wrap') : null;
       var introDots = introModal

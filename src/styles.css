@@ -5580,6 +5580,132 @@ body {
   justify-content: flex-end;
 }
 
+.hc-dash-tier-badge-btn {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  margin: -4px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.hc-dash-tier-badge-btn:hover {
+  opacity: 0.8;
+}
+
+.hc-tiers-modal-overlay {
+  z-index: 200;
+}
+
+.hc-tiers-modal-sheet {
+  width: 100%;
+  max-width: 420px;
+  max-height: 85%;
+  background: var(--hc-card, #ffffff);
+  border-radius: 20px;
+  padding: 18px 0 12px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.hc-tiers-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.hc-tiers-modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #000000;
+  font-family: var(--hc-font);
+}
+
+.hc-tiers-modal-close {
+  background: none;
+  border: none;
+  font-size: 15px;
+  color: #666666;
+  font-family: var(--hc-font);
+  cursor: pointer;
+  padding: 6px 8px;
+}
+
+.hc-tiers-modal-close:hover {
+  color: #000000;
+}
+
+.hc-tiers-modal-list {
+  padding: 8px 12px;
+  overflow-y: auto;
+}
+
+.hc-tiers-modal-row {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-radius: 12px;
+  margin-bottom: 4px;
+}
+
+.hc-tiers-modal-row--current {
+  background: #f8f8f8;
+}
+
+.hc-tiers-modal-badge {
+  width: 44px;
+  height: 44px;
+  margin-right: 14px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.hc-tiers-modal-badge-placeholder {
+  background: #f0f0f0;
+  border-radius: 8px;
+}
+
+.hc-tiers-modal-row-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.hc-tiers-modal-row-name {
+  font-size: 16px;
+  font-weight: 400;
+  color: #000000;
+  font-family: var(--hc-font);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hc-tiers-modal-row-name--current {
+  color: var(--hc-primary, #00c8ff);
+}
+
+.hc-tiers-modal-row-req {
+  font-size: 13px;
+  color: #666666;
+  font-family: var(--hc-font);
+  margin-top: 2px;
+}
+
+.hc-tiers-modal-row-chip {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--hc-primary, #00c8ff);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 8px;
+  font-family: var(--hc-font);
+}
+
 .hc-dash-tier-badge-text {
   font-size: 14px;
   font-weight: 700;
@@ -7755,35 +7881,7 @@ body {
 
 .hc-weekly-lb-modal-header {
   flex-shrink: 0;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-start;
-  padding: max(12px, env(safe-area-inset-top, 0px)) 16px 12px;
-  border-bottom: 1px solid #f0f0f0;
-  gap: 12px;
-}
-
-.hc-weekly-lb-modal-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  margin: 0;
-  padding: 8px 8px 8px 0;
-  border: none;
-  background: transparent;
-  font: inherit;
-  font-size: 17px;
-  color: #000000;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.hc-weekly-lb-modal-back-icon {
-  font-size: 28px;
-  line-height: 1;
-  font-weight: 300;
-  margin-right: 2px;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .hc-weekly-lb-modal-scroll {

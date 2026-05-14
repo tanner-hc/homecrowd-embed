@@ -102,7 +102,7 @@ export function buildDashboardHalfCircleGaugeHtml(o) {
   var tierBadge = '';
   if (currentTierName) {
     tierBadge =
-      '<div class="hc-dash-tier-badge"><span class="hc-dash-tier-badge-text">' +
+      '<button type="button" class="hc-dash-tier-badge hc-dash-tier-badge-btn" data-action="open-tiers-modal"><span class="hc-dash-tier-badge-text">' +
       escapeHtml(currentTierName) +
       '</span>' +
       (currentTierBadgeUrl
@@ -110,7 +110,7 @@ export function buildDashboardHalfCircleGaugeHtml(o) {
           escapeAttr(currentTierBadgeUrl) +
           '" alt="" loading="lazy" decoding="async" onerror="this.style.display=\'none\'"/>'
         : '') +
-      '</div>';
+      '</button>';
   }
 
   return (

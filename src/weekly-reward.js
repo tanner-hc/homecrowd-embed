@@ -3,6 +3,7 @@ import lottie from 'lottie-web';
 import confettiAnimation from './assets/Confetti.json';
 import trophyIconSvg from './assets/icons/trophy.svg?raw';
 import { escapeHtml, escapeAttr } from './base-components/html.js';
+import NavHeader from './base-components/NavHeader.js';
 
 function normalizeMediaUrl(url) {
   if (url == null || url === '') return null;
@@ -538,7 +539,7 @@ export function openWeeklyLeaderboardModal(options) {
   overlay.setAttribute('aria-modal', 'true');
   overlay.innerHTML =
     '<div class="hc-weekly-lb-modal-header">' +
-    '<button type="button" class="hc-weekly-lb-modal-back" data-weekly-lb-close="1"><span class="hc-weekly-lb-modal-back-icon" aria-hidden="true">‹</span><span>Home</span></button>' +
+    NavHeader({ title: 'Home', backButtonId: 'hc-weekly-lb-back' }) +
     '</div>' +
     '<div class="hc-weekly-lb-modal-scroll">' +
     '<div class="hc-weekly-lb-modal-inner">' +
@@ -551,9 +552,10 @@ export function openWeeklyLeaderboardModal(options) {
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
   }
 
-  overlay.addEventListener('click', function (e) {
-    if (e.target && e.target.closest('[data-weekly-lb-close="1"]')) close();
-  });
+  var backBtn = overlay.querySelector('#hc-weekly-lb-back');
+  if (backBtn) {
+    backBtn.addEventListener('click', close);
+  }
 
   document.body.appendChild(overlay);
 }
