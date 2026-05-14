@@ -215,7 +215,7 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
   var canRedeemPts = availablePts >= (product.points_cost || 0);
   var canEnterRaffle =
     redemptionType === 'raffle' &&
-    (ticketCount > 0 || canRedeemPts) &&
+    canRedeemPts &&
     !isLocked &&
     !raffleDrawingPassed &&
     !raffleCompletedByStatus;
@@ -574,31 +574,6 @@ function buildBottomBarHtml(o) {
       return html;
     }
 
-    if (o.ticketCount > 0 && !o.isLocked && !o.raffleDrawingPassed) {
-      html += '<div class="hc-split-actions">';
-      html += MainButton({
-        id: 'hc-redeem-pts',
-        large: false,
-        className: 'hc-split-half',
-        disabled: !o.canRedeemPts || o.cardLockedActive,
-        html:
-          'Redeem for&nbsp;<strong>' +
-          formatDisplayNumber(product.points_cost || 0) +
-          ' pts</strong>',
-      });
-      html += '<div class="hc-split-div"></div>';
-      html += MainButton({
-        id: 'hc-redeem-ticket',
-        large: false,
-        className: 'hc-split-half',
-        disabled: o.cardLockedActive,
-        html:
-          'Use ticket (<strong>' + formatDisplayNumber(o.ticketCount) + '</strong>)',
-      });
-      html += '</div>';
-      html += '</div>';
-      return html;
-    }
 
     var raffleDisabled = !o.canEnterRaffle || o.cardLockedActive || o.isLocked;
     html += MainButton({
@@ -765,18 +740,6 @@ function bindDetailEvents(container, product, summary, currentUser, cardLinkStat
     });
   }
 
-  var raffleTix = document.getElementById('hc-redeem-ticket');
-  if (raffleTix) {
-    raffleTix.addEventListener('click', function () {
-      if (raffleTix.disabled) return;
-      writeRedemptionConfirmAndNavigate(product, {
-        availablePoints: avail,
-        availableTickets: ticketCount,
-        payWithStripe: false,
-        useRaffleTicket: true,
-      });
-    });
-  }
 
   var raffleSingle = document.getElementById('hc-redeem-raffle');
   if (raffleSingle) {

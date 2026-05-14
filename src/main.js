@@ -218,32 +218,54 @@ function removeDailyVisitStorageValue(key) {
   } catch (_e) { }
 }
 
+function showBonusModal(title, message) {
+  var overlay = document.createElement('div');
+  overlay.className = 'hc-modal-overlay';
+  overlay.innerHTML =
+    '<div class="hc-modal" style="text-align:center;">' +
+    '<div style="font-size:32px;margin-bottom:12px;">🎉</div>' +
+    '<div class="hc-modal-title">' + title + '</div>' +
+    '<div class="hc-modal-text">' + message + '</div>' +
+    '<div class="hc-modal-actions" style="justify-content:center;">' +
+    '<button class="hc-btn hc-btn-primary hc-btn-large" style="min-width:120px;" data-bonus-close="1">Awesome!</button>' +
+    '</div>' +
+    '</div>';
+
+  function close() {
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  }
+
+  overlay.addEventListener('click', function (e) {
+    if (e.target && (e.target.closest('[data-bonus-close]') || e.target === overlay)) close();
+  });
+
+  document.body.appendChild(overlay);
+}
+
 function showDailyBonus(dailyBonus) {
   console.log('🎯 [embed] Daily visit bonus received:', dailyBonus);
   if (!dailyBonus) {
     console.log('🎯 [embed] No daily bonus in response');
     return;
   }
-  if (dailyBonus.tickets_awarded && dailyBonus.tickets_awarded > 0) {
-    console.log('🎯 [embed] Showing daily ticket bonus modal');
-    window.alert(
-      'Daily Bonus!\n' +
-      (dailyBonus.message ||
-        'You earned ' +
-        dailyBonus.tickets_awarded +
-        ' raffle ticket' +
-        (dailyBonus.tickets_awarded > 1 ? 's' : '') +
-        '!')
-    );
-  } else if (dailyBonus.points_awarded && dailyBonus.points_awarded > 0) {
-    console.log('🎯 [embed] Showing daily points bonus modal');
-    window.alert(
-      'Daily Bonus!\n' +
-      (dailyBonus.message || 'You earned ' + dailyBonus.points_awarded + ' points!')
-    );
+  var hasBonus =
+    (dailyBonus.points_awarded > 0) ||
+    (dailyBonus.tickets_awarded > 0) ||
+    (dailyBonus.entries_awarded > 0);
+
+  if (hasBonus) {
+    console.log('🎯 [embed] Showing daily bonus modal');
+    showBonusModal('Daily Bonus!', dailyBonus.message || 'You received a daily bonus!');
   } else {
-    console.log('🎯 [embed] Daily bonus had no awarded tickets or points:', dailyBonus);
+    console.log('🎯 [embed] Daily bonus had no awarded value:', dailyBonus);
   }
+}
+
+function showRaffleEntryModal(count, titles) {
+  var msg = titles && titles.length > 0
+    ? "You've been entered into: <strong>" + titles.join(', ') + '</strong>!'
+    : "You've been entered into " + count + ' raffle' + (count > 1 ? 's' : '') + '!';
+  showBonusModal("You're In!", msg);
 }
 
 async function checkDailyVisit() {
@@ -522,8 +544,11 @@ function render(route) {
     renderLogin(appEl, async function (u) {
       if (schoolId) {
         try {
-          await api.assignSchool(schoolId);
+          var assignResult = await api.assignSchool(schoolId);
           u = await api.fetchCurrentUser();
+          if (assignResult && assignResult.auto_raffle_entries > 0) {
+            showRaffleEntryModal(assignResult.auto_raffle_entries, assignResult.raffle_titles);
+          }
         } catch (e) { }
       }
       user = u;
