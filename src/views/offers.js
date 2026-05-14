@@ -48,8 +48,60 @@ function getStoredOfferLocation() {
 var _userLocation = null;
 
 export function renderOffers(container) {
-  container.innerHTML = LoadingSpinner({ text: 'Loading offers...' });
-  loadOffers(container, 'stores');
+  container.innerHTML = buildOffersShell('stores');
+
+  var carouselTapDedupe = { card: null, until: 0 };
+  container._hcCarouselDedupe = carouselTapDedupe;
+  container._hcStoresLoaded = { featured: false, grid: false };
+  container._hcOnlineLoaded = { featured: false, grid: false };
+
+  wireUpOffersTabs(container);
+  wireUpOffersCardClicks(container, carouselTapDedupe);
+
+  var userLoc = getStoredOfferLocation();
+
+  api
+    .getFeaturedOffers('card_linked')
+    .then(function (raw) {
+      if (!container.isConnected) return;
+      populateFeaturedStores(container, pickFeaturedList(raw));
+    })
+    .catch(function () {
+      if (!container.isConnected) return;
+      populateFeaturedStores(container, []);
+    });
+
+  api
+    .getFeaturedOffers('click')
+    .then(function (raw) {
+      if (!container.isConnected) return;
+      populateFeaturedOnline(container, pickFeaturedList(raw));
+    })
+    .catch(function () {
+      if (!container.isConnected) return;
+      populateFeaturedOnline(container, []);
+    });
+
+  getOffersWithLocationRetry(1, 50, userLoc)
+    .then(function (raw) {
+      if (!container.isConnected) return;
+      populateStoresGrid(container, pickOliveList(raw));
+    })
+    .catch(function () {
+      if (!container.isConnected) return;
+      populateStoresGrid(container, []);
+    });
+
+  api
+    .getWildfireOffers(1, 50)
+    .then(function (raw) {
+      if (!container.isConnected) return;
+      populateOnlineGrid(container, pickWildfireList(raw));
+    })
+    .catch(function () {
+      if (!container.isConnected) return;
+      populateOnlineGrid(container, []);
+    });
 }
 
 async function getOffersWithLocationRetry(page, pageSize, userLoc) {
@@ -63,196 +115,262 @@ async function getOffersWithLocationRetry(page, pageSize, userLoc) {
   }
 }
 
-async function loadOffers(container, activeTab) {
-  try {
-    var userLoc = getStoredOfferLocation();
-    var results = await Promise.all([
-      getOffersWithLocationRetry(1, 50, userLoc).catch(function () {
-        return {};
-      }),
-      api.getWildfireOffers(1, 50).catch(function () {
-        return {};
-      }),
-      api.getFeaturedOffers('card_linked').catch(function () {
-        return [];
-      }),
-      api.getFeaturedOffers('click').catch(function () {
-        return [];
-      }),
-    ]);
-
-    var cardlinkedRaw = results[0];
-    var clickRaw = results[1];
-    var featuredStoresRaw = results[2];
-    var featuredOnlineRaw = results[3];
-
-    var cardlinked = cardlinkedRaw.cardlinked || cardlinkedRaw.results || (Array.isArray(cardlinkedRaw) ? cardlinkedRaw : []);
-    var click = clickRaw.click || clickRaw.results || (Array.isArray(clickRaw) ? clickRaw : []);
-    var allFeaturedStores = Array.isArray(featuredStoresRaw) ? featuredStoresRaw : featuredStoresRaw.results || [];
-    var allFeaturedOnline = Array.isArray(featuredOnlineRaw) ? featuredOnlineRaw : featuredOnlineRaw.results || [];
-
-    var featuredStoresTop = allFeaturedStores.filter(function (f) {
-      return f.is_active && f.top_featured;
-    });
-    var featuredStoresBottom = allFeaturedStores.filter(function (f) {
-      return f.is_active && f.bottom_featured;
-    });
-    var featuredOnlineTop = allFeaturedOnline.filter(function (f) {
-      return f.is_active && f.top_featured;
-    });
-    var featuredOnlineBottom = allFeaturedOnline.filter(function (f) {
-      return f.is_active && f.bottom_featured;
-    });
-
-    var html = '<div class="hc-offers-page">';
-
-    html += '<div class="hc-offers-tabs">';
-    html +=
-      '<button type="button" class="hc-offers-tab' +
-      (activeTab === 'stores' ? ' active' : '') +
-      '" data-tab="stores">In-person</button>';
-    html +=
-      '<button type="button" class="hc-offers-tab' +
-      (activeTab === 'online' ? ' active' : '') +
-      '" data-tab="online">In-app</button>';
-    html +=
-      '<button type="button" class="hc-offers-tab' +
-      (activeTab === 'extension' ? ' active' : '') +
-      '" data-tab="extension">Online</button>';
-    html += '</div>';
-
-    html +=
-      '<div id="hc-tab-stores" class="hc-tab-content"' +
-      (activeTab !== 'stores' ? ' style="display:none"' : '') +
-      '>';
-
-    html += '<div class="hc-screen-title">';
-    html += ScreenTitle({
-      title: 'Partner stores',
-      subtitle: 'Explore our marketplace of exclusive earnings',
-    });
-    html += '</div>';
-
-    if (featuredStoresTop.length > 0) {
-      html += renderStoresHeroCarousel(featuredStoresTop);
-    }
-
-    if (featuredStoresBottom.length > 0) {
-      html += renderFeaturedGrid(featuredStoresBottom);
-    }
-
-    html += renderLocationMapSection();
-
-    html += '<div class="hc-search-wrap">' + SearchBar({ id: 'hc-search-stores', placeholder: 'Search', value: '' }) + '</div>';
-
-    html += '<div id="hc-stores-grid" class="hc-merchant-grid">';
-    cardlinked.forEach(function (m) {
-      html += renderMerchantCard(m);
-    });
-    html += '</div>';
-
-    if (cardlinked.length === 0 && featuredStoresTop.length === 0 && featuredStoresBottom.length === 0) {
-      html += EmptyState({
-        title: 'No Store Offers',
-        subtitle: 'No in-store offers available right now.',
-        iconChar: '🏪',
-      });
-    }
-
-    html += '<div style="height:80px"></div>';
-    html += '</div>';
-
-    html +=
-      '<div id="hc-tab-online" class="hc-tab-content"' +
-      (activeTab !== 'online' ? ' style="display:none"' : '') +
-      '>';
-
-    html += '<div class="hc-screen-title">';
-    html += ScreenTitle({
-      title: 'Online offers',
-      subtitle: 'Explore our marketplace of exclusive earnings',
-    });
-    html += '</div>';
-
-    if (featuredOnlineTop.length > 0) {
-      html += renderOnlineFeaturedCarousel(featuredOnlineTop, 'top');
-    }
-
-    if (featuredOnlineBottom.length > 0) {
-      html += renderOnlineFeaturedCarousel(featuredOnlineBottom, 'bottom');
-    }
-
-    html += '<div class="hc-search-wrap">' + SearchBar({ id: 'hc-search-online', placeholder: 'Search', value: '' }) + '</div>';
-
-    html += '<div id="hc-online-grid" class="hc-merchant-grid">';
-    click.forEach(function (m) {
-      html += renderMerchantCard(m);
-    });
-    html += '</div>';
-
-    if (click.length === 0 && featuredOnlineTop.length === 0 && featuredOnlineBottom.length === 0) {
-      html += EmptyState({
-        title: 'No Online Offers',
-        subtitle: 'No online offers available right now.',
-        iconChar: '🌐',
-      });
-    }
-
-    html += '<div style="height:80px"></div>';
-    html += '</div>';
-
-    html +=
-      '<div id="hc-tab-extension" class="hc-tab-content"' +
-      (activeTab !== 'extension' ? ' style="display:none"' : '') +
-      '>';
-    html += '<div id="hc-offers-extension-panel" class="hc-offers-extension-panel"></div>';
-    html += '<div style="height:80px"></div>';
-    html += '</div>';
-
-    html += '</div>';
-
-    container.innerHTML = html;
-
-    var tabs = container.querySelectorAll('.hc-offers-tab');
-    tabs.forEach(function (tab) {
-      tab.addEventListener('click', function () {
-        var targetTab = this.getAttribute('data-tab');
-        tabs.forEach(function (t) {
-          t.classList.remove('active');
-        });
-        this.classList.add('active');
-        document.getElementById('hc-tab-stores').style.display = targetTab === 'stores' ? '' : 'none';
-        document.getElementById('hc-tab-online').style.display = targetTab === 'online' ? '' : 'none';
-        document.getElementById('hc-tab-extension').style.display = targetTab === 'extension' ? '' : 'none';
-        if (targetTab === 'extension') {
-          var extPanel = document.getElementById('hc-offers-extension-panel');
-          mountBrowserExtensionInline(extPanel);
-        }
-      });
-    });
-
-    bindSearch('hc-search-stores', 'hc-stores-grid', cardlinked);
-    bindSearch('hc-search-online', 'hc-online-grid', click);
-
-    initOffersCarousels(container);
-    var carouselTapDedupe = initOffersCarouselTapOpens(container);
-    initOffersMap(container, cardlinked);
-
-    container.addEventListener('click', async function (e) {
-      var card = e.target.closest('[data-offer-id], [data-offer-type]');
-      if (!card) return;
-      if (carouselTapDedupe.card === card && Date.now() < carouselTapDedupe.until) {
-        carouselTapDedupe.card = null;
-        carouselTapDedupe.until = 0;
-        return;
-      }
-      await handleOffersMarketplaceCardClick(card);
-    });
-  } catch (err) {
-    container.innerHTML =
-      '<div class="hc-alert-error">Failed to load offers: ' + escapeHtml(err.message) + '</div>';
-  }
+function pickFeaturedList(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (raw && Array.isArray(raw.results)) return raw.results;
+  return [];
 }
+
+function pickOliveList(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw.cardlinked)) return raw.cardlinked;
+  if (Array.isArray(raw.results)) return raw.results;
+  if (Array.isArray(raw)) return raw;
+  return [];
+}
+
+function pickWildfireList(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw.click)) return raw.click;
+  if (Array.isArray(raw.results)) return raw.results;
+  if (Array.isArray(raw)) return raw;
+  return [];
+}
+
+function gridSkeletonHtml() {
+  var card =
+    '<div class="hc-merchant-card hc-merchant-card--skeleton" aria-hidden="true">' +
+    '<div class="hc-merchant-img-wrap hc-skeleton-shimmer"></div>' +
+    '<div class="hc-merchant-card-info">' +
+    '<div class="hc-merchant-location hc-skeleton-line hc-skeleton-shimmer"></div>' +
+    '</div></div>';
+  var html = '';
+  for (var i = 0; i < 6; i++) html += card;
+  return html;
+}
+
+function buildOffersShell(activeTab) {
+  var html = '<div class="hc-offers-page">';
+
+  html += '<div class="hc-offers-tabs">';
+  html +=
+    '<button type="button" class="hc-offers-tab' +
+    (activeTab === 'stores' ? ' active' : '') +
+    '" data-tab="stores">In-person</button>';
+  html +=
+    '<button type="button" class="hc-offers-tab' +
+    (activeTab === 'online' ? ' active' : '') +
+    '" data-tab="online">In-app</button>';
+  html +=
+    '<button type="button" class="hc-offers-tab' +
+    (activeTab === 'extension' ? ' active' : '') +
+    '" data-tab="extension">Online</button>';
+  html += '</div>';
+
+  html +=
+    '<div id="hc-tab-stores" class="hc-tab-content"' +
+    (activeTab !== 'stores' ? ' style="display:none"' : '') +
+    '>';
+  html += '<div class="hc-screen-title">';
+  html += ScreenTitle({
+    title: 'Partner stores',
+    subtitle: 'Explore our marketplace of exclusive earnings',
+  });
+  html += '</div>';
+  html += '<div id="hc-stores-featured-area"></div>';
+  html += renderLocationMapSection();
+  html +=
+    '<div class="hc-search-wrap">' +
+    SearchBar({ id: 'hc-search-stores', placeholder: 'Search', value: '' }) +
+    '</div>';
+  html += '<div id="hc-stores-grid" class="hc-merchant-grid">' + gridSkeletonHtml() + '</div>';
+  html += '<div id="hc-stores-empty-slot"></div>';
+  html += '<div style="height:80px"></div>';
+  html += '</div>';
+
+  html +=
+    '<div id="hc-tab-online" class="hc-tab-content"' +
+    (activeTab !== 'online' ? ' style="display:none"' : '') +
+    '>';
+  html += '<div class="hc-screen-title">';
+  html += ScreenTitle({
+    title: 'Online offers',
+    subtitle: 'Explore our marketplace of exclusive earnings',
+  });
+  html += '</div>';
+  html += '<div id="hc-online-featured-area"></div>';
+  html +=
+    '<div class="hc-search-wrap">' +
+    SearchBar({ id: 'hc-search-online', placeholder: 'Search', value: '' }) +
+    '</div>';
+  html += '<div id="hc-online-grid" class="hc-merchant-grid">' + gridSkeletonHtml() + '</div>';
+  html += '<div id="hc-online-empty-slot"></div>';
+  html += '<div style="height:80px"></div>';
+  html += '</div>';
+
+  html +=
+    '<div id="hc-tab-extension" class="hc-tab-content"' +
+    (activeTab !== 'extension' ? ' style="display:none"' : '') +
+    '>';
+  html += '<div id="hc-offers-extension-panel" class="hc-offers-extension-panel"></div>';
+  html += '<div style="height:80px"></div>';
+  html += '</div>';
+
+  html += '</div>';
+  return html;
+}
+
+function wireUpOffersTabs(container) {
+  var tabs = container.querySelectorAll('.hc-offers-tab');
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      var targetTab = this.getAttribute('data-tab');
+      tabs.forEach(function (t) {
+        t.classList.remove('active');
+      });
+      this.classList.add('active');
+      var storesEl = container.querySelector('#hc-tab-stores');
+      var onlineEl = container.querySelector('#hc-tab-online');
+      var extEl = container.querySelector('#hc-tab-extension');
+      if (storesEl) storesEl.style.display = targetTab === 'stores' ? '' : 'none';
+      if (onlineEl) onlineEl.style.display = targetTab === 'online' ? '' : 'none';
+      if (extEl) extEl.style.display = targetTab === 'extension' ? '' : 'none';
+      if (targetTab === 'extension') {
+        var extPanel = container.querySelector('#hc-offers-extension-panel');
+        mountBrowserExtensionInline(extPanel);
+      }
+    });
+  });
+}
+
+function wireUpOffersCardClicks(container, dedupe) {
+  container.addEventListener('click', async function (e) {
+    var card = e.target.closest('[data-offer-id], [data-offer-type]');
+    if (!card) return;
+    if (dedupe.card === card && Date.now() < dedupe.until) {
+      dedupe.card = null;
+      dedupe.until = 0;
+      return;
+    }
+    await handleOffersMarketplaceCardClick(card);
+  });
+}
+
+function populateFeaturedStores(container, all) {
+  var area = container.querySelector('#hc-stores-featured-area');
+  if (!area) return;
+  var top = all.filter(function (f) { return f.is_active && f.top_featured; });
+  var bottom = all.filter(function (f) { return f.is_active && f.bottom_featured; });
+  var html = '';
+  if (top.length > 0) html += renderStoresHeroCarousel(top);
+  if (bottom.length > 0) html += renderFeaturedGrid(bottom);
+  area.innerHTML = html;
+  initOffersCarousels(area);
+  initOffersCarouselTapOpensInto(area, container._hcCarouselDedupe);
+  container._hcStoresLoaded.featured = true;
+  container._hcStoresFeaturedHasItems = top.length > 0 || bottom.length > 0;
+  maybeShowStoresEmptyState(container);
+}
+
+function populateFeaturedOnline(container, all) {
+  var area = container.querySelector('#hc-online-featured-area');
+  if (!area) return;
+  var top = all.filter(function (f) { return f.is_active && f.top_featured; });
+  var bottom = all.filter(function (f) { return f.is_active && f.bottom_featured; });
+  var html = '';
+  if (top.length > 0) html += renderOnlineFeaturedCarousel(top, 'top');
+  if (bottom.length > 0) html += renderOnlineFeaturedCarousel(bottom, 'bottom');
+  area.innerHTML = html;
+  initOffersCarousels(area);
+  initOffersCarouselTapOpensInto(area, container._hcCarouselDedupe);
+  container._hcOnlineLoaded.featured = true;
+  container._hcOnlineFeaturedHasItems = top.length > 0 || bottom.length > 0;
+  maybeShowOnlineEmptyState(container);
+}
+
+function populateStoresGrid(container, cardlinked) {
+  var grid = container.querySelector('#hc-stores-grid');
+  if (grid) {
+    var html = '';
+    cardlinked.forEach(function (m) { html += renderMerchantCard(m); });
+    grid.innerHTML = html;
+  }
+  bindSearch('hc-search-stores', 'hc-stores-grid', cardlinked);
+  initOffersMap(container, cardlinked);
+  container._hcStoresLoaded.grid = true;
+  container._hcStoresGridHasItems = cardlinked.length > 0;
+  maybeShowStoresEmptyState(container);
+}
+
+function populateOnlineGrid(container, click) {
+  var grid = container.querySelector('#hc-online-grid');
+  if (grid) {
+    var html = '';
+    click.forEach(function (m) { html += renderMerchantCard(m); });
+    grid.innerHTML = html;
+  }
+  bindSearch('hc-search-online', 'hc-online-grid', click);
+  container._hcOnlineLoaded.grid = true;
+  container._hcOnlineGridHasItems = click.length > 0;
+  maybeShowOnlineEmptyState(container);
+}
+
+function maybeShowStoresEmptyState(container) {
+  var loaded = container._hcStoresLoaded;
+  if (!loaded.featured || !loaded.grid) return;
+  if (container._hcStoresGridHasItems || container._hcStoresFeaturedHasItems) return;
+  var slot = container.querySelector('#hc-stores-empty-slot');
+  if (!slot) return;
+  slot.innerHTML = EmptyState({
+    title: 'No Store Offers',
+    subtitle: 'No in-store offers available right now.',
+    iconChar: '🏪',
+  });
+}
+
+function maybeShowOnlineEmptyState(container) {
+  var loaded = container._hcOnlineLoaded;
+  if (!loaded.featured || !loaded.grid) return;
+  if (container._hcOnlineGridHasItems || container._hcOnlineFeaturedHasItems) return;
+  var slot = container.querySelector('#hc-online-empty-slot');
+  if (!slot) return;
+  slot.innerHTML = EmptyState({
+    title: 'No Online Offers',
+    subtitle: 'No online offers available right now.',
+    iconChar: '🌐',
+  });
+}
+
+function initOffersCarouselTapOpensInto(scopeEl, dedupe) {
+  var carousels = scopeEl.querySelectorAll(
+    '.hc-offers-hero-carousel .hc-carousel, .hc-online-carousel .hc-carousel',
+  );
+  carousels.forEach(function (carousel) {
+    var ptrDown = null;
+    carousel.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      ptrDown = { x: e.clientX, y: e.clientY, t: Date.now(), id: e.pointerId };
+    });
+    carousel.addEventListener('pointerup', function (e) {
+      if (!ptrDown || e.pointerId !== ptrDown.id) return;
+      var down = ptrDown;
+      ptrDown = null;
+      if (Math.abs(e.clientX - down.x) > 14 || Math.abs(e.clientY - down.y) > 14) return;
+      if (Date.now() - down.t > 800) return;
+      var slide = e.target && e.target.closest && e.target.closest('.hc-carousel-slide');
+      if (!slide || !carousel.contains(slide)) return;
+      var slideCard = slide.querySelector('[data-offer-id], [data-offer-type]');
+      if (!slideCard) return;
+      dedupe.card = slideCard;
+      dedupe.until = Date.now() + 450;
+      handleOffersMarketplaceCardClick(slideCard).catch(function () {});
+    });
+    carousel.addEventListener('pointercancel', function (e) {
+      if (ptrDown && e.pointerId === ptrDown.id) ptrDown = null;
+    });
+  });
+}
+
 
 function buildFeaturedCardInner(f) {
   var oid = f.offer_id || f.id ? String(f.offer_id || f.id) : '';
@@ -1380,7 +1498,7 @@ function renderMerchantCard(merchant) {
     '">';
   if (logoUrl) {
     html +=
-      '<div class="hc-merchant-img-wrap"><img class="hc-merchant-img" src="' +
+      '<div class="hc-merchant-img-wrap"><img class="hc-merchant-img" loading="lazy" decoding="async" src="' +
       escapeAttr(logoUrl) +
       '" alt="' +
       escapeAttr(name) +

@@ -477,27 +477,23 @@ export function buildWeeklyRewardHomeTileHtml(title, rewardId, opts) {
   if (!idStr) return '';
   var name = String(title || '').trim();
   var eyebrow = opts.eyebrow != null ? String(opts.eyebrow) : 'Weekly reward';
-  var halfWidth = !!opts.halfWidth;
   var tileKind = opts.tileKind === 'overall' ? 'overall' : 'weekly';
-  var outerClass = 'hc-weekly-reward-home-tile' + (halfWidth ? ' hc-weekly-reward-home-tile--half' : '');
-  var iconWrapClass =
-    'hc-weekly-reward-home-tile-icon-wrap' + (halfWidth ? ' hc-weekly-reward-home-tile-icon-wrap--half' : '');
   var html =
-    '<button type="button" class="' +
-    outerClass +
-    '" data-home-lb-tile="' +
+    '<button type="button" class="hc-weekly-reward-home-tile" data-home-lb-tile="' +
     escapeAttr(tileKind) +
     '" data-reward-id="' +
     escapeAttr(idStr) +
     '">';
-  html += '<span class="hc-weekly-reward-home-tile-card">';
-  html += '<span class="' + iconWrapClass + '">' + WEEKLY_HOME_TROPHY_SVG + '</span>';
+  html += '<span class="hc-weekly-reward-home-tile-header">';
   html += '<span class="hc-weekly-reward-home-tile-eyebrow">' + escapeHtml(eyebrow) + '</span>';
+  html +=
+    '<svg class="hc-weekly-reward-home-tile-chevron" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+  html += '</span>';
+  html += '<span class="hc-weekly-reward-home-tile-icon-wrap">' + WEEKLY_HOME_TROPHY_SVG + '</span>';
   if (name) {
     html += '<span class="hc-weekly-reward-home-tile-title">' + escapeHtml(name) + '</span>';
   }
-  html += '<span class="hc-weekly-reward-home-tile-subtitle">View rankings</span>';
-  html += '</span></button>';
+  html += '</button>';
   return html;
 }
 

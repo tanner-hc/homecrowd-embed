@@ -13,6 +13,7 @@ import {
   buildWeeklyCountdownLabel,
   buildWeeklyRewardContext,
   connectWeeklyPrizeWebSocket,
+  openWeeklyLeaderboardModal,
   showWeeklyWinnerModal,
 } from '../weekly-reward.js';
 
@@ -660,6 +661,8 @@ async function loadRewards(container, routeEpoch) {
 
     attachWeeklyCountdown(container);
 
+    var weeklyLbRows =
+      leaderboardRes && Array.isArray(leaderboardRes.leaderboard) ? leaderboardRes.leaderboard : [];
     container.onclick = function (e) {
       var weeklyRewardCard = e.target.closest('.hc-rewards-weekly-section [data-reward-id]');
       if (weeklyRewardCard) {
@@ -669,8 +672,12 @@ async function loadRewards(container, routeEpoch) {
             lookupRewardForClick(weeklyRewardId, formattedRewards, weeklyRewardItem, overallRewardItem),
             currentUser,
           );
-          window.location.hash =
-            '#/rewards/' + encodeURIComponent(weeklyRewardId) + '?weekly=1';
+          openWeeklyLeaderboardModal({
+            rows: weeklyLbRows,
+            rewardTitle: (weeklyReward && weeklyReward.title) || '',
+            rewardDescription: (weeklyReward && weeklyReward.description) || '',
+            rewardImageUrl: (weeklyReward && weeklyReward.imageUrl) || null,
+          });
         }
         return;
       }
@@ -682,8 +689,12 @@ async function loadRewards(container, routeEpoch) {
             lookupRewardForClick(overallRewardId, formattedRewards, weeklyRewardItem, overallRewardItem),
             currentUser,
           );
-          window.location.hash =
-            '#/rewards/' + encodeURIComponent(overallRewardId) + '?overall=1';
+          openWeeklyLeaderboardModal({
+            rows: (overallReward && overallReward.rows) || [],
+            rewardTitle: (overallReward && overallReward.title) || '',
+            rewardDescription: (overallReward && overallReward.description) || '',
+            rewardImageUrl: (overallReward && overallReward.imageUrl) || null,
+          });
         }
         return;
       }
