@@ -3,8 +3,7 @@ import * as analytics from '../analytics.js';
 import shopIconUrl from '../assets/icons/store.svg';
 import { mountBrowserExtensionInline } from './browser-extension.js';
 import { resolveMapKitTokenAsync, ensureMapKitLoaded, mapKitAuthFailureWasReported } from '../mapkit-embed.js';
-import { postToNative } from '../bridge.js';
-import { showWebviewOverlay } from '../webview-overlay.js';
+import { hasNativeBridge, postToNative } from '../bridge.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import ScreenTitle from '../base-components/ScreenTitle.js';
 import SearchBar from '../base-components/SearchBar.js';
@@ -1679,6 +1678,14 @@ async function handleOffersMarketplaceCardClick(card) {
   var offerId = card.getAttribute('data-offer-id');
   var offerType = card.getAttribute('data-offer-type');
   var featuredOfferRaw = card.getAttribute('data-featured-offer');
+  var merchantTitle = '';
+  try {
+    var merchantRaw = card.getAttribute('data-merchant');
+    if (merchantRaw) {
+      var merchantParsed = JSON.parse(merchantRaw);
+      merchantTitle = merchantParsed.name || merchantParsed.merchantName || '';
+    }
+  } catch (e) {}
 
   if (featuredOfferRaw) {
     try {
@@ -1706,7 +1713,7 @@ async function handleOffersMarketplaceCardClick(card) {
           offer_id: offerId,
           offer_source: 'olive',
         });
-        openExternalUrl(trackUrl);
+        openExternalUrl(trackUrl, merchantTitle);
         return;
       }
     } catch (err) {}
@@ -1737,7 +1744,7 @@ async function handleOffersMarketplaceCardClick(card) {
           merchant_id: merchantId,
           offer_source: 'wildfire',
         });
-        openExternalUrl(trackUrl);
+        openExternalUrl(trackUrl, merchantTitle);
         return;
       }
     } catch (err) {}
@@ -1749,13 +1756,32 @@ async function handleOffersMarketplaceCardClick(card) {
       var url = merchantData.website;
       if (url) {
         if (url.indexOf('http') !== 0) url = 'https://' + url;
-        openExternalUrl(url);
+        openExternalUrl(url, merchantTitle);
       }
     }
   } catch (err) {}
 }
 
-function openExternalUrl(url) {
-  postToNative('homecrowd:open-url', { url: url });
-  showWebviewOverlay(url);
+function openExternalUrl(url, title) {
+  // Homecrowd-own native shell: hand off to a top-level native WebView.
+  // Bypasses X-Frame-Options. Only triggers when our specific bridge is
+  // present, not when a third-party app wraps us in a generic WebView.
+  if (hasNativeBridge()) {
+    postToNative('homecrowd:open-merchant-webview', { url: url, title: title || '' });
+    return;
+  }
+
+  // Try opening in a new tab/WebView first. Some host WebViews hand off to
+  // the system browser, others open an in-app tab. Returns null when popups
+  // are blocked or unsupported.
+  var newWin = null;
+  try {
+    newWin = window.open(url, '_blank', 'noopener,noreferrer');
+  } catch (e) {}
+  if (newWin) return;
+
+  // Last resort: top-level navigation in the host WebView. Replaces the
+  // embed with the merchant page (no iframe, so X-Frame-Options doesn't
+  // apply). User returns via the host's back navigation.
+  window.location.href = url;
 }
