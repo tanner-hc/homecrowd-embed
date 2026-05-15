@@ -400,10 +400,13 @@ export async function trackOfferClick(offerId) {
   return request('/api/olive/track-click/?offer_id=' + encodeURIComponent(offerId));
 }
 
-export async function getWildfireOffers(page, pageSize) {
+export async function getWildfireOffers(page, pageSize, query) {
   var params = 'page=' + (page || 1) + '&pageSize=' + (pageSize || 50);
   if (wildfireAppId) {
     params += '&wildfire_app_id=' + encodeURIComponent(wildfireAppId);
+  }
+  if (query && String(query).trim()) {
+    params += '&q=' + encodeURIComponent(String(query).trim());
   }
   return request('/api/wildfire/offers/?' + params);
 }

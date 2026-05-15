@@ -1,5 +1,6 @@
 import * as api from '../api.js';
 import * as analytics from '../analytics.js';
+import shopIconUrl from '../assets/icons/store.svg';
 import { mountBrowserExtensionInline } from './browser-extension.js';
 import { resolveMapKitTokenAsync, ensureMapKitLoaded, mapKitAuthFailureWasReported } from '../mapkit-embed.js';
 import { postToNative } from '../bridge.js';
@@ -96,12 +97,20 @@ export function renderOffers(container) {
     .getWildfireOffers(1, 50)
     .then(function (raw) {
       if (!container.isConnected) return;
-      populateOnlineGrid(container, pickWildfireList(raw));
+      populateOnlineGrid(container, pickWildfireList(raw), pickWildfirePagination(raw));
     })
     .catch(function () {
       if (!container.isConnected) return;
-      populateOnlineGrid(container, []);
+      populateOnlineGrid(container, [], null);
     });
+}
+
+function pickWildfirePagination(raw) {
+  if (!raw || !raw.pagination) return null;
+  return {
+    currentPage: Number(raw.pagination.currentPage) || 1,
+    hasMore: !!raw.pagination.hasMoreClick,
+  };
 }
 
 async function getOffersWithLocationRetry(page, pageSize, userLoc) {
@@ -183,6 +192,7 @@ function buildOffersShell(activeTab) {
     '<div class="hc-search-wrap">' +
     SearchBar({ id: 'hc-search-stores', placeholder: 'Search', value: '' }) +
     '</div>';
+  html += '<div id="hc-stores-search-header" class="hc-search-header"></div>';
   html += '<div id="hc-stores-grid" class="hc-merchant-grid">' + gridSkeletonHtml() + '</div>';
   html += '<div id="hc-stores-empty-slot"></div>';
   html += '<div style="height:80px"></div>';
@@ -203,7 +213,9 @@ function buildOffersShell(activeTab) {
     '<div class="hc-search-wrap">' +
     SearchBar({ id: 'hc-search-online', placeholder: 'Search', value: '' }) +
     '</div>';
+  html += '<div id="hc-online-search-header" class="hc-search-header"></div>';
   html += '<div id="hc-online-grid" class="hc-merchant-grid">' + gridSkeletonHtml() + '</div>';
+  html += '<div id="hc-online-load-more"></div>';
   html += '<div id="hc-online-empty-slot"></div>';
   html += '<div style="height:80px"></div>';
   html += '</div>';
@@ -235,11 +247,23 @@ function wireUpOffersTabs(container) {
       if (storesEl) storesEl.style.display = targetTab === 'stores' ? '' : 'none';
       if (onlineEl) onlineEl.style.display = targetTab === 'online' ? '' : 'none';
       if (extEl) extEl.style.display = targetTab === 'extension' ? '' : 'none';
+      clearOffersSearchInputs(container);
       if (targetTab === 'extension') {
         var extPanel = container.querySelector('#hc-offers-extension-panel');
         mountBrowserExtensionInline(extPanel);
       }
     });
+  });
+}
+
+function clearOffersSearchInputs(container) {
+  ['hc-search-stores', 'hc-search-online'].forEach(function (id) {
+    var input = container.querySelector('#' + id);
+    if (!input || !input.value) return;
+    input.value = '';
+    // Dispatch input so bindSearch's listener restores the grid, hides the
+    // search header, and re-shows the featured area / load-more button.
+    input.dispatchEvent(new Event('input', { bubbles: true }));
   });
 }
 
@@ -302,17 +326,76 @@ function populateStoresGrid(container, cardlinked) {
   maybeShowStoresEmptyState(container);
 }
 
-function populateOnlineGrid(container, click) {
+function populateOnlineGrid(container, click, pagination) {
   var grid = container.querySelector('#hc-online-grid');
   if (grid) {
     var html = '';
     click.forEach(function (m) { html += renderMerchantCard(m); });
     grid.innerHTML = html;
   }
-  bindSearch('hc-search-online', 'hc-online-grid', click);
+  // Keep the merchants array on the container so search + load-more both
+  // operate on the same growing list.
+  container._hcOnlineMerchants = click.slice();
+  container._hcOnlinePage = pagination ? pagination.currentPage : 1;
+  container._hcOnlineHasMore = pagination ? pagination.hasMore : false;
+  bindSearch('hc-search-online', 'hc-online-grid', container._hcOnlineMerchants, container);
+  renderOnlineLoadMore(container);
   container._hcOnlineLoaded.grid = true;
   container._hcOnlineGridHasItems = click.length > 0;
   maybeShowOnlineEmptyState(container);
+}
+
+function renderOnlineLoadMore(container) {
+  var slot = container.querySelector('#hc-online-load-more');
+  if (!slot) return;
+  // Hide while searching — server-side search returns the full result set.
+  var searchInput = container.querySelector('#hc-search-online');
+  var searching = !!(searchInput && searchInput.value && searchInput.value.trim());
+  if (!container._hcOnlineHasMore || searching) {
+    slot.innerHTML = '';
+    return;
+  }
+  slot.innerHTML =
+    '<button type="button" class="hc-load-more-btn" id="hc-online-load-more-btn">Load More</button>';
+  var btn = slot.querySelector('#hc-online-load-more-btn');
+  if (btn) {
+    btn.addEventListener('click', function () {
+      handleOnlineLoadMore(container, btn);
+    });
+  }
+}
+
+function handleOnlineLoadMore(container, btn) {
+  if (container._hcOnlineLoadingMore) return;
+  container._hcOnlineLoadingMore = true;
+  btn.disabled = true;
+  btn.textContent = 'Loading...';
+  var nextPage = (container._hcOnlinePage || 1) + 1;
+  api
+    .getWildfireOffers(nextPage, 50)
+    .then(function (raw) {
+      if (!container.isConnected) return;
+      var newItems = pickWildfireList(raw);
+      var pagination = pickWildfirePagination(raw);
+      container._hcOnlineMerchants.push.apply(container._hcOnlineMerchants, newItems);
+      container._hcOnlinePage = pagination ? pagination.currentPage : nextPage;
+      container._hcOnlineHasMore = pagination ? pagination.hasMore : false;
+      var grid = container.querySelector('#hc-online-grid');
+      if (grid) {
+        var appendHtml = '';
+        newItems.forEach(function (m) { appendHtml += renderMerchantCard(m); });
+        grid.insertAdjacentHTML('beforeend', appendHtml);
+      }
+      renderOnlineLoadMore(container);
+    })
+    .catch(function (err) {
+      console.error('Load more wildfire failed:', err && err.message);
+      btn.disabled = false;
+      btn.textContent = 'Load More';
+    })
+    .then(function () {
+      container._hcOnlineLoadingMore = false;
+    });
 }
 
 function maybeShowStoresEmptyState(container) {
@@ -1364,10 +1447,39 @@ function initOffersMap(container, cardlinked) {
   }
 }
 
-function bindSearch(inputId, gridId, allMerchants) {
+function bindSearch(inputId, gridId, allMerchants, container) {
   var input = document.getElementById(inputId);
   if (!input) return;
+  var isOnline = inputId.indexOf('online') >= 0;
+  var tabLabel = isOnline ? 'Online' : 'Stores';
+  var headerId = isOnline ? 'hc-online-search-header' : 'hc-stores-search-header';
+  var tabContentId = isOnline ? 'hc-tab-online' : 'hc-tab-stores';
   var searchAnalyticsTimer = null;
+  var serverSearchTimer = null;
+  var serverSearchRequestId = 0;
+
+  function setHeader(html) {
+    var header = document.getElementById(headerId);
+    if (header) header.innerHTML = html;
+  }
+
+  function setSearching(active) {
+    var tab = document.getElementById(tabContentId);
+    if (!tab) return;
+    if (active) tab.classList.add('hc-tab--searching');
+    else tab.classList.remove('hc-tab--searching');
+  }
+
+  function renderResultHeader(count, query) {
+    setHeader(
+      '<div class="hc-search-header-text">' +
+        count +
+        ' results for "' +
+        escapeHtml(query) +
+        '"</div>'
+    );
+  }
+
   input.addEventListener('input', function () {
     var q = this.value.toLowerCase().trim();
     var grid = document.getElementById(gridId);
@@ -1377,19 +1489,69 @@ function bindSearch(inputId, gridId, allMerchants) {
     }
     var trimmed = (this.value || '').trim();
     if (trimmed.length >= 2) {
-      var marketplaceTab = inputId.indexOf('online') >= 0 ? 'online' : 'stores';
+      var marketplaceTab = isOnline ? 'online' : 'stores';
       var qt = trimmed.slice(0, 200);
       searchAnalyticsTimer = setTimeout(function () {
         analytics.trackEmbedSearch(qt, marketplaceTab);
       }, 700);
     }
     if (!q) {
+      if (serverSearchTimer) {
+        clearTimeout(serverSearchTimer);
+        serverSearchTimer = null;
+      }
+      serverSearchRequestId++;
+      setHeader('');
+      setSearching(false);
       grid.innerHTML = '';
       allMerchants.forEach(function (m) {
         grid.innerHTML += renderMerchantCard(m);
       });
+      if (isOnline && container) renderOnlineLoadMore(container);
       return;
     }
+    setSearching(true);
+    if (isOnline && container) {
+      var slot = container.querySelector('#hc-online-load-more');
+      if (slot) slot.innerHTML = '';
+    }
+
+    // Online tab: the client only has the first page of merchants loaded, so
+    // client-side filtering misses anything past the alphabetical first page.
+    // Hit /api/wildfire/offers/?q=... server-side; the feed is cached.
+    if (isOnline) {
+      if (serverSearchTimer) {
+        clearTimeout(serverSearchTimer);
+      }
+      var requestId = ++serverSearchRequestId;
+      setHeader(
+        '<div class="hc-search-header-text">Searching "' + escapeHtml(q) + '"...</div>'
+      );
+      grid.innerHTML = '';
+      serverSearchTimer = setTimeout(function () {
+        api
+          .getWildfireOffers(1, 200, q)
+          .then(function (resp) {
+            if (requestId !== serverSearchRequestId) return;
+            var list = pickWildfireList(resp) || [];
+            renderResultHeader(list.length, q);
+            grid.innerHTML = '';
+            list.forEach(function (m) {
+              grid.innerHTML += renderMerchantCard(m);
+            });
+          })
+          .catch(function (err) {
+            if (requestId !== serverSearchRequestId) return;
+            console.error('Wildfire search failed:', err && err.message);
+            setHeader(
+              '<div class="hc-search-header-text">Search failed. Try again.</div>'
+            );
+            grid.innerHTML = '';
+          });
+      }, 300);
+      return;
+    }
+
     var filtered = allMerchants.filter(function (m) {
       var name = (m.name || m.merchantName || '').toLowerCase();
       if (name.indexOf(q) >= 0) return true;
@@ -1400,17 +1562,11 @@ function bindSearch(inputId, gridId, allMerchants) {
       }
       return false;
     });
+    renderResultHeader(filtered.length, q);
     grid.innerHTML = '';
-    if (filtered.length === 0) {
-      grid.innerHTML =
-        '<div class="hc-search-empty" style="grid-column:1/-1;text-align:center;padding:40px;color:#999;">No results for "' +
-        escapeHtml(q) +
-        '"</div>';
-    } else {
-      filtered.forEach(function (m) {
-        grid.innerHTML += renderMerchantCard(m);
-      });
-    }
+    filtered.forEach(function (m) {
+      grid.innerHTML += renderMerchantCard(m);
+    });
   });
 }
 
@@ -1470,7 +1626,7 @@ function renderMerchantCard(merchant) {
   var name = merchant.name || merchant.merchantName || 'Unknown';
   var location = '';
   if (merchant.isOnline || merchant.reach === 'online_only') {
-    location = 'Online Store';
+    location = '';
   } else if (merchant.city && merchant.state) {
     location = merchant.city + ', ' + merchant.state;
   }
@@ -1504,17 +1660,10 @@ function renderMerchantCard(merchant) {
       escapeAttr(name) +
       '" /></div>';
   } else {
-    var initials = name
-      .split(' ')
-      .map(function (w) {
-        return w[0] || '';
-      })
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
     html +=
-      '<div class="hc-merchant-img-wrap"><div class="hc-merchant-initials">' +
-      escapeHtml(initials) +
+      '<div class="hc-merchant-img-wrap"><div class="hc-merchant-no-logo">' +
+      '<img class="hc-merchant-no-logo-icon" src="' + escapeAttr(shopIconUrl) + '" alt="" aria-hidden="true" />' +
+      '<div class="hc-merchant-no-logo-name">' + escapeHtml(name) + '</div>' +
       '</div></div>';
   }
   html += '<div class="hc-merchant-card-info">';

@@ -3232,23 +3232,29 @@ body {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 15px;
-  padding: 0 20px;
-  padding-bottom: 100px;
+  padding: 0 20px 35px;
 }
 
 .hc-merchant-card {
   background: #fff;
   border-radius: 12px;
-  box-shadow: var(--hc-shadow);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   align-items: center;
   text-align: center;
-  padding: 8px 8px 12px;
+  padding: 12px 8px;
   cursor: pointer;
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
 }
 
 .hc-merchant-card:hover {
-  box-shadow: var(--hc-shadow-heavy);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+  transform: translateY(-1px);
+}
+
+.hc-merchant-card:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .hc-merchant-img-wrap {
@@ -3279,8 +3285,91 @@ body {
   color: var(--hc-text-secondary);
 }
 
+.hc-merchant-no-logo {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  box-sizing: border-box;
+}
+
+.hc-merchant-no-logo-icon {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 4px;
+  object-fit: contain;
+}
+
+.hc-search-header {
+  padding: 0 20px;
+}
+
+.hc-search-header:empty {
+  display: none;
+}
+
+.hc-tab--searching #hc-stores-featured-area,
+.hc-tab--searching #hc-online-featured-area,
+.hc-tab--searching .hc-offers-map-section {
+  display: none;
+}
+
+.hc-search-header-text {
+  font-size: 15px;
+  font-weight: 400;
+  color: #000;
+  margin-bottom: 16px;
+}
+
+.hc-load-more-btn {
+  display: block;
+  margin: 20px auto;
+  min-width: 150px;
+  padding: 12px 40px;
+  background: #002E5D;
+  color: #fff;
+  border: none;
+  border-radius: 25px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.hc-load-more-btn:hover:not(:disabled) {
+  background: #003a75;
+}
+
+.hc-load-more-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.hc-load-more-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.hc-merchant-no-logo-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #c0c0c0;
+  text-align: center;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .hc-merchant-card-info {
   margin-top: 10px;
+}
+
+.hc-merchant-card-info:empty {
+  margin-top: 0;
 }
 
 .hc-merchant-location {
