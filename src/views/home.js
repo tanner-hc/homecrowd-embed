@@ -423,7 +423,7 @@ function buildCheckboxSection(userTier, checkedItems) {
     {
       key: 'safariExtension',
       label: 'Activate safari extension',
-      href: '#/offers',
+      href: '#/browser-extension',
       showGo: !checkedItems.safariExtension,
     },
     {
