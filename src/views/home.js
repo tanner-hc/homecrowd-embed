@@ -163,6 +163,18 @@ function transactionMerchantDisplayName(transaction) {
   return titleCaseIfAllCapsShouting(stripped);
 }
 
+function pickTransactionDate(transaction) {
+  if (!transaction) return null;
+  return (
+    transaction.transaction_date ||
+    transaction.transactionDate ||
+    transaction.date ||
+    transaction.created_at ||
+    transaction.createdAt ||
+    null
+  );
+}
+
 function getTransactionsArray(transactionsRes) {
   if (!transactionsRes) return [];
   var txns = transactionsRes.transactions || transactionsRes.results || transactionsRes;
@@ -179,7 +191,7 @@ function filterTransactionsByDate(transactions, filter) {
   startOfWeek.setHours(0, 0, 0, 0);
   if (!Array.isArray(transactions)) return [];
   return transactions.filter(function (transaction) {
-    var d = transaction.transaction_date || transaction.transactionDate;
+    var d = pickTransactionDate(transaction);
     var transactionDate = new Date(d);
     if (filter === 'This week') return transactionDate >= startOfWeek;
     if (filter === 'This month') return transactionDate >= startOfMonth;
@@ -223,17 +235,9 @@ function formatTransactionDateHome(dateString) {
 function getPaymentMethodHome(transaction) {
   if (transaction.wildfire_merchant_id || transaction.wildfire_merchant_name) return 'Online';
   if (transaction.card_nickname) return transaction.card_nickname;
-  var methods = ['Visa', 'Amex', 'Master Card'];
-  var hash = 0;
-  var transactionId = transaction.id || (transaction.merchant && transaction.merchant.name) || '0';
-  var s = String(transactionId);
-  var i;
-  for (i = 0; i < s.length; i++) {
-    var char = s.charCodeAt(i);
-    hash = hash * 31 + char;
-    hash = hash % 2147483647;
-  }
-  return methods[Math.abs(hash) % methods.length];
+  if (transaction.card_scheme) return transaction.card_scheme;
+  if (transaction.last4) return '•••• ' + transaction.last4;
+  return '';
 }
 
 function filterRecentTransactions(transactions, searchText) {
@@ -262,9 +266,13 @@ function filterRecentTransactions(transactions, searchText) {
 
 function buildHomeTransactionRowHtml(t) {
   var merchantLabel = transactionMerchantDisplayName(t);
-  var dateRaw = t.transaction_date || t.transactionDate;
-  var payInfo =
-    escapeHtml(getPaymentMethodHome(t)) + ' • ' + escapeHtml(formatTransactionDateHome(dateRaw));
+  var dateRaw = pickTransactionDate(t);
+  var method = getPaymentMethodHome(t);
+  var dateLabel = formatTransactionDateHome(dateRaw);
+  var payInfo = [method, dateLabel]
+    .filter(function (part) { return !!part; })
+    .map(escapeHtml)
+    .join(' • ');
   var isStripe = !!(t.isStripeRewardPurchase || t.is_stripe_reward_purchase);
   var amt =
     t.amount != null && String(t.amount).trim() !== ''
@@ -801,8 +809,8 @@ async function fetchDashboardPayload() {
   var schoolCashback = computeSchoolCashback(oliveTransactionsRes);
   var rawTx = getTransactionsArray(oliveTransactionsRes);
   var sortedTx = rawTx.slice().sort(function (a, b) {
-    var ta = new Date(a.transaction_date || a.transactionDate || 0).getTime();
-    var tb = new Date(b.transaction_date || b.transactionDate || 0).getTime();
+    var ta = new Date(pickTransactionDate(a) || 0).getTime();
+    var tb = new Date(pickTransactionDate(b) || 0).getTime();
     return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0);
   });
   var transactionsForList = sortedTx.slice(0, 100);
