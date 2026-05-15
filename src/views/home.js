@@ -235,7 +235,7 @@ function formatTransactionDateHome(dateString) {
 function getPaymentMethodHome(transaction) {
   if (transaction.wildfire_merchant_id || transaction.wildfire_merchant_name) return 'Online';
   if (transaction.card_nickname) return transaction.card_nickname;
-  if (transaction.card_scheme) return transaction.card_scheme;
+  if (transaction.card_scheme) return String(transaction.card_scheme).replace(/\b\w/g, function (c) { return c.toUpperCase(); });
   if (transaction.last4) return '•••• ' + transaction.last4;
   return '';
 }
