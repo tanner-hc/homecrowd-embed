@@ -411,12 +411,15 @@ export async function getWildfireOffers(page, pageSize, query) {
   return request('/api/wildfire/offers/?' + params);
 }
 
-export async function trackWildfireClick(merchantId) {
-  var params = 'merchant_id=' + encodeURIComponent(merchantId);
+export function buildWildfireRedirectUrl(merchantId) {
+  var token = getAccessToken();
+  if (!token) return null;
+  var params =
+    'merchant_id=' + encodeURIComponent(merchantId) + '&t=' + encodeURIComponent(token);
   if (wildfireAppId) {
     params += '&wildfire_app_id=' + encodeURIComponent(wildfireAppId);
   }
-  return request('/api/wildfire/track-click/?' + params);
+  return baseUrl + '/api/wildfire/redirect/?' + params;
 }
 
 export async function getFeaturedOffers(offerType) {
