@@ -4,6 +4,7 @@ import shopIconUrl from '../assets/icons/store.svg';
 import { mountBrowserExtensionInline } from './browser-extension.js';
 import { resolveMapKitTokenAsync, ensureMapKitLoaded, mapKitAuthFailureWasReported } from '../mapkit-embed.js';
 import { hasNativeBridge, postToNative } from '../bridge.js';
+import { showWebviewOverlay } from '../webview-overlay.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import ScreenTitle from '../base-components/ScreenTitle.js';
 import SearchBar from '../base-components/SearchBar.js';
@@ -1764,24 +1765,53 @@ async function handleOffersMarketplaceCardClick(card) {
 
 function openExternalUrl(url, title) {
   // Homecrowd-own native shell: hand off to a top-level native WebView.
-  // Bypasses X-Frame-Options. Only triggers when our specific bridge is
-  // present, not when a third-party app wraps us in a generic WebView.
+  // Only triggers when our specific bridge is present, not when a
+  // third-party app wraps us in a generic WebView.
   if (hasNativeBridge()) {
     postToNative('homecrowd:open-merchant-webview', { url: url, title: title || '' });
     return;
   }
 
-  // Try opening in a new tab/WebView first. Some host WebViews hand off to
-  // the system browser, others open an in-app tab. Returns null when popups
-  // are blocked or unsupported.
-  var newWin = null;
-  try {
-    newWin = window.open(url, '_blank', 'noopener,noreferrer');
-  } catch (e) {}
-  if (newWin) return;
+  // Show a spinner immediately so the user sees feedback while we probe
+  // the URL's frame headers server-side.
+  showFullscreenSpinner();
 
-  // Last resort: top-level navigation in the host WebView. Replaces the
-  // embed with the merchant page (no iframe, so X-Frame-Options doesn't
-  // apply). User returns via the host's back navigation.
-  window.location.href = url;
+  api
+    .checkEmbeddable(url)
+    .then(function (verdict) {
+      var embeddable = verdict && verdict.embeddable;
+      if (embeddable) {
+        // Safe to load inside the in-app iframe overlay.
+        hideFullscreenSpinner();
+        showWebviewOverlay(url);
+        return;
+      }
+      // X-Frame-Options or CSP frame-ancestors blocks iframing. Top-level
+      // navigation in the host WebView is the only way to actually reach
+      // the merchant. Spinner stays up until the WebView unloads us.
+      window.location.href = url;
+    })
+    .catch(function (err) {
+      console.warn('checkEmbeddable failed, falling back to top-level nav:', err && err.message);
+      // Treat failures as not-embeddable — top-level nav always works.
+      window.location.href = url;
+    });
+}
+
+var fullscreenSpinnerEl = null;
+function showFullscreenSpinner() {
+  if (fullscreenSpinnerEl) return;
+  fullscreenSpinnerEl = document.createElement('div');
+  fullscreenSpinnerEl.className = 'hc-route-spinner-overlay';
+  fullscreenSpinnerEl.innerHTML =
+    '<div class="hc-route-spinner-card">' +
+    '<div class="hc-spinner hc-route-spinner-wheel" aria-busy="true"></div>' +
+    '<p class="hc-route-spinner-text">Opening...</p>' +
+    '</div>';
+  document.body.appendChild(fullscreenSpinnerEl);
+}
+function hideFullscreenSpinner() {
+  if (!fullscreenSpinnerEl) return;
+  fullscreenSpinnerEl.remove();
+  fullscreenSpinnerEl = null;
 }
