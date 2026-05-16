@@ -2057,7 +2057,8 @@ body {
 }
 
 /* Route-transition full-screen spinner (shown while we probe a merchant URL
-   and either open the iframe overlay or navigate top-level). */
+   and either open the iframe overlay or navigate top-level). Renders the
+   shared LoadingSpinner component inside. */
 .hc-route-spinner-overlay {
   position: fixed;
   inset: 0;
@@ -2066,26 +2067,6 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 10000;
-}
-
-.hc-route-spinner-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
-.hc-route-spinner-wheel {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  min-height: 40px;
-}
-
-.hc-route-spinner-text {
-  font-size: 14px;
-  color: #444;
-  margin: 0;
 }
 
 /* Spinner */
@@ -3668,19 +3649,32 @@ body {
   padding: 4px 8px;
 }
 
-.hc-webview-url {
+.hc-webview-url,
+.hc-webview-title {
   flex: 1;
   text-align: center;
   font-size: 13px;
-  font-weight: 400;
-  color: #999;
+  font-weight: 500;
+  color: #444;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding: 0 8px;
 }
 
 .hc-webview-spacer {
   width: 50px;
+}
+
+.hc-webview-open-external {
+  background: none;
+  border: none;
+  font-family: var(--hc-font);
+  font-size: 14px;
+  font-weight: 400;
+  color: #00C8FF;
+  cursor: pointer;
+  padding: 4px 8px;
 }
 
 .hc-webview-iframe {
