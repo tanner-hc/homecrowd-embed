@@ -2056,6 +2056,38 @@ body {
   cursor: not-allowed;
 }
 
+/* Route-transition full-screen spinner (shown while we probe a merchant URL
+   and either open the iframe overlay or navigate top-level). */
+.hc-route-spinner-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.hc-route-spinner-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.hc-route-spinner-wheel {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.hc-route-spinner-text {
+  font-size: 14px;
+  color: #444;
+  margin: 0;
+}
+
 /* Spinner */
 .hc-spinner {
   display: flex;

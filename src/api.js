@@ -424,6 +424,10 @@ export async function getFeaturedOffers(offerType) {
   return request('/api/merchant/featured-offers/' + params);
 }
 
+export async function checkEmbeddable(url) {
+  return request('/api/embed/check-frameable/?url=' + encodeURIComponent(url));
+}
+
 export async function getLeaderboard() {
   return request(EMBED_BASE + '/rewards/leaderboard/');
 }
