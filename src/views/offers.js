@@ -1745,7 +1745,7 @@ async function handleOffersMarketplaceCardClick(card) {
           merchant_id: merchantId,
           offer_source: 'wildfire',
         });
-        openExternalUrl(trackUrl, merchantTitle);
+        window.location.href = trackUrl;
         return;
       }
     } catch (err) {}
@@ -1757,7 +1757,7 @@ async function handleOffersMarketplaceCardClick(card) {
       var url = merchantData.website;
       if (url) {
         if (url.indexOf('http') !== 0) url = 'https://' + url;
-        openExternalUrl(url, merchantTitle);
+        window.location.href = url;
       }
     }
   } catch (err) {}
