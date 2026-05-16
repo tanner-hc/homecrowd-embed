@@ -1772,28 +1772,36 @@ function openExternalUrl(url, title) {
     return;
   }
 
-  // Show a spinner immediately so the user sees feedback while we probe
-  // the URL's frame headers server-side.
+  // Show a spinner during the server-side header check. Runtime detection
+  // alone can't tell a CSP-blocked frame parked at chrome-error://... from
+  // a successful cross-origin load (both throw SecurityError when read).
+  // The server-side check reads actual response headers and is reliable.
   showFullscreenSpinner();
 
   api
     .checkEmbeddable(url)
     .then(function (verdict) {
-      var embeddable = verdict && verdict.embeddable;
-      if (embeddable) {
-        // Safe to load inside the in-app iframe overlay.
+      if (verdict && verdict.embeddable) {
         hideFullscreenSpinner();
-        showWebviewOverlay(url);
+        // Iframe overlay still has its own timeout/about-blank fallback as
+        // belt-and-suspenders for cases where headers look OK but the
+        // merchant page still fails to render (e.g., third-party cookie
+        // issues inside a host-app WebView).
+        showWebviewOverlay(url, {
+          title: title,
+          onFallback: function () {
+            showFullscreenSpinner();
+            window.location.href = url;
+          },
+        });
         return;
       }
-      // X-Frame-Options or CSP frame-ancestors blocks iframing. Top-level
-      // navigation in the host WebView is the only way to actually reach
-      // the merchant. Spinner stays up until the WebView unloads us.
+      // Headers say no — go top-level. Spinner stays up until the WebView
+      // navigates away.
       window.location.href = url;
     })
     .catch(function (err) {
       console.warn('checkEmbeddable failed, falling back to top-level nav:', err && err.message);
-      // Treat failures as not-embeddable — top-level nav always works.
       window.location.href = url;
     });
 }
@@ -1803,15 +1811,28 @@ function showFullscreenSpinner() {
   if (fullscreenSpinnerEl) return;
   fullscreenSpinnerEl = document.createElement('div');
   fullscreenSpinnerEl.className = 'hc-route-spinner-overlay';
-  fullscreenSpinnerEl.innerHTML =
-    '<div class="hc-route-spinner-card">' +
-    '<div class="hc-spinner hc-route-spinner-wheel" aria-busy="true"></div>' +
-    '<p class="hc-route-spinner-text">Opening...</p>' +
-    '</div>';
+  fullscreenSpinnerEl.innerHTML = LoadingSpinner({ text: 'Opening...' });
   document.body.appendChild(fullscreenSpinnerEl);
 }
 function hideFullscreenSpinner() {
-  if (!fullscreenSpinnerEl) return;
-  fullscreenSpinnerEl.remove();
-  fullscreenSpinnerEl = null;
+  if (fullscreenSpinnerEl) {
+    fullscreenSpinnerEl.remove();
+    fullscreenSpinnerEl = null;
+  }
+  // Belt-and-suspenders: if bfcache restored the DOM but reset the
+  // module-scoped reference, query and remove any stray overlay so we
+  // don't leave a spinner orphaned on the page.
+  var stale = document.querySelectorAll('.hc-route-spinner-overlay');
+  for (var i = 0; i < stale.length; i++) stale[i].remove();
+}
+
+// When the user navigates away via window.location.href and then hits
+// "back" in the host app (e.g., the Boise State app's back button), the
+// embed page is restored from bfcache with its DOM state intact —
+// including a lingering spinner. Drop it on pageshow so the user isn't
+// staring at a stale loading overlay.
+if (typeof window !== 'undefined') {
+  window.addEventListener('pageshow', function () {
+    hideFullscreenSpinner();
+  });
 }
