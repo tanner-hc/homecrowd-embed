@@ -853,15 +853,9 @@ async function fetchDashboardPayload() {
     (!checkedItems.linkCard || !checkedItems.safariExtension || !checkedItems.firstPurchase);
 
   if (freshUser && freshUser.id) {
-    try {
-      await api.getUserPointsSummary(freshUser.id);
-    } catch (_e) { }
-    try {
-      await api.getRaffleTicketsSummary();
-    } catch (_e) { }
-    try {
-      await api.getRaffleEntriesSummary();
-    } catch (_e) { }
+    api.getUserPointsSummary(freshUser.id).catch(function () { });
+    api.getRaffleTicketsSummary().catch(function () { });
+    api.getRaffleEntriesSummary().catch(function () { });
   }
 
   var leaderboardSectionActive = !!(
@@ -872,16 +866,12 @@ async function fetchDashboardPayload() {
   var weeklyReward = null;
   var overallReward = null;
   if (leaderboardSectionActive) {
-    try {
-      weeklyReward = await buildWeeklyRewardContext(leaderboardRes);
-    } catch (_e) {
-      weeklyReward = null;
-    }
-    try {
-      overallReward = await buildOverallRewardContext(leaderboardRes);
-    } catch (_e2) {
-      overallReward = null;
-    }
+    var rewardPair = await Promise.all([
+      buildWeeklyRewardContext(leaderboardRes).catch(function () { return null; }),
+      buildOverallRewardContext(leaderboardRes).catch(function () { return null; }),
+    ]);
+    weeklyReward = rewardPair[0];
+    overallReward = rewardPair[1];
   }
 
   var profileSchool = profileUser && (profileUser.active_school || profileUser.activeSchool);

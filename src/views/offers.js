@@ -1734,21 +1734,18 @@ async function handleOffersMarketplaceCardClick(card) {
 
   var merchantId = card.getAttribute('data-merchant-id');
   if (merchantId) {
-    try {
-      var trackResult = await api.trackWildfireClick(merchantId);
-      var trackUrl = trackResult && (trackResult.tracking_url || trackResult.website);
-      if (trackUrl) {
-        if (trackUrl.indexOf('http') !== 0) trackUrl = 'https://' + trackUrl;
-        analytics.trackEmbedOfferLinkClick({
-          entry_point: 'embed_marketplace',
-          flow: 'wildfire_tracking',
-          merchant_id: merchantId,
-          offer_source: 'wildfire',
-        });
-        window.location.href = trackUrl;
-        return;
-      }
-    } catch (err) {}
+    var redirectUrl = api.buildWildfireRedirectUrl(merchantId);
+    if (redirectUrl) {
+      showFullscreenSpinner();
+      analytics.trackEmbedOfferLinkClick({
+        entry_point: 'embed_marketplace',
+        flow: 'wildfire_tracking',
+        merchant_id: merchantId,
+        offer_source: 'wildfire',
+      });
+      window.location.href = redirectUrl;
+      return;
+    }
   }
   try {
     var merchantAttr = card.getAttribute('data-merchant');
