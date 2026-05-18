@@ -9,10 +9,7 @@ import {
   buildOverallRewardContext,
   buildWeeklyRewardContext,
   buildWeeklyRewardHomeTileHtml,
-  connectWeeklyPrizeWebSocket,
-  openWeeklyLeaderboardModal,
-  showWeeklyWinnerModal,
-  tryShowMissedWinnerModalFromLeaderboard,
+  openWeeklyLeaderboardModalFromHome,
 } from '../weekly-reward.js';
 import chartUpIconSvg from '../assets/icons/chart-up.svg?raw';
 import activityIconSvg from '../assets/icons/activity.svg?raw';
@@ -30,8 +27,6 @@ var instructionTabBarEl = null;
 var instructionTabGuardHandler = null;
 var instructionRepositionHandler = null;
 var instructionScrollEl = null;
-var weeklySocketCleanup = null;
-var overallSocketCleanup = null;
 var curvedArrowSvgHtml =
   '<svg class="hc-global-instruction-arrow-svg" viewBox="0 0 140 160" fill="none" aria-hidden="true">' +
   '<path d="M38 14 C28 45 25 85 45 105 C60 120 86 118 108 112" stroke="#00B8D4" stroke-width="13" stroke-opacity="0.35" stroke-linecap="round" stroke-linejoin="round"></path>' +
@@ -873,13 +868,6 @@ async function fetchDashboardPayload() {
     ]);
     weeklyReward = rewardPair[0];
     overallReward = rewardPair[1];
-    var weeklyPrizeTitleForModal = weeklyReward && weeklyReward.title ? weeklyReward.title : null;
-    var overallPrizeTitleForModal = overallReward && overallReward.title ? overallReward.title : null;
-    tryShowMissedWinnerModalFromLeaderboard(
-      leaderboardRes,
-      weeklyPrizeTitleForModal,
-      overallPrizeTitleForModal,
-    );
   }
 
   var profileSchool = profileUser && (profileUser.active_school || profileUser.activeSchool);
@@ -903,20 +891,13 @@ async function fetchDashboardPayload() {
     weeklyReward: weeklyReward,
     overallReward: overallReward,
     leaderboardRows: leaderboardList,
+    leaderboardRes: leaderboardRes,
     tierConfigTiers: tierConfigTiers,
   };
 }
 
 function loadHome(container) {
   clearInstructionOverlay();
-  if (weeklySocketCleanup) {
-    weeklySocketCleanup();
-    weeklySocketCleanup = null;
-  }
-  if (overallSocketCleanup) {
-    overallSocketCleanup();
-    overallSocketCleanup = null;
-  }
   container.innerHTML = LoadingSpinner({
     text: 'Loading your activity...',
     className: 'hc-home-loading',
@@ -1052,64 +1033,24 @@ function loadHome(container) {
           mountInstructionOverlay(container);
         });
       }
-      container._hcWeeklyLbPayload =
-        ctx.leaderboardSectionActive && ctx.weeklyReward && ctx.weeklyReward.rewardId
-          ? {
-            rows: ctx.leaderboardRows || [],
-            rewardTitle: ctx.weeklyReward.title || '',
-            rewardDescription: ctx.weeklyReward.description || '',
-            rewardImageUrl: ctx.weeklyReward.imageUrl || null,
-          }
-          : null;
-      container._hcOverallLbPayload =
-        ctx.leaderboardSectionActive && ctx.overallReward && ctx.overallReward.rewardId
-          ? {
-            rows: (ctx.overallReward && ctx.overallReward.rows) || [],
-            rewardTitle: ctx.overallReward.title || '',
-            rewardDescription: ctx.overallReward.description || '',
-            rewardImageUrl: ctx.overallReward.imageUrl || null,
-          }
-          : null;
+      container._hcLeaderboardRes = ctx.leaderboardRes || null;
       var weeklyLbBtn = container.querySelector('[data-home-lb-tile="weekly"]');
       if (weeklyLbBtn) {
         weeklyLbBtn.addEventListener('click', function () {
-          var payload = container._hcWeeklyLbPayload;
-          if (payload) openWeeklyLeaderboardModal(payload);
+          if (ctx.weeklyReward) {
+            openWeeklyLeaderboardModalFromHome(ctx.weeklyReward, container._hcLeaderboardRes);
+          }
         });
       }
       var overallLbBtn = container.querySelector('[data-home-lb-tile="overall"]');
       if (overallLbBtn) {
         overallLbBtn.addEventListener('click', function () {
-          var payload = container._hcOverallLbPayload;
-          if (payload) openWeeklyLeaderboardModal(payload);
+          if (ctx.overallReward) {
+            openWeeklyLeaderboardModalFromHome(ctx.overallReward, container._hcLeaderboardRes);
+          }
         });
       }
       mountHomeRecentActivity(container);
-      var activeSchool = ctx.user && (ctx.user.activeSchool || ctx.user.active_school);
-      var hasSchoolId = !!(activeSchool && activeSchool.id != null);
-      var weeklyPrizeTitle = ctx.weeklyReward && ctx.weeklyReward.title ? ctx.weeklyReward.title : null;
-      var overallPrizeTitle = ctx.overallReward && ctx.overallReward.title ? ctx.overallReward.title : null;
-      weeklySocketCleanup = connectWeeklyPrizeWebSocket({
-        enabled: hasSchoolId,
-        prizeType: 'weekly',
-        onMessage: function (message) {
-          if (!message || message.type !== 'weekly_prize_finalized') return;
-          showWeeklyWinnerModal(message.weekly_prize || null, weeklyPrizeTitle, { prizeKind: 'weekly' });
-          loadHome(container);
-        },
-      });
-      overallSocketCleanup = connectWeeklyPrizeWebSocket({
-        enabled: hasSchoolId,
-        prizeType: 'overall',
-        onMessage: function (message) {
-          if (!message || message.type !== 'overall_prize_finalized') return;
-          showWeeklyWinnerModal(message.overall_prize || null, overallPrizeTitle, {
-            prizeKind: 'overall',
-            winnerBadgeLabel: 'Overall Winner',
-          });
-          loadHome(container);
-        },
-      });
     })
     .catch(function (err) {
       clearInstructionOverlay();

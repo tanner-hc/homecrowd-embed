@@ -8,24 +8,21 @@ import NavHeader from '../base-components/NavHeader.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
 import { writeRedemptionConfirmAndNavigate } from './redemption-confirmation.js';
+import { parsePeriodEndTimestamp } from '../rewardPeriodCountdown.js';
+import { createPrizeFinalizeModalWatcher } from '../prizeFinalizeModal.js';
 import {
+  buildOverallRewardContext,
   buildWeeklyCountdownLabel,
   buildWeeklyLeaderboardHtml,
-  connectWeeklyPrizeWebSocket,
-  showWeeklyWinnerModal,
+  buildWeeklyRewardContext,
 } from '../weekly-reward.js';
 
-var weeklyDetailSocketCleanup = null;
-var weeklyCountdownCleanup = null;
+var weeklyDetailLiveCleanup = null;
 
 export function renderRewardDetail(container, ctx) {
-  if (weeklyDetailSocketCleanup) {
-    weeklyDetailSocketCleanup();
-    weeklyDetailSocketCleanup = null;
-  }
-  if (weeklyCountdownCleanup) {
-    weeklyCountdownCleanup();
-    weeklyCountdownCleanup = null;
+  if (weeklyDetailLiveCleanup) {
+    weeklyDetailLiveCleanup();
+    weeklyDetailLiveCleanup = null;
   }
   var product = normalizeProduct(ctx.product);
   var summary = ctx.summary;
@@ -418,6 +415,143 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
   return html;
 }
 
+function attachWeeklyRewardDetailLiveUpdates(container, initialReward) {
+  var state = Object.assign({}, initialReward);
+  var periodEndedRefreshDone = false;
+  var countdownTimer = null;
+  var pollTimer = null;
+  var periodEndTimer = null;
+  var finalizeWatcher = null;
+
+  function getPeriodFields() {
+    var isOverall = state.periodKind === 'overall';
+    return {
+      periodEndsAt: isOverall ? state.periodEndsAt : state.weekEndsAt,
+      periodEndDateOnly: isOverall ? state.periodEndDateOnly : state.weekEndDateOnly,
+      periodEndTime: isOverall ? state.periodEndTime : state.weekEndTime,
+    };
+  }
+
+  function getPeriodEndTimestamp() {
+    var fields = getPeriodFields();
+    return parsePeriodEndTimestamp(fields.periodEndsAt, fields.periodEndDateOnly, fields.periodEndTime);
+  }
+
+  function startCountdownTimer() {
+    if (countdownTimer) window.clearInterval(countdownTimer);
+    var countdownEl = container.querySelector('.hc-weekly-countdown-text');
+    if (!countdownEl) return;
+    countdownTimer = window.setInterval(function () {
+      countdownEl.textContent = buildWeeklyCountdownLabel(state);
+    }, 1000);
+  }
+
+  function replaceWeeklySection() {
+    var section = container.querySelector('.hc-weekly-detail-section');
+    if (!section) return;
+    var wrap = document.createElement('div');
+    wrap.innerHTML = buildWeeklyDetailHtml(state);
+    var next = wrap.firstElementChild;
+    if (next) section.replaceWith(next);
+    startCountdownTimer();
+  }
+
+  function syncFinalizeWatcher() {
+    if (!finalizeWatcher || typeof finalizeWatcher.updateContext !== 'function') return;
+    var fields = getPeriodFields();
+    finalizeWatcher.updateContext({
+      periodEndsAt: fields.periodEndsAt,
+      periodEndDateOnly: fields.periodEndDateOnly,
+      periodEndTime: fields.periodEndTime,
+      prizeId: state.prizeId,
+      prizeTitle: state.title || '',
+    });
+    if (state.winnerName && typeof finalizeWatcher.onWinnerNameUpdate === 'function') {
+      finalizeWatcher.onWinnerNameUpdate(state.winnerName);
+    }
+  }
+
+  function refreshFromApi() {
+    return api
+      .getLeaderboard()
+      .then(function (lb) {
+        if (!lb || lb.success === false) return null;
+        var build =
+          state.periodKind === 'overall' ? buildOverallRewardContext : buildWeeklyRewardContext;
+        return build(lb);
+      })
+      .then(function (next) {
+        if (!next || String(next.rewardId) !== String(state.rewardId)) return;
+        Object.assign(state, next);
+        replaceWeeklySection();
+        syncFinalizeWatcher();
+        if (state.winnerName && pollTimer) {
+          window.clearInterval(pollTimer);
+          pollTimer = null;
+        }
+      })
+      .catch(function () {});
+  }
+
+  function schedulePeriodEndRefresh() {
+    var ts = getPeriodEndTimestamp();
+    if (!ts || !Number.isFinite(ts)) return;
+    var trigger = function () {
+      if (periodEndedRefreshDone) return;
+      periodEndedRefreshDone = true;
+      refreshFromApi();
+    };
+    var msUntilEnd = ts - Date.now();
+    if (msUntilEnd <= 0) {
+      trigger();
+      return;
+    }
+    periodEndTimer = window.setTimeout(trigger, msUntilEnd + 500);
+  }
+
+  function startPolling() {
+    var ts = getPeriodEndTimestamp();
+    if (!ts || !Number.isFinite(ts)) return;
+    if (Date.now() < ts || state.winnerName) return;
+    pollTimer = window.setInterval(function () {
+      if (state.winnerName) {
+        window.clearInterval(pollTimer);
+        pollTimer = null;
+        return;
+      }
+      refreshFromApi();
+    }, 15000);
+  }
+
+  var periodFields = getPeriodFields();
+  finalizeWatcher = createPrizeFinalizeModalWatcher({
+    enabled: true,
+    leaderboardType: state.periodKind === 'overall' ? 'overall' : 'weekly',
+    periodEndsAt: periodFields.periodEndsAt,
+    periodEndDateOnly: periodFields.periodEndDateOnly,
+    periodEndTime: periodFields.periodEndTime,
+    prizeId: state.prizeId,
+    initialWinnerName: state.winnerName || '',
+    prizeTitle: state.title || '',
+  });
+
+  startCountdownTimer();
+  schedulePeriodEndRefresh();
+  startPolling();
+  refreshFromApi();
+
+  return function teardownWeeklyDetailLive() {
+    if (countdownTimer) window.clearInterval(countdownTimer);
+    if (pollTimer) window.clearInterval(pollTimer);
+    if (periodEndTimer) window.clearTimeout(periodEndTimer);
+    if (finalizeWatcher && typeof finalizeWatcher.destroy === 'function') finalizeWatcher.destroy();
+    countdownTimer = null;
+    pollTimer = null;
+    periodEndTimer = null;
+    finalizeWatcher = null;
+  };
+}
+
 function buildWeeklyDetailHtml(weeklyReward) {
   if (!weeklyReward) return '';
   var isOverall = weeklyReward.periodKind === 'overall';
@@ -638,42 +772,13 @@ function bindDetailEvents(container, product, summary, currentUser, cardLinkStat
   attachRafflePillAuction(container);
 
   if (weeklyReward) {
-    var countdownEl = container.querySelector('.hc-weekly-countdown-text');
-    if (countdownEl) {
-      var countdownTimer = window.setInterval(function () {
-        countdownEl.textContent = buildWeeklyCountdownLabel(weeklyReward);
-      }, 1000);
-      weeklyCountdownCleanup = function () {
-        window.clearInterval(countdownTimer);
-      };
-    }
-    var prizeKind = weeklyReward.periodKind === 'overall' ? 'overall' : 'weekly';
-    weeklyDetailSocketCleanup = connectWeeklyPrizeWebSocket({
-      enabled: true,
-      prizeType: prizeKind,
-      onMessage: function (message) {
-        if (prizeKind === 'overall') {
-          if (!message || message.type !== 'overall_prize_finalized') return;
-          showWeeklyWinnerModal(message.overall_prize || null, weeklyReward.title, {
-            prizeKind: 'overall',
-            winnerBadgeLabel: 'Overall Winner',
-          });
-        } else {
-          if (!message || message.type !== 'weekly_prize_finalized') return;
-          showWeeklyWinnerModal(message.weekly_prize || null, weeklyReward.title, { prizeKind: 'weekly' });
-        }
-      },
-    });
+    weeklyDetailLiveCleanup = attachWeeklyRewardDetailLiveUpdates(container, weeklyReward);
     window.addEventListener(
       'hashchange',
       function () {
-        if (weeklyDetailSocketCleanup) {
-          weeklyDetailSocketCleanup();
-          weeklyDetailSocketCleanup = null;
-        }
-        if (weeklyCountdownCleanup) {
-          weeklyCountdownCleanup();
-          weeklyCountdownCleanup = null;
+        if (weeklyDetailLiveCleanup) {
+          weeklyDetailLiveCleanup();
+          weeklyDetailLiveCleanup = null;
         }
       },
       { once: true },
