@@ -11,6 +11,12 @@ import {
   markWinnerAlertBeenShown,
   pickUnshownWinnerAlert,
 } from './winnerAlert.js';
+import {
+  formatPeriodCountdown,
+  formatPeriodEndLocal,
+  parsePeriodEndTimestamp,
+} from './rewardPeriodCountdown.js';
+import { createPrizeFinalizeModalWatcher } from './prizeFinalizeModal.js';
 
 function normalizeMediaUrl(url) {
   if (url == null || url === '') return null;
@@ -88,16 +94,11 @@ function pickWeekEndsAt(leaderboardRes, prize) {
 }
 
 function resolveTargetMs(weekEndsAt, prize) {
-  if (weekEndsAt) {
-    var directMs = new Date(weekEndsAt).getTime();
-    if (Number.isFinite(directMs)) return directMs;
-  }
-  var fallbackDate = prize && typeof prize === 'object' ? prize.week_end_date || prize.weekEndDate : null;
-  if (fallbackDate) {
-    var fallbackMs = new Date(String(fallbackDate) + 'T23:59:59').getTime();
-    if (Number.isFinite(fallbackMs)) return fallbackMs;
-  }
-  return null;
+  return parsePeriodEndTimestamp(
+    weekEndsAt,
+    prize && typeof prize === 'object' ? prize.week_end_date || prize.weekEndDate : null,
+    prize && typeof prize === 'object' ? prize.week_end_time || prize.weekEndTime : null,
+  );
 }
 
 function getWinnerName(winner) {
@@ -148,6 +149,30 @@ function isPrizeFinalized(prize) {
   if (prize.is_finalized === true || prize.isFinalized === true) return true;
   var winnerName = prize.winner_name || prize.winnerName;
   return prize.is_active === false && !!winnerName;
+}
+
+function isPlaceholderPrize(prize) {
+  if (!prize || typeof prize !== 'object') return true;
+  if (prize.id != null || prize.id === 0) return false;
+  if (pickRewardId(prize)) return false;
+  var title = String(prize.title || prize.cover_title || prize.coverTitle || '').toLowerCase();
+  return title.indexOf('no reward') >= 0;
+}
+
+function isWeeklyPrizeVisible(prize) {
+  if (!prize) return false;
+  if (typeof prize === 'string') return !!String(prize).trim();
+  if (isPlaceholderPrize(prize)) return false;
+  if (prize.is_active === false && !isPrizeFinalized(prize)) return false;
+  return true;
+}
+
+function isOverallPrizeVisible(prize) {
+  if (!prize) return false;
+  if (typeof prize === 'string') return !!String(prize).trim();
+  if (isPlaceholderPrize(prize)) return false;
+  if (prize.is_active === false && !isPrizeFinalized(prize)) return false;
+  return true;
 }
 
 function resolveFinalizedWeeklyWinnerInfo(leaderboardRes, prize) {
@@ -213,18 +238,14 @@ function pickOverallRows(leaderboardRes) {
 
 function resolveOverallPeriodTargetMs(leaderboardRes, prize) {
   var raw =
+    (prize && typeof prize === 'object' && (prize.overall_ends_at || prize.end_date || prize.endDate)) ||
     (leaderboardRes && (leaderboardRes.overall_period_ends_at || leaderboardRes.overallPeriodEndsAt)) ||
-    (prize && typeof prize === 'object' && (prize.end_date || prize.endDate)) ||
     null;
-  if (!raw) return null;
-  var ms = new Date(raw).getTime();
-  if (Number.isFinite(ms)) return ms;
-  var d = String(raw).trim();
-  if (d) {
-    var ms2 = new Date(d + 'T23:59:59').getTime();
-    if (Number.isFinite(ms2)) return ms2;
-  }
-  return null;
+  return parsePeriodEndTimestamp(
+    raw,
+    prize && typeof prize === 'object' ? prize.end_date || prize.endDate : null,
+    prize && typeof prize === 'object' ? prize.end_time || prize.endTime : null,
+  );
 }
 
 function resolveFinalizedOverallWinnerInfo(prize) {
@@ -257,7 +278,7 @@ function pickRewardImage(reward) {
 
 export async function buildWeeklyRewardContext(leaderboardRes) {
   var prize = pickPrize(leaderboardRes);
-  if (!prize) return null;
+  if (!isWeeklyPrizeVisible(prize)) return null;
   if (typeof prize === 'string') {
     var stringTitle = prize.trim();
     if (!stringTitle) return null;
@@ -349,18 +370,21 @@ export async function buildWeeklyRewardContext(leaderboardRes) {
     terms: prizeForMeta.terms || '',
     rows: rows,
     weekEndsAt: weekEndsAt,
-    winnerName: afterCutoff ? finalizedWinnerInfo.name : '',
+    winnerName: getWinnerName(prizeForMeta.winner_name || prizeForMeta.winnerName || ''),
     winnerPoints: afterCutoff ? finalizedWinnerInfo.points : null,
     candidateWinnerName: periodLeaderInfo.name,
     candidateWinnerPoints: periodLeaderInfo.points,
     targetMs: targetMs,
     periodKind: 'weekly',
+    prizeId: prizeForMeta.id != null ? String(prizeForMeta.id) : null,
+    weekEndDateOnly: prizeForMeta.week_end_date || prizeForMeta.weekEndDate || null,
+    weekEndTime: prizeForMeta.week_end_time || prizeForMeta.weekEndTime || null,
   };
 }
 
 export async function buildOverallRewardContext(leaderboardRes) {
   var prize = pickOverallPrize(leaderboardRes);
-  if (!prize) return null;
+  if (!isOverallPrizeVisible(prize)) return null;
   if (typeof prize === 'string') {
     var oStringTitle = prize.trim();
     if (!oStringTitle) return null;
@@ -451,13 +475,66 @@ export async function buildOverallRewardContext(leaderboardRes) {
     terms: oPrizeForMeta.terms || '',
     rows: oRows,
     weekEndsAt: null,
-    winnerName: oAfterCutoff ? oFinalizedWinnerInfo.name : '',
+    winnerName: getWinnerName(oPrizeForMeta.winner_name || oPrizeForMeta.winnerName || ''),
     winnerPoints: oAfterCutoff ? oFinalizedWinnerInfo.points : null,
     candidateWinnerName: oPeriodLeaderInfo.name,
     candidateWinnerPoints: oPeriodLeaderInfo.points,
     targetMs: oTargetMs,
     periodKind: 'overall',
+    prizeId: oPrizeForMeta.id != null ? String(oPrizeForMeta.id) : null,
+    periodEndsAt: oPrizeForMeta.overall_ends_at || oPrizeForMeta.end_date || oPrizeForMeta.endDate || null,
+    periodEndDateOnly: oPrizeForMeta.end_date || oPrizeForMeta.endDate || null,
+    periodEndTime: oPrizeForMeta.end_time || oPrizeForMeta.endTime || null,
   };
+}
+
+export function buildLeaderboardModalOptions(meta, leaderboardRes) {
+  if (!meta) return null;
+  var isOverall = meta.periodKind === 'overall';
+  var prize = isOverall ? pickOverallPrize(leaderboardRes) : pickPrize(leaderboardRes);
+  var contextLabel = isOverall ? 'Overall' : 'Weekly';
+  var weekEndsAt = pickWeekEndsAt(leaderboardRes, prize);
+  return {
+    leaderboardType: isOverall ? 'overall' : 'weekly',
+    contextLabel: contextLabel,
+    rows: Array.isArray(meta.rows) ? meta.rows.slice() : [],
+    rewardTitle: meta.title || '',
+    rewardDescription: meta.description || '',
+    rewardImageUrl: meta.imageUrl || null,
+    periodEndsAt: isOverall
+      ? (meta.periodEndsAt || (prize && (prize.overall_ends_at || prize.end_date || prize.endDate)) || null)
+      : meta.weekEndsAt || weekEndsAt || null,
+    periodEndDateOnly: isOverall
+      ? meta.periodEndDateOnly || (prize && (prize.end_date || prize.endDate)) || null
+      : meta.weekEndDateOnly || (prize && (prize.week_end_date || prize.weekEndDate)) || null,
+    periodEndTime:
+      meta.periodEndTime ||
+      meta.weekEndTime ||
+      (prize && (prize.end_time || prize.week_end_time || prize.weekEndTime)) ||
+      null,
+    prizeId: meta.prizeId || (prize && prize.id != null ? String(prize.id) : null),
+    initialWinnerName: getWinnerName(
+      (prize && (prize.winner_name || prize.winnerName)) || meta.winnerName || '',
+    ),
+    prizeTitle: meta.title || '',
+  };
+}
+
+export function openWeeklyLeaderboardModalFromHome(meta, leaderboardRes) {
+  return api
+    .getLeaderboard()
+    .catch(function () {
+      return leaderboardRes || null;
+    })
+    .then(function (freshRes) {
+      var lb = freshRes && freshRes.success !== false ? freshRes : leaderboardRes;
+      var isOverall = meta && meta.periodKind === 'overall';
+      var build = isOverall ? buildOverallRewardContext : buildWeeklyRewardContext;
+      return build(lb).then(function (freshMeta) {
+        var payload = buildLeaderboardModalOptions(freshMeta || meta, lb);
+        if (payload) openWeeklyLeaderboardModal(payload);
+      });
+    });
 }
 
 export function buildWeeklyRewardCardHtml(meta, className) {
@@ -532,6 +609,19 @@ export function openWeeklyLeaderboardModal(options) {
   var rewardTitle = opts.rewardTitle != null ? String(opts.rewardTitle) : '';
   var rewardDescription = opts.rewardDescription != null ? String(opts.rewardDescription) : '';
   var rewardImageUrl = opts.rewardImageUrl ? normalizeMediaUrl(opts.rewardImageUrl) : null;
+  var leaderboardType = opts.leaderboardType === 'overall' ? 'overall' : 'weekly';
+  var contextLabel = opts.contextLabel || (leaderboardType === 'overall' ? 'Overall' : 'Weekly');
+  var periodEndsAt = opts.periodEndsAt || null;
+  var periodEndDateOnly = opts.periodEndDateOnly || null;
+  var periodEndTime = opts.periodEndTime || null;
+  var prizeId = opts.prizeId || null;
+  var prizeTitle = opts.prizeTitle != null ? String(opts.prizeTitle) : rewardTitle;
+  var winnerName = String(opts.initialWinnerName || '').trim();
+  var periodEndTimestamp = parsePeriodEndTimestamp(periodEndsAt, periodEndDateOnly, periodEndTime);
+  var periodEndedRefreshDone = false;
+  var countdownTimer = null;
+  var pollTimer = null;
+  var finalizeWatcher = null;
 
   function leaderboardSectionHtml(list) {
     if (!list.length) {
@@ -561,6 +651,135 @@ export function openWeeklyLeaderboardModal(options) {
     return html;
   }
 
+  function countdownCardHtml(nowMs) {
+    if (!periodEndTimestamp || !Number.isFinite(periodEndTimestamp)) return '';
+    var isEnded = nowMs >= periodEndTimestamp;
+    var label = formatPeriodCountdown(periodEndTimestamp, nowMs, {
+      contextLabel: contextLabel,
+      endedText: contextLabel + ' period ended',
+    });
+    var localLabel = formatPeriodEndLocal(periodEndTimestamp);
+    var html = '<div class="hc-weekly-lb-countdown-card">';
+    html +=
+      '<div class="hc-weekly-lb-countdown-eyebrow">' +
+      escapeHtml(contextLabel + ' reward') +
+      '</div>';
+    html +=
+      '<div class="hc-weekly-lb-countdown-value' +
+      (isEnded ? ' hc-weekly-lb-countdown-value--ended' : '') +
+      '">' +
+      escapeHtml(label) +
+      '</div>';
+    if (localLabel) {
+      html +=
+        '<div class="hc-weekly-lb-countdown-sub">' +
+        escapeHtml((isEnded ? 'Ended ' : 'Ends ') + localLabel) +
+        '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function winnerCardHtml() {
+    if (!winnerName) return '';
+    return (
+      '<div class="hc-weekly-lb-winner-card">' +
+      '<div class="hc-weekly-lb-winner-eyebrow">' +
+      escapeHtml(contextLabel + ' Winner') +
+      '</div>' +
+      '<div class="hc-weekly-lb-winner-name">' +
+      escapeHtml(winnerName) +
+      '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderBody() {
+    var inner = overlay.querySelector('.hc-weekly-lb-modal-inner');
+    if (!inner) return;
+    var nowMs = Date.now();
+    inner.innerHTML =
+      countdownCardHtml(nowMs) +
+      winnerCardHtml() +
+      rewardHeroHtml() +
+      '<div class="hc-weekly-lb-leaderboard-wrap">' +
+      leaderboardSectionHtml(rows) +
+      '</div>';
+  }
+
+  function applyPrizeFromLeaderboard(res) {
+    if (!res || res.success === false) return;
+    var prize = leaderboardType === 'overall' ? pickOverallPrize(res) : pickPrize(res);
+    if (!prize) return;
+    if (leaderboardType === 'overall') {
+      rows = pickOverallRows(res);
+      if (prize.end_date) periodEndDateOnly = prize.end_date;
+      if (prize.overall_ends_at || prize.end_date) {
+        periodEndsAt = prize.overall_ends_at || prize.end_date;
+      }
+      if (prize.end_time) periodEndTime = prize.end_time;
+    } else {
+      rows = pickRows(res);
+      if (res.week_ends_at || res.weekEndsAt) {
+        periodEndsAt = res.week_ends_at || res.weekEndsAt;
+      } else if (prize.week_end_date) {
+        periodEndDateOnly = prize.week_end_date;
+      }
+      if (prize.week_end_time) periodEndTime = prize.week_end_time;
+    }
+    if (prize.id != null) prizeId = String(prize.id);
+    var nextWinner = getWinnerName(prize.winner_name || prize.winnerName || '');
+    if (nextWinner) {
+      winnerName = nextWinner;
+    }
+    periodEndTimestamp = parsePeriodEndTimestamp(periodEndsAt, periodEndDateOnly, periodEndTime);
+    if (finalizeWatcher && typeof finalizeWatcher.updateContext === 'function') {
+      finalizeWatcher.updateContext({
+        periodEndsAt: periodEndsAt,
+        periodEndDateOnly: periodEndDateOnly,
+        periodEndTime: periodEndTime,
+        prizeId: prizeId,
+        prizeTitle: prizeTitle,
+      });
+      if (winnerName && typeof finalizeWatcher.onWinnerNameUpdate === 'function') {
+        finalizeWatcher.onWinnerNameUpdate(winnerName);
+      }
+    }
+    renderBody();
+  }
+
+  function refreshLeaderboard() {
+    return api.getLeaderboard().then(applyPrizeFromLeaderboard).catch(function () {});
+  }
+
+  function schedulePeriodEndRefresh() {
+    if (!periodEndTimestamp || !Number.isFinite(periodEndTimestamp)) return;
+    var trigger = function () {
+      if (periodEndedRefreshDone) return;
+      periodEndedRefreshDone = true;
+      refreshLeaderboard();
+    };
+    var msUntilEnd = periodEndTimestamp - Date.now();
+    if (msUntilEnd <= 0) {
+      trigger();
+      return;
+    }
+    window.setTimeout(trigger, msUntilEnd + 500);
+  }
+
+  function startPolling() {
+    if (!periodEndTimestamp || !Number.isFinite(periodEndTimestamp)) return;
+    if (Date.now() < periodEndTimestamp || winnerName) return;
+    pollTimer = window.setInterval(function () {
+      if (winnerName) {
+        window.clearInterval(pollTimer);
+        pollTimer = null;
+        return;
+      }
+      refreshLeaderboard();
+    }, 15000);
+  }
+
   var overlay = document.createElement('div');
   overlay.className = 'hc-weekly-lb-modal';
   overlay.setAttribute('role', 'dialog');
@@ -573,15 +792,51 @@ export function openWeeklyLeaderboardModal(options) {
     NavHeader({ title: 'Home', backButtonId: 'hc-weekly-lb-back' }) +
     '</div>' +
     '<div class="hc-weekly-lb-modal-scroll">' +
-    '<div class="hc-weekly-lb-modal-inner">' +
-    rewardHeroHtml() +
-    '<div class="hc-weekly-lb-leaderboard-wrap">' +
-    leaderboardSectionHtml(rows) +
-    '</div></div></div>';
+    '<div class="hc-weekly-lb-modal-inner"></div>' +
+    '</div>';
+
+  function teardown() {
+    if (countdownTimer) window.clearInterval(countdownTimer);
+    if (pollTimer) window.clearInterval(pollTimer);
+    if (finalizeWatcher && typeof finalizeWatcher.destroy === 'function') finalizeWatcher.destroy();
+    countdownTimer = null;
+    pollTimer = null;
+    finalizeWatcher = null;
+  }
 
   function close() {
+    teardown();
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
   }
+
+  renderBody();
+
+  if (periodEndTimestamp && Number.isFinite(periodEndTimestamp)) {
+    countdownTimer = window.setInterval(function () {
+      var card = overlay.querySelector('.hc-weekly-lb-countdown-card');
+      if (!card) return;
+      var nowMs = Date.now();
+      var replacement = document.createElement('div');
+      replacement.innerHTML = countdownCardHtml(nowMs);
+      var nextCard = replacement.firstElementChild;
+      if (nextCard) card.replaceWith(nextCard);
+    }, 1000);
+  }
+
+  finalizeWatcher = createPrizeFinalizeModalWatcher({
+    enabled: true,
+    leaderboardType: leaderboardType,
+    periodEndsAt: periodEndsAt,
+    periodEndDateOnly: periodEndDateOnly,
+    periodEndTime: periodEndTime,
+    prizeId: prizeId,
+    initialWinnerName: '',
+    prizeTitle: prizeTitle,
+  });
+
+  schedulePeriodEndRefresh();
+  startPolling();
+  refreshLeaderboard();
 
   var backBtn = overlay.querySelector('#hc-weekly-lb-back');
   if (backBtn) {
@@ -592,17 +847,20 @@ export function openWeeklyLeaderboardModal(options) {
 }
 
 export function buildWeeklyCountdownLabel(meta) {
-  if (!meta || !Number.isFinite(meta.targetMs)) return '';
-  var delta = Math.max(0, meta.targetMs - Date.now());
-  if (delta <= 0) return 'Weekly draw ended';
-  var days = Math.floor(delta / 86400000);
-  var hours = Math.floor((delta % 86400000) / 3600000);
-  var minutes = Math.floor((delta % 3600000) / 60000);
-  var seconds = Math.floor((delta % 60000) / 1000);
-  if (days > 0) return 'Ends in: ' + days + 'd ' + hours + 'h ' + minutes + 'm ' + seconds + 's';
-  if (hours > 0) return 'Ends in: ' + hours + 'h ' + minutes + 'm ' + seconds + 's';
-  if (minutes > 0) return 'Ends in: ' + minutes + 'm ' + seconds + 's';
-  return 'Ends in: ' + seconds + 's';
+  if (!meta) return '';
+  var contextLabel = meta.periodKind === 'overall' ? 'Overall' : 'Weekly';
+  var targetMs =
+    meta.targetMs != null
+      ? meta.targetMs
+      : parsePeriodEndTimestamp(
+          meta.periodEndsAt || meta.weekEndsAt,
+          meta.periodEndDateOnly || meta.weekEndDateOnly,
+          meta.periodEndTime || meta.weekEndTime,
+        );
+  return formatPeriodCountdown(targetMs, Date.now(), {
+    contextLabel: contextLabel,
+    endedText: contextLabel + ' period ended',
+  });
 }
 
 export function buildWeeklyLeaderboardHtml(rows, limit) {
@@ -716,10 +974,6 @@ export function showWeeklyWinnerModal(prize, fallbackTitle, options) {
   if (key) markWinnerAlertBeenShown(key);
 
   var winnerName = alert.winnerName || (prize && (prize.winner_name || prize.winnerName));
-  var winnerPoints =
-    alert.winnerPoints != null
-      ? alert.winnerPoints
-      : prize && (prize.winner_points != null ? prize.winner_points : prize.winning_points);
   var prizeTitle =
     alert.prizeTitle ||
     (prize && (prize.cover_title || prize.coverTitle || prize.title || prize.name)) ||
@@ -748,9 +1002,6 @@ export function showWeeklyWinnerModal(prize, fallbackTitle, options) {
     '<div class="hc-weekly-winner-section-label">Won</div>' +
     '<div class="hc-weekly-winner-prize">' +
     escapeHtml(prizeTitle) +
-    '</div>' +
-    '<div class="hc-weekly-winner-points">' +
-    escapeHtml(typeof winnerPoints === 'number' ? winnerPoints + ' points' : winnerPoints != null ? String(winnerPoints) + ' points' : 'Points not available') +
     '</div>' +
     '<button type="button" class="hc-weekly-winner-button" data-weekly-winner-close="1">Awesome</button>' +
     '</div>' +

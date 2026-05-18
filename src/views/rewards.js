@@ -12,14 +12,8 @@ import {
   buildOverallRewardContext,
   buildWeeklyCountdownLabel,
   buildWeeklyRewardContext,
-  connectWeeklyPrizeWebSocket,
-  openWeeklyLeaderboardModal,
-  showWeeklyWinnerModal,
-  tryShowMissedWinnerModalFromLeaderboard,
+  openWeeklyLeaderboardModalFromHome,
 } from '../weekly-reward.js';
-
-var weeklySocketCleanup = null;
-var overallSocketCleanup = null;
 var weeklyCountdownCleanup = null;
 
 function removeFloatingPointsOverlay() {
@@ -300,6 +294,9 @@ function buildRewardCardHtml(item, section, cardLinkStatus, isEarlyRelease, getI
         (Number.isFinite(item.weeklyTargetMs)
           ? ' data-weekly-target-ms="' + escapeAttr(String(item.weeklyTargetMs)) + '"'
           : '') +
+        ' data-weekly-period-kind="' +
+        escapeAttr(item.redemption_type === 'overall' ? 'overall' : 'weekly') +
+        '"' +
         '>' +
         escapeHtml(item.weeklyCountdownLabel || item.description || 'Weekly reward') +
         '</span>';
@@ -394,18 +391,11 @@ function buildOverallRewardListItem(overallReward) {
   };
 }
 
-function formatWeeklyCountdownFromTarget(targetMs) {
-  if (!Number.isFinite(targetMs)) return '';
-  var delta = Math.max(0, targetMs - Date.now());
-  if (delta <= 0) return 'Weekly draw ended';
-  var days = Math.floor(delta / 86400000);
-  var hours = Math.floor((delta % 86400000) / 3600000);
-  var minutes = Math.floor((delta % 3600000) / 60000);
-  var seconds = Math.floor((delta % 60000) / 1000);
-  if (days > 0) return 'Ends in: ' + days + 'd ' + hours + 'h ' + minutes + 'm ' + seconds + 's';
-  if (hours > 0) return 'Ends in: ' + hours + 'h ' + minutes + 'm ' + seconds + 's';
-  if (minutes > 0) return 'Ends in: ' + minutes + 'm ' + seconds + 's';
-  return 'Ends in: ' + seconds + 's';
+function formatWeeklyCountdownFromTarget(targetMs, periodKind) {
+  return buildWeeklyCountdownLabel({
+    targetMs: targetMs,
+    periodKind: periodKind === 'overall' ? 'overall' : 'weekly',
+  });
 }
 
 function lookupRewardForClick(rewardIdStr, formattedRewards, weeklyRewardItem, overallRewardItem) {
@@ -454,7 +444,8 @@ function attachWeeklyCountdown(container) {
     }
     nodes.forEach(function (node) {
       var targetMs = Number(node.getAttribute('data-weekly-target-ms'));
-      var label = formatWeeklyCountdownFromTarget(targetMs);
+      var periodKind = node.getAttribute('data-weekly-period-kind') || 'weekly';
+      var label = formatWeeklyCountdownFromTarget(targetMs, periodKind);
       if (label) node.textContent = label;
     });
   }
@@ -476,14 +467,6 @@ function attachWeeklyCountdown(container) {
 
 async function loadRewards(container, routeEpoch) {
   removeFloatingPointsOverlay();
-  if (weeklySocketCleanup) {
-    weeklySocketCleanup();
-    weeklySocketCleanup = null;
-  }
-  if (overallSocketCleanup) {
-    overallSocketCleanup();
-    overallSocketCleanup = null;
-  }
   if (weeklyCountdownCleanup) {
     weeklyCountdownCleanup();
     weeklyCountdownCleanup = null;
@@ -532,14 +515,6 @@ async function loadRewards(container, routeEpoch) {
     var leaderboardActive = !leaderboardRes || leaderboardRes.leaderboard_active !== false;
     var weeklyReward = leaderboardActive ? await buildWeeklyRewardContext(leaderboardRes) : null;
     var overallReward = leaderboardActive ? await buildOverallRewardContext(leaderboardRes) : null;
-    if (leaderboardActive && leaderboardRes) {
-      tryShowMissedWinnerModalFromLeaderboard(
-        leaderboardRes,
-        weeklyReward && weeklyReward.title,
-        overallReward && overallReward.title,
-      );
-    }
-
     var sections = organizeRewardsByDate(formattedRewards);
 
     var html = '';
@@ -669,8 +644,7 @@ async function loadRewards(container, routeEpoch) {
 
     attachWeeklyCountdown(container);
 
-    var weeklyLbRows =
-      leaderboardRes && Array.isArray(leaderboardRes.leaderboard) ? leaderboardRes.leaderboard : [];
+    container._hcLeaderboardRes = leaderboardRes || null;
     container.onclick = function (e) {
       var weeklyRewardCard = e.target.closest('.hc-rewards-weekly-section [data-reward-id]');
       if (weeklyRewardCard) {
@@ -680,12 +654,7 @@ async function loadRewards(container, routeEpoch) {
             lookupRewardForClick(weeklyRewardId, formattedRewards, weeklyRewardItem, overallRewardItem),
             currentUser,
           );
-          openWeeklyLeaderboardModal({
-            rows: weeklyLbRows,
-            rewardTitle: (weeklyReward && weeklyReward.title) || '',
-            rewardDescription: (weeklyReward && weeklyReward.description) || '',
-            rewardImageUrl: (weeklyReward && weeklyReward.imageUrl) || null,
-          });
+          openWeeklyLeaderboardModalFromHome(weeklyReward, container._hcLeaderboardRes);
         }
         return;
       }
@@ -697,12 +666,7 @@ async function loadRewards(container, routeEpoch) {
             lookupRewardForClick(overallRewardId, formattedRewards, weeklyRewardItem, overallRewardItem),
             currentUser,
           );
-          openWeeklyLeaderboardModal({
-            rows: (overallReward && overallReward.rows) || [],
-            rewardTitle: (overallReward && overallReward.title) || '',
-            rewardDescription: (overallReward && overallReward.description) || '',
-            rewardImageUrl: (overallReward && overallReward.imageUrl) || null,
-          });
+          openWeeklyLeaderboardModalFromHome(overallReward, container._hcLeaderboardRes);
         }
         return;
       }
@@ -723,29 +687,6 @@ async function loadRewards(container, routeEpoch) {
         window.location.hash = '#/cards';
       };
     }
-    weeklySocketCleanup = connectWeeklyPrizeWebSocket({
-      enabled: leaderboardActive,
-      prizeType: 'weekly',
-      onMessage: function (message) {
-        if (!message || message.type !== 'weekly_prize_finalized') return;
-        showWeeklyWinnerModal(message.weekly_prize || null, weeklyReward && weeklyReward.title, {
-          prizeKind: 'weekly',
-        });
-        loadRewards(container, getNavEpoch());
-      },
-    });
-    overallSocketCleanup = connectWeeklyPrizeWebSocket({
-      enabled: leaderboardActive,
-      prizeType: 'overall',
-      onMessage: function (message) {
-        if (!message || message.type !== 'overall_prize_finalized') return;
-        showWeeklyWinnerModal(message.overall_prize || null, overallReward && overallReward.title, {
-          prizeKind: 'overall',
-          winnerBadgeLabel: 'Overall Winner',
-        });
-        loadRewards(container, getNavEpoch());
-      },
-    });
   } catch (err) {
     removeFloatingPointsOverlay();
     if (routeEpoch !== getNavEpoch() || !container.isConnected) {

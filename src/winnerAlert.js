@@ -113,6 +113,15 @@ export function pickUnshownWinnerAlert(leaderboardRes) {
   return candidate;
 }
 
+export function applyWinnerAlertIfNew(message, onShow) {
+  var alert = buildWinnerAlertFromWebSocketMessage(message);
+  if (!alert || !alert.key) return false;
+  if (hasWinnerAlertBeenShown(alert.key)) return false;
+  markWinnerAlertBeenShown(alert.key);
+  if (typeof onShow === 'function') onShow(alert);
+  return true;
+}
+
 export function buildWinnerAlertFromWebSocketMessage(message) {
   if (!message || typeof message !== 'object') return null;
 

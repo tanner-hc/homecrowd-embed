@@ -2219,13 +2219,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 24px;
-}
-
-.hc-daily-bonus-confetti-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  pointer-events: none;
+  font-family: var(--hc-font);
 }
 
 .hc-daily-bonus-backdrop {
@@ -2234,107 +2228,145 @@ body {
   background: rgba(0, 0, 0, 0.5);
 }
 
+.hc-daily-bonus-confetti-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
 .hc-daily-bonus-card {
   position: relative;
   z-index: 3;
   width: 100%;
   max-width: 420px;
-  max-height: min(82vh, 640px);
+  max-height: 82vh;
   overflow-y: auto;
   border-radius: 24px;
-  background: #fff;
+  background: #ffffff;
   padding: 22px 18px 20px;
   text-align: center;
-  box-shadow: var(--hc-shadow-modal);
+  box-shadow: 0 16px 24px rgba(0, 0, 0, 0.18);
+  -webkit-overflow-scrolling: touch;
 }
 
 .hc-daily-bonus-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  align-self: center;
   border-radius: 999px;
-  background: #eaf8ff;
+  background: #111827;
   padding: 6px 14px;
-  margin-bottom: 12px;
-  color: #00a9d6;
+  margin: 0 auto 12px;
+  color: #ffffff;
+  font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
 }
 
 .hc-daily-bonus-title {
+  font-family: 'Baikal-Bold', var(--hc-font);
   font-size: 22px;
   font-weight: 700;
-  color: var(--hc-text-primary);
+  color: #000000;
   margin-bottom: 8px;
 }
 
 .hc-daily-bonus-message {
+  font-family: 'Baikal-Regular', var(--hc-font);
   font-size: 15px;
-  line-height: 1.45;
-  color: var(--hc-text-secondary);
-  margin-bottom: var(--hc-spacing-md);
-}
-
-.hc-daily-bonus-button {
-  display: block;
-  width: 100%;
-  margin-top: 4px;
-  padding: 14px 20px;
-  border: none;
-  border-radius: 999px;
-  background: #00c8ff;
-  color: #000;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
+  line-height: 22px;
+  color: #666666;
+  margin-bottom: 14px;
 }
 
 .hc-daily-bonus-pill {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin: 0 auto 8px;
   padding: 8px 14px;
   border-radius: 999px;
   background: #f3f4f6;
+  font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 14px;
-  font-weight: 600;
-  color: var(--hc-text-primary);
+  font-weight: 500;
+  color: #000000;
 }
 
 .hc-daily-bonus-raffles {
   width: 100%;
-  margin-top: 8px;
-  margin-bottom: var(--hc-spacing-md);
+  margin-top: 4px;
+  margin-bottom: 12px;
   padding-top: 12px;
   border-top: 1px solid #e5e7eb;
-  text-align: left;
 }
 
 .hc-daily-bonus-raffles-title {
+  font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 14px;
-  font-weight: 600;
-  color: var(--hc-text-primary);
+  font-weight: 500;
+  color: #000000;
   margin-bottom: 10px;
   text-align: center;
 }
 
-.hc-daily-bonus-raffle-list {
-  margin: 0;
-  padding-left: 18px;
+.hc-daily-bonus-raffle-scroll {
+  max-height: none;
+  overflow: visible;
+}
+
+.hc-daily-bonus-raffle-scroll--tall {
   max-height: 180px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-.hc-daily-bonus-raffle-list li {
+.hc-daily-bonus-raffle-row {
+  display: flex;
+  align-items: flex-start;
   margin-bottom: 8px;
-  font-size: 14px;
-  line-height: 1.35;
-  color: var(--hc-text-primary);
+  padding: 0 4px;
+  text-align: left;
 }
 
-.hc-daily-bonus-actions {
-  justify-content: center;
+.hc-daily-bonus-raffle-bullet {
+  flex: 0 0 14px;
+  width: 14px;
+  font-family: 'Baikal-Bold', var(--hc-font);
+  font-size: 15px;
+  line-height: 20px;
+  color: #000000;
+}
+
+.hc-daily-bonus-raffle-title-text {
+  flex: 1;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-size: 15px;
+  line-height: 20px;
+  color: #000000;
+}
+
+.hc-daily-bonus-card .hc-daily-bonus-main-btn.hc-bc-main-btn {
+  width: 100%;
+  margin-top: 4px;
+  min-height: 48px;
+  padding: 16px;
+  border-radius: 25px;
+  border: none;
+  background: #00c8ff;
+  color: #000000;
+  font-family: 'Baikal-Bold', var(--hc-font);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.hc-daily-bonus-card .hc-daily-bonus-main-btn.hc-bc-main-btn:hover:not(:disabled) {
+  background: #00a8d6;
+  color: #000000;
 }
 
 /* Reward Detail (matches ProductDetailScreen) */
@@ -8144,6 +8176,51 @@ body {
   box-sizing: border-box;
 }
 
+.hc-weekly-lb-countdown-card,
+.hc-weekly-lb-winner-card {
+  align-self: stretch;
+  margin-bottom: 16px;
+  padding: 18px 16px;
+  background: #f8f8f8;
+  border-radius: 20px;
+  border: 1px solid #ececec;
+  text-align: center;
+}
+
+.hc-weekly-lb-countdown-eyebrow,
+.hc-weekly-lb-winner-eyebrow {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #888888;
+  margin-bottom: 8px;
+}
+
+.hc-weekly-lb-countdown-value {
+  font-size: 22px;
+  font-weight: 500;
+  color: #000000;
+  line-height: 1.2;
+}
+
+.hc-weekly-lb-countdown-value--ended {
+  color: #666666;
+}
+
+.hc-weekly-lb-countdown-sub {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #666666;
+}
+
+.hc-weekly-lb-winner-name {
+  font-size: 24px;
+  font-weight: 500;
+  color: #000000;
+  line-height: 1.25;
+}
+
 .hc-weekly-lb-reward-hero {
   align-self: stretch;
   margin-bottom: 24px;
@@ -8448,7 +8525,7 @@ body {
 .hc-weekly-winner-modal {
   position: fixed;
   inset: 0;
-  z-index: 10000;
+  z-index: 10002;
   display: flex;
   align-items: center;
   justify-content: center;
