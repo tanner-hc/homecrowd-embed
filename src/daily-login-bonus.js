@@ -1,3 +1,6 @@
+import lottie from 'lottie-web';
+import confettiAnimation from './assets/Confetti.json';
+
 function dedupeRaffleTitles(titles) {
   if (!Array.isArray(titles)) return [];
   var seen = {};
@@ -44,13 +47,21 @@ export function showDailyLoginBonusModal(dailyBonus) {
     rewardsHtml += '<div class="hc-daily-bonus-pill">+' + escapeHtml(String(points)) + ' points</div>';
   }
   if (tickets > 0) {
-    rewardsHtml += '<div class="hc-daily-bonus-pill">+' + escapeHtml(String(tickets)) + ' raffle ticket' + (tickets === 1 ? '' : 's') + '</div>';
+    rewardsHtml +=
+      '<div class="hc-daily-bonus-pill">+' +
+      escapeHtml(String(tickets)) +
+      ' raffle ticket' +
+      (tickets === 1 ? '' : 's') +
+      '</div>';
   }
 
   var rafflesHtml = '';
   if (raffleTitles.length > 0) {
     rafflesHtml += '<div class="hc-daily-bonus-raffles">';
-    rafflesHtml += '<div class="hc-daily-bonus-raffles-title">Entered into ' + (entries === 1 ? '1 raffle' : entries + ' raffles') + '</div>';
+    rafflesHtml +=
+      '<div class="hc-daily-bonus-raffles-title">Entered into ' +
+      (entries === 1 ? '1 raffle' : entries + ' raffles') +
+      '</div>';
     rafflesHtml += '<ul class="hc-daily-bonus-raffle-list">';
     raffleTitles.forEach(function (title) {
       rafflesHtml += '<li>' + escapeHtml(title) + '</li>';
@@ -59,25 +70,47 @@ export function showDailyLoginBonusModal(dailyBonus) {
   }
 
   var overlay = document.createElement('div');
-  overlay.className = 'hc-modal-overlay hc-daily-bonus-modal-overlay';
-  overlay.innerHTML = '<div class="hc-modal hc-daily-bonus-modal">' +
-    '<div class="hc-daily-bonus-emoji">🎉</div>' +
-    '<div class="hc-modal-title">Daily Bonus!</div>' +
-    '<div class="hc-modal-text hc-daily-bonus-message">' + escapeHtml(message) + '</div>' +
+  overlay.className = 'hc-daily-bonus-modal-root';
+  overlay.innerHTML =
+    '<div class="hc-daily-bonus-backdrop" data-daily-bonus-close="1"></div>' +
+    '<div class="hc-daily-bonus-card">' +
+    '<div class="hc-daily-bonus-badge">Daily Bonus</div>' +
+    '<div class="hc-daily-bonus-title">You\'re all set for today</div>' +
+    '<div class="hc-daily-bonus-message">' +
+    escapeHtml(message) +
+    '</div>' +
     rewardsHtml +
     rafflesHtml +
-    '<div class="hc-modal-actions hc-daily-bonus-actions">' +
-    '<button type="button" class="hc-btn hc-btn-primary hc-btn-large" data-daily-bonus-close="1">Awesome!</button>' +
-    '</div></div>';
+    '<button type="button" class="hc-daily-bonus-button" data-daily-bonus-close="1">Awesome!</button>' +
+    '</div>' +
+    '<div class="hc-daily-bonus-confetti-layer" aria-hidden="true"></div>';
+
+  var animation = null;
 
   function close() {
+    if (animation) {
+      animation.destroy();
+      animation = null;
+    }
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
   }
 
   overlay.addEventListener('click', function (e) {
-    if (e.target && (e.target.closest('[data-daily-bonus-close]') || e.target === overlay)) close();
+    if (e.target && e.target.closest('[data-daily-bonus-close]')) close();
   });
 
   document.body.appendChild(overlay);
+
+  var confettiEl = overlay.querySelector('.hc-daily-bonus-confetti-layer');
+  if (confettiEl) {
+    animation = lottie.loadAnimation({
+      container: confettiEl,
+      renderer: 'svg',
+      loop: false,
+      autoplay: true,
+      animationData: confettiAnimation,
+    });
+  }
+
   return true;
 }

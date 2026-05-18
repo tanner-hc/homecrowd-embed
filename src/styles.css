@@ -2198,20 +2198,84 @@ body {
   justify-content: flex-end;
 }
 
-.hc-daily-bonus-modal {
+.hc-daily-bonus-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.hc-daily-bonus-confetti-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.hc-daily-bonus-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.hc-daily-bonus-card {
+  position: relative;
+  z-index: 3;
+  width: 100%;
   max-width: 420px;
   max-height: min(82vh, 640px);
   overflow-y: auto;
+  border-radius: 24px;
+  background: #fff;
+  padding: 22px 18px 20px;
   text-align: center;
+  box-shadow: var(--hc-shadow-modal);
 }
 
-.hc-daily-bonus-emoji {
-  font-size: 32px;
+.hc-daily-bonus-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #eaf8ff;
+  padding: 6px 14px;
   margin-bottom: 12px;
+  color: #00a9d6;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.hc-daily-bonus-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--hc-text-primary);
+  margin-bottom: 8px;
 }
 
 .hc-daily-bonus-message {
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--hc-text-secondary);
   margin-bottom: var(--hc-spacing-md);
+}
+
+.hc-daily-bonus-button {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 999px;
+  background: #00c8ff;
+  color: #000;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .hc-daily-bonus-pill {
