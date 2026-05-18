@@ -19,16 +19,36 @@
  *
  * --- WebView → Native ---
  * Events sent to the native layer:
- *   homecrowd:ready           — WebView is loaded and ready for config
- *   homecrowd:login           — User authenticated, payload: { user }
- *   homecrowd:logout          — User logged out
- *   homecrowd:route-change    — Navigation occurred, payload: { route }
- *   homecrowd:card-link        — Card link flow started, payload: { type }
- *   homecrowd:open-url         — External URL requested, payload: { url }
- *   homecrowd:error           — Something went wrong, payload: { message }
+ *   homecrowd:ready                    — WebView is loaded and ready for config
+ *   homecrowd:login                    — User authenticated, payload: { user }
+ *   homecrowd:logout                   — User logged out
+ *   homecrowd:route-change             — Navigation occurred, payload: { route }
+ *   homecrowd:card-link                — Card link flow started, payload: { type }
+ *   homecrowd:open-url                 — External URL requested, payload: { url }
+ *   homecrowd:open-merchant-webview    — Open URL in a top-level native WebView on top of the embed
+ *                                        (bypasses X-Frame-Options that block iframe embedding),
+ *                                        payload: { url, title }
+ *   homecrowd:error                    — Something went wrong, payload: { message }
  */
 
 var listeners = {};
+
+/**
+ * Returns true when a real native shell (iOS / Android / RN / Flutter) is
+ * hosting the embed. Used to decide whether merchant URLs can be handed off
+ * to native for a top-level WebView (X-Frame-Options safe) or whether we
+ * have to fall back to opening a new tab.
+ */
+export function hasNativeBridge() {
+  if (typeof window === 'undefined') return false;
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.homecrowd) {
+    return true;
+  }
+  if (window.HomecrowdBridge && window.HomecrowdBridge.postMessage) return true;
+  if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) return true;
+  if (window.FlutterWebView && window.FlutterWebView.postMessage) return true;
+  return false;
+}
 
 /**
  * Send an event to the native host app.

@@ -400,25 +400,35 @@ export async function trackOfferClick(offerId) {
   return request('/api/olive/track-click/?offer_id=' + encodeURIComponent(offerId));
 }
 
-export async function getWildfireOffers(page, pageSize) {
+export async function getWildfireOffers(page, pageSize, query) {
   var params = 'page=' + (page || 1) + '&pageSize=' + (pageSize || 50);
   if (wildfireAppId) {
     params += '&wildfire_app_id=' + encodeURIComponent(wildfireAppId);
   }
+  if (query && String(query).trim()) {
+    params += '&q=' + encodeURIComponent(String(query).trim());
+  }
   return request('/api/wildfire/offers/?' + params);
 }
 
-export async function trackWildfireClick(merchantId) {
-  var params = 'merchant_id=' + encodeURIComponent(merchantId);
+export function buildWildfireRedirectUrl(merchantId) {
+  var token = getAccessToken();
+  if (!token) return null;
+  var params =
+    'merchant_id=' + encodeURIComponent(merchantId) + '&t=' + encodeURIComponent(token);
   if (wildfireAppId) {
     params += '&wildfire_app_id=' + encodeURIComponent(wildfireAppId);
   }
-  return request('/api/wildfire/track-click/?' + params);
+  return baseUrl + '/api/wildfire/redirect/?' + params;
 }
 
 export async function getFeaturedOffers(offerType) {
   var params = offerType ? '?offer_type=' + offerType : '';
   return request('/api/merchant/featured-offers/' + params);
+}
+
+export async function checkEmbeddable(url) {
+  return request('/api/embed/check-frameable/?url=' + encodeURIComponent(url));
 }
 
 export async function getLeaderboard() {

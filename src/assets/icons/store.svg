@@ -1,0 +1,15 @@
+<svg width="210" height="194" viewBox="0 0 210 194" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g stroke="#B8B8B8" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+    <!-- awning roof -->
+    <path d="M24 70.5L43.5 30.5C45.8 25.8 50.6 23 55.8 23H148.2C153.5 23 158.2 25.8 160.5 30.5L179 70.5"/>
+    <!-- scalloped valance -->
+    <path d="M24 70.5C24 82 32.6 91 43.2 91C53.8 91 62.4 82 62.4 70.5C62.4 82 71 91 81.6 91C92.2 91 100.8 82 100.8 70.5C100.8 82 109.4 91 120 91C130.6 91 139.2 82 139.2 70.5C139.2 82 147.8 91 158.4 91C169 91 177.6 82 177.6 70.5"/>
+    <!-- building sides and base -->
+    <path d="M33.5 88V166.5H168V88"/>
+    <path d="M23.5 167.5H178.5"/>
+    <!-- left window -->
+    <path d="M51.5 106.5H94.5V146.5H51.5V106.5Z"/>
+    <!-- door -->
+    <path d="M110.5 166.5V106.5H151.5V166.5"/>
+  </g>
+</svg>
