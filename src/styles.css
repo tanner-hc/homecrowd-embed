@@ -2198,6 +2198,68 @@ body {
   justify-content: flex-end;
 }
 
+.hc-daily-bonus-modal {
+  max-width: 420px;
+  max-height: min(82vh, 640px);
+  overflow-y: auto;
+  text-align: center;
+}
+
+.hc-daily-bonus-emoji {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.hc-daily-bonus-message {
+  margin-bottom: var(--hc-spacing-md);
+}
+
+.hc-daily-bonus-pill {
+  display: inline-block;
+  margin: 0 auto 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--hc-text-primary);
+}
+
+.hc-daily-bonus-raffles {
+  width: 100%;
+  margin-top: 8px;
+  margin-bottom: var(--hc-spacing-md);
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.hc-daily-bonus-raffles-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--hc-text-primary);
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.hc-daily-bonus-raffle-list {
+  margin: 0;
+  padding-left: 18px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.hc-daily-bonus-raffle-list li {
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--hc-text-primary);
+}
+
+.hc-daily-bonus-actions {
+  justify-content: center;
+}
+
 /* Reward Detail (matches ProductDetailScreen) */
 .hc-detail-image-wrap {
   width: 100%;

@@ -13,6 +13,7 @@ import { renderCards } from './views/cards.js';
 import { renderLinkCards } from './views/link-cards.js';
 import { renderRewardDetail } from './views/reward-detail.js';
 import { resolveCardLinkStatus } from './cardLinkStatus.js';
+import { showDailyLoginBonusModal } from './daily-login-bonus.js';
 import {
   buildOverallRewardContext,
   buildWeeklyRewardContext,
@@ -248,17 +249,11 @@ function showDailyBonus(dailyBonus) {
     console.log('🎯 [embed] No daily bonus in response');
     return;
   }
-  var hasBonus =
-    (dailyBonus.points_awarded > 0) ||
-    (dailyBonus.tickets_awarded > 0) ||
-    (dailyBonus.entries_awarded > 0);
-
-  if (hasBonus) {
-    console.log('🎯 [embed] Showing daily bonus modal');
-    showBonusModal('Daily Bonus!', dailyBonus.message || 'You received a daily bonus!');
-  } else {
-    console.log('🎯 [embed] Daily bonus had no awarded value:', dailyBonus);
+  if (showDailyLoginBonusModal(dailyBonus)) {
+    console.log('🎯 [embed] Showing daily bonus modal with raffle list');
+    return;
   }
+  console.log('🎯 [embed] Daily bonus had no awarded value:', dailyBonus);
 }
 
 function showRaffleEntryModal(count, titles) {
