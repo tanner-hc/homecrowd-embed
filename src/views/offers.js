@@ -1621,14 +1621,28 @@ function renderFeaturedGrid(items) {
   return html;
 }
 
+function formatDistanceMiles(d) {
+  if (!Number.isFinite(d)) return '';
+  if (d < 0.1) return '<0.1 mi';
+  if (d < 10) return d.toFixed(1) + ' mi';
+  return Math.round(d) + ' mi';
+}
+
 function renderMerchantCard(merchant) {
   var logoUrl = merchant.logoUrl || merchant.logo || '';
   var name = merchant.name || merchant.merchantName || 'Unknown';
+  var isOnline = !!(merchant.isOnline || merchant.reach === 'online_only');
   var location = '';
-  if (merchant.isOnline || merchant.reach === 'online_only') {
-    location = '';
-  } else if (merchant.city && merchant.state) {
+  if (!isOnline && merchant.city && merchant.state) {
     location = merchant.city + ', ' + merchant.state;
+  }
+  var distance = '';
+  if (!isOnline) {
+    var userLoc = getStoredOfferLocation();
+    var userLat = userLoc ? Number(userLoc.latitude) : NaN;
+    var userLng = userLoc ? Number(userLoc.longitude) : NaN;
+    var d = merchantDistanceMiles(merchant, userLat, userLng);
+    if (Number.isFinite(d)) distance = formatDistanceMiles(d);
   }
   var offerType = merchant.offerSource === 'wildfire' || merchant.wildfireMerchantId ? 'wildfire' : 'olive';
   var detailId = offerType === 'olive' && merchant.offerId ? String(merchant.offerId) : '';
@@ -1647,7 +1661,7 @@ function renderMerchantCard(merchant) {
         logoUrl: logoUrl,
         location: location,
         website: merchant.website || '',
-        isOnline: !!(merchant.isOnline || merchant.reach === 'online_only'),
+        isOnline: isOnline,
         cashback: merchant.cashback || merchant.points || '',
       }),
     ) +
@@ -1667,8 +1681,9 @@ function renderMerchantCard(merchant) {
       '</div></div>';
   }
   html += '<div class="hc-merchant-card-info">';
-  if (location) {
-    html += '<div class="hc-merchant-location">' + escapeHtml(location) + '</div>';
+  if (location || distance) {
+    var line = location && distance ? location + ' · ' + distance : location || distance;
+    html += '<div class="hc-merchant-location">' + escapeHtml(line) + '</div>';
   }
   html += '</div></div>';
   return html;
