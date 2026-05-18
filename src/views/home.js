@@ -12,6 +12,7 @@ import {
   connectWeeklyPrizeWebSocket,
   openWeeklyLeaderboardModal,
   showWeeklyWinnerModal,
+  tryShowMissedWinnerModalFromLeaderboard,
 } from '../weekly-reward.js';
 import chartUpIconSvg from '../assets/icons/chart-up.svg?raw';
 import activityIconSvg from '../assets/icons/activity.svg?raw';
@@ -882,6 +883,13 @@ async function fetchDashboardPayload() {
     } catch (_e2) {
       overallReward = null;
     }
+    var weeklyPrizeTitleForModal = weeklyReward && weeklyReward.title ? weeklyReward.title : null;
+    var overallPrizeTitleForModal = overallReward && overallReward.title ? overallReward.title : null;
+    tryShowMissedWinnerModalFromLeaderboard(
+      leaderboardRes,
+      weeklyPrizeTitleForModal,
+      overallPrizeTitleForModal,
+    );
   }
 
   var profileSchool = profileUser && (profileUser.active_school || profileUser.activeSchool);

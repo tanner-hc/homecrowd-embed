@@ -5,6 +5,12 @@ import trophyIconSvg from './assets/icons/trophy.svg?raw';
 import headerLogoUrl from './assets/header.png';
 import { escapeHtml, escapeAttr } from './base-components/html.js';
 import NavHeader from './base-components/NavHeader.js';
+import {
+  buildWinnerAlertFromWebSocketMessage,
+  hasWinnerAlertBeenShown,
+  markWinnerAlertBeenShown,
+  pickUnshownWinnerAlert,
+} from './winnerAlert.js';
 
 function normalizeMediaUrl(url) {
   if (url == null || url === '') return null;
@@ -137,31 +143,56 @@ function topLeaderboardRow(rows) {
   }, rows[0]);
 }
 
-function resolveWinnerInfo(leaderboardRes, rows, prize) {
-  var topRow = topLeaderboardRow(rows);
+function isPrizeFinalized(prize) {
+  if (!prize || typeof prize !== 'object') return false;
+  if (prize.is_finalized === true || prize.isFinalized === true) return true;
+  var winnerName = prize.winner_name || prize.winnerName;
+  return prize.is_active === false && !!winnerName;
+}
+
+function resolveFinalizedWeeklyWinnerInfo(leaderboardRes, prize) {
   var lastWeekWinner =
     leaderboardRes && (leaderboardRes.last_week_prize_winner || leaderboardRes.lastWeekPrizeWinner);
-  var winnerName =
-    getWinnerName(topRow) ||
-    getWinnerName(lastWeekWinner) ||
-    getWinnerName(prize && typeof prize === 'object' ? prize.winner_name || prize.winnerName : '');
-  var fromPrize =
-    prize && typeof prize === 'object'
-      ? Number(prize.winner_points != null ? prize.winner_points : prize.winning_points)
-      : NaN;
-  var fromTopRow = topRow ? Number(topRow.points) : NaN;
-  var fromLastWinner =
-    lastWeekWinner && typeof lastWeekWinner === 'object'
-      ? Number(lastWeekWinner.winning_points != null ? lastWeekWinner.winning_points : lastWeekWinner.points)
-      : NaN;
-  var winnerPoints = Number.isFinite(fromPrize) && fromPrize > 0
-    ? fromPrize
-    : Number.isFinite(fromTopRow)
-      ? fromTopRow
-      : Number.isFinite(fromLastWinner)
-        ? fromLastWinner
-        : null;
-  return { name: winnerName, points: winnerPoints };
+  var fromLastWeek = getWinnerName(lastWeekWinner);
+  if (fromLastWeek) {
+    var fromLastWeekPoints =
+      lastWeekWinner && typeof lastWeekWinner === 'object'
+        ? Number(
+            lastWeekWinner.winning_points != null
+              ? lastWeekWinner.winning_points
+              : lastWeekWinner.points,
+          )
+        : NaN;
+    return {
+      name: fromLastWeek,
+      points: Number.isFinite(fromLastWeekPoints) && fromLastWeekPoints > 0 ? fromLastWeekPoints : null,
+    };
+  }
+
+  if (isPrizeFinalized(prize)) {
+    var finalizedName = getWinnerName(prize.winner_name || prize.winnerName || '');
+    var fromPrize = Number(
+      prize.winner_points != null ? prize.winner_points : prize.winning_points,
+    );
+    if (finalizedName) {
+      return {
+        name: finalizedName,
+        points: Number.isFinite(fromPrize) && fromPrize > 0 ? fromPrize : null,
+      };
+    }
+  }
+
+  return { name: '', points: null };
+}
+
+function resolvePeriodLeaderInfo(rows) {
+  var topRow = topLeaderboardRow(rows);
+  if (!topRow) return { name: '', points: null };
+  var points = Number(topRow.points);
+  return {
+    name: getWinnerName(topRow),
+    points: Number.isFinite(points) ? points : null,
+  };
 }
 
 function pickOverallPrize(leaderboardRes) {
@@ -196,23 +227,17 @@ function resolveOverallPeriodTargetMs(leaderboardRes, prize) {
   return null;
 }
 
-function resolveOverallWinnerInfo(rows, prize) {
-  var topRow = topLeaderboardRow(rows);
-  var winnerName =
-    getWinnerName(topRow) ||
-    getWinnerName(prize && typeof prize === 'object' ? prize.winner_name || prize.winnerName : '');
-  var fromPrize =
-    prize && typeof prize === 'object'
-      ? Number(prize.winner_points != null ? prize.winner_points : prize.winning_points)
-      : NaN;
-  var fromTopRow = topRow ? Number(topRow.points) : NaN;
-  var winnerPoints =
-    Number.isFinite(fromPrize) && fromPrize > 0
-      ? fromPrize
-      : Number.isFinite(fromTopRow)
-        ? fromTopRow
-        : null;
-  return { name: String(winnerName || '').trim(), points: winnerPoints };
+function resolveFinalizedOverallWinnerInfo(prize) {
+  if (!prize || typeof prize !== 'object') return { name: '', points: null };
+  var winnerName = getWinnerName(prize.winner_name || prize.winnerName || '');
+  if (!winnerName) return { name: '', points: null };
+  var fromPrize = Number(
+    prize.winner_points != null ? prize.winner_points : prize.winning_points,
+  );
+  return {
+    name: winnerName,
+    points: Number.isFinite(fromPrize) && fromPrize > 0 ? fromPrize : null,
+  };
 }
 
 function pickRewardImage(reward) {
@@ -247,7 +272,7 @@ export async function buildWeeklyRewardContext(leaderboardRes) {
       weekEndsAt: pickWeekEndsAt(leaderboardRes, null),
       winnerName: '',
       winnerPoints: null,
-    candidateWinnerName: '',
+      candidateWinnerName: '',
       candidateWinnerPoints: null,
       targetMs: null,
       periodKind: 'weekly',
@@ -288,7 +313,8 @@ export async function buildWeeklyRewardContext(leaderboardRes) {
   var weekEndsAt = pickWeekEndsAt(leaderboardRes, prizeForMeta);
   var targetMs = resolveTargetMs(weekEndsAt, prizeForMeta);
   var afterCutoff = Number.isFinite(targetMs) && Date.now() >= targetMs;
-  var winnerInfo = resolveWinnerInfo(leaderboardRes, rows, prizeForMeta);
+  var finalizedWinnerInfo = resolveFinalizedWeeklyWinnerInfo(leaderboardRes, prizeForMeta);
+  var periodLeaderInfo = resolvePeriodLeaderInfo(rows);
 
   var rewardIdStr = rewardId != null ? String(rewardId).trim() : '';
   var imageUrlStr = imageUrl != null ? String(imageUrl).trim() : '';
@@ -303,8 +329,8 @@ export async function buildWeeklyRewardContext(leaderboardRes) {
       prizeForMeta.coverTitle ||
       'Reward',
     subtitle:
-      (afterCutoff && winnerInfo.name
-        ? 'Winner: ' + winnerInfo.name
+      (afterCutoff && finalizedWinnerInfo.name
+        ? 'Winner: ' + finalizedWinnerInfo.name
         : prizeForMeta.subtitle ||
           prizeForMeta.description ||
           prizeForMeta.cover_text ||
@@ -323,10 +349,10 @@ export async function buildWeeklyRewardContext(leaderboardRes) {
     terms: prizeForMeta.terms || '',
     rows: rows,
     weekEndsAt: weekEndsAt,
-    winnerName: afterCutoff ? winnerInfo.name : '',
-    winnerPoints: afterCutoff ? winnerInfo.points : null,
-    candidateWinnerName: winnerInfo.name,
-    candidateWinnerPoints: winnerInfo.points,
+    winnerName: afterCutoff ? finalizedWinnerInfo.name : '',
+    winnerPoints: afterCutoff ? finalizedWinnerInfo.points : null,
+    candidateWinnerName: periodLeaderInfo.name,
+    candidateWinnerPoints: periodLeaderInfo.points,
     targetMs: targetMs,
     periodKind: 'weekly',
   };
@@ -389,7 +415,8 @@ export async function buildOverallRewardContext(leaderboardRes) {
   var oRows = pickOverallRows(leaderboardRes);
   var oTargetMs = resolveOverallPeriodTargetMs(leaderboardRes, oPrizeForMeta);
   var oAfterCutoff = Number.isFinite(oTargetMs) && Date.now() >= oTargetMs;
-  var oWinnerInfo = resolveOverallWinnerInfo(oRows, oPrizeForMeta);
+  var oFinalizedWinnerInfo = resolveFinalizedOverallWinnerInfo(oPrizeForMeta);
+  var oPeriodLeaderInfo = resolvePeriodLeaderInfo(oRows);
 
   var oRewardIdStr = oRewardId != null ? String(oRewardId).trim() : '';
   var oImageUrlStr = oImageUrl != null ? String(oImageUrl).trim() : '';
@@ -404,8 +431,8 @@ export async function buildOverallRewardContext(leaderboardRes) {
       oPrizeForMeta.coverTitle ||
       'Reward',
     subtitle:
-      (oAfterCutoff && oWinnerInfo.name
-        ? 'Winner: ' + oWinnerInfo.name
+      (oAfterCutoff && oFinalizedWinnerInfo.name
+        ? 'Winner: ' + oFinalizedWinnerInfo.name
         : oPrizeForMeta.subtitle ||
           oPrizeForMeta.description ||
           oPrizeForMeta.cover_text ||
@@ -424,10 +451,10 @@ export async function buildOverallRewardContext(leaderboardRes) {
     terms: oPrizeForMeta.terms || '',
     rows: oRows,
     weekEndsAt: null,
-    winnerName: oAfterCutoff ? oWinnerInfo.name : '',
-    winnerPoints: oAfterCutoff ? oWinnerInfo.points : null,
-    candidateWinnerName: oWinnerInfo.name,
-    candidateWinnerPoints: oWinnerInfo.points,
+    winnerName: oAfterCutoff ? oFinalizedWinnerInfo.name : '',
+    winnerPoints: oAfterCutoff ? oFinalizedWinnerInfo.points : null,
+    candidateWinnerName: oPeriodLeaderInfo.name,
+    candidateWinnerPoints: oPeriodLeaderInfo.points,
     targetMs: oTargetMs,
     periodKind: 'overall',
   };
@@ -662,30 +689,48 @@ export function connectWeeklyPrizeWebSocket(options) {
   };
 }
 
-function winnerAlertKey(prize, prizeKind) {
-  var kind = prizeKind === 'overall' ? 'overall-prize' : 'weekly-prize';
-  if (!prize || typeof prize !== 'object') return kind + ':unknown';
-  var idPart = prize.id || prize.week_end_date || prize.end_date || prize.endDate || 'unknown';
-  return kind + ':' + idPart + ':' + (prize.winner_name || prize.winnerName || 'unknown');
-}
-
 export function showWeeklyWinnerModal(prize, fallbackTitle, options) {
   var opts = options || {};
   var prizeKind = opts.prizeKind === 'overall' ? 'overall' : 'weekly';
-  var key = opts.alertKey != null ? opts.alertKey : winnerAlertKey(prize, prizeKind);
-  if (!window.__hcWeeklyWinnerAlertShownKeys) window.__hcWeeklyWinnerAlertShownKeys = new Set();
-  if (!opts.force && window.__hcWeeklyWinnerAlertShownKeys.has(key)) return;
-  window.__hcWeeklyWinnerAlertShownKeys.add(key);
+  var message =
+    prizeKind === 'overall'
+      ? { type: 'overall_prize_finalized', overall_prize: prize }
+      : { type: 'weekly_prize_finalized', weekly_prize: prize };
+  var alert = opts.alert || buildWinnerAlertFromWebSocketMessage(message);
+  if (!alert && prize) {
+    alert = {
+      kind: prizeKind,
+      key: null,
+      winnerName: prize.winner_name || prize.winnerName || '',
+      winnerPoints: prize.winner_points != null ? prize.winner_points : prize.winning_points,
+      prizeTitle:
+        (prize.cover_title || prize.coverTitle || prize.title || prize.name) ||
+        fallbackTitle ||
+        (prizeKind === 'overall' ? 'Overall reward' : 'Weekly reward'),
+      winnerBadgeLabel: prizeKind === 'overall' ? 'Overall Winner' : 'Weekly Winner',
+    };
+  }
+  if (!alert) return;
+  var key = opts.alertKey != null ? opts.alertKey : alert.key;
+  if (!opts.force && key && hasWinnerAlertBeenShown(key)) return;
+  if (key) markWinnerAlertBeenShown(key);
 
-  var winnerName = prize && (prize.winner_name || prize.winnerName);
-  var winnerPoints = prize && (prize.winner_points != null ? prize.winner_points : prize.winning_points);
+  var winnerName = alert.winnerName || (prize && (prize.winner_name || prize.winnerName));
+  var winnerPoints =
+    alert.winnerPoints != null
+      ? alert.winnerPoints
+      : prize && (prize.winner_points != null ? prize.winner_points : prize.winning_points);
   var prizeTitle =
+    alert.prizeTitle ||
     (prize && (prize.cover_title || prize.coverTitle || prize.title || prize.name)) ||
     fallbackTitle ||
     (prizeKind === 'overall' ? 'Overall reward' : 'Weekly reward');
 
   var winnerBadgeLabel =
-    opts.winnerBadgeLabel != null ? String(opts.winnerBadgeLabel) : prizeKind === 'overall' ? 'Overall Winner' : 'Weekly Winner';
+    opts.winnerBadgeLabel != null
+      ? String(opts.winnerBadgeLabel)
+      : alert.winnerBadgeLabel ||
+        (prizeKind === 'overall' ? 'Overall Winner' : 'Weekly Winner');
 
   var overlay = document.createElement('div');
   overlay.className = 'hc-weekly-winner-modal';
@@ -736,4 +781,26 @@ export function showWeeklyWinnerModal(prize, fallbackTitle, options) {
       animationData: confettiAnimation,
     });
   }
+}
+
+export function tryShowMissedWinnerModalFromLeaderboard(leaderboardRes, fallbackWeeklyTitle, fallbackOverallTitle) {
+  var alert = pickUnshownWinnerAlert(leaderboardRes);
+  if (!alert) return false;
+  markWinnerAlertBeenShown(alert.key);
+  var fallbackTitle =
+    alert.kind === 'overall' ? fallbackOverallTitle || 'Overall reward' : fallbackWeeklyTitle || 'Weekly reward';
+  showWeeklyWinnerModal(
+    {
+      winner_name: alert.winnerName,
+      winner_points: alert.winnerPoints,
+      title: alert.prizeTitle,
+    },
+    fallbackTitle,
+    {
+      prizeKind: alert.kind,
+      alert: alert,
+      alertKey: alert.key,
+    },
+  );
+  return true;
 }
