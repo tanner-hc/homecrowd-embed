@@ -15,6 +15,7 @@ import {
   connectWeeklyPrizeWebSocket,
   openWeeklyLeaderboardModal,
   showWeeklyWinnerModal,
+  tryShowMissedWinnerModalFromLeaderboard,
 } from '../weekly-reward.js';
 
 var weeklySocketCleanup = null;
@@ -531,6 +532,13 @@ async function loadRewards(container, routeEpoch) {
     var leaderboardActive = !leaderboardRes || leaderboardRes.leaderboard_active !== false;
     var weeklyReward = leaderboardActive ? await buildWeeklyRewardContext(leaderboardRes) : null;
     var overallReward = leaderboardActive ? await buildOverallRewardContext(leaderboardRes) : null;
+    if (leaderboardActive && leaderboardRes) {
+      tryShowMissedWinnerModalFromLeaderboard(
+        leaderboardRes,
+        weeklyReward && weeklyReward.title,
+        overallReward && overallReward.title,
+      );
+    }
 
     var sections = organizeRewardsByDate(formattedRewards);
 

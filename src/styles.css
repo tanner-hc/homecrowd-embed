@@ -2211,6 +2211,132 @@ body {
   justify-content: flex-end;
 }
 
+.hc-daily-bonus-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.hc-daily-bonus-confetti-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.hc-daily-bonus-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.hc-daily-bonus-card {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: 420px;
+  max-height: min(82vh, 640px);
+  overflow-y: auto;
+  border-radius: 24px;
+  background: #fff;
+  padding: 22px 18px 20px;
+  text-align: center;
+  box-shadow: var(--hc-shadow-modal);
+}
+
+.hc-daily-bonus-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #eaf8ff;
+  padding: 6px 14px;
+  margin-bottom: 12px;
+  color: #00a9d6;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.hc-daily-bonus-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--hc-text-primary);
+  margin-bottom: 8px;
+}
+
+.hc-daily-bonus-message {
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--hc-text-secondary);
+  margin-bottom: var(--hc-spacing-md);
+}
+
+.hc-daily-bonus-button {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 999px;
+  background: #00c8ff;
+  color: #000;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hc-daily-bonus-pill {
+  display: inline-block;
+  margin: 0 auto 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--hc-text-primary);
+}
+
+.hc-daily-bonus-raffles {
+  width: 100%;
+  margin-top: 8px;
+  margin-bottom: var(--hc-spacing-md);
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.hc-daily-bonus-raffles-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--hc-text-primary);
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.hc-daily-bonus-raffle-list {
+  margin: 0;
+  padding-left: 18px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.hc-daily-bonus-raffle-list li {
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--hc-text-primary);
+}
+
+.hc-daily-bonus-actions {
+  justify-content: center;
+}
+
 /* Reward Detail (matches ProductDetailScreen) */
 .hc-detail-image-wrap {
   width: 100%;
