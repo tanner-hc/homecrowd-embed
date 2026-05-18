@@ -585,11 +585,18 @@ function renderOnlineFeaturedCarousel(items, position) {
 function renderLocationMapSection() {
   return (
     '<div class="hc-offers-map-section">' +
-    '<div id="hc-offers-location-prompt" class="hc-offers-location-card">' +
+    '<div id="hc-offers-location-loading" class="hc-offers-location-card">' +
+    '<p class="hc-offers-location-text" style="margin-bottom:16px">Loading map\u2026</p>' +
+    '<div class="hc-offers-location-spinner" role="status" aria-label="Loading"></div>' +
+    '</div>' +
+    '<div id="hc-offers-location-prompt" class="hc-offers-location-card" style="display:none">' +
     '<p class="hc-offers-location-text">Enable location to discover nearby stores and exclusive local deals</p>' +
     '<button type="button" class="hc-offers-location-btn" id="hc-offers-enable-loc">Enable Location</button>' +
     '</div>' +
     '<div id="hc-offers-map-mount" class="hc-offers-map-mount" style="display:none" aria-label="Map"></div>' +
+    '<div id="hc-offers-no-stores" class="hc-offers-no-stores-card" style="display:none">' +
+    '<p class="hc-offers-no-stores-text">No stores near you</p>' +
+    '</div>' +
     '</div>'
   );
 }
@@ -1259,11 +1266,20 @@ function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merc
 
 function initOffersMap(container, cardlinked) {
   var promptEl = container.querySelector('#hc-offers-location-prompt');
+  var loadingEl = container.querySelector('#hc-offers-location-loading');
+  var noStoresEl = container.querySelector('#hc-offers-no-stores');
   var mapMount = container.querySelector('#hc-offers-map-mount');
   var btn = container.querySelector('#hc-offers-enable-loc');
   if (!mapMount || !promptEl) return;
 
+  var locationKnown = false;
+
   container._hcCardlinkedStores = Array.isArray(cardlinked) ? cardlinked : [];
+
+  function showNoStoresIfEmpty(list) {
+    if (!noStoresEl) return;
+    noStoresEl.style.display = Array.isArray(list) && list.length === 0 ? '' : 'none';
+  }
 
   function showMapMountUnavailable(message) {
     console.warn('[HC offers map] unavailable:', message || '');
@@ -1276,17 +1292,26 @@ function initOffersMap(container, cardlinked) {
   }
 
   function showMapUI() {
+    locationKnown = true;
+    if (loadingEl) loadingEl.style.display = 'none';
     promptEl.style.display = 'none';
     mapMount.style.display = '';
   }
 
   function showPromptUI() {
+    if (loadingEl) loadingEl.style.display = 'none';
     promptEl.style.display = '';
     mapMount.style.display = 'none';
     mapMount.classList.remove('hc-offers-map-loading');
     mapMount.classList.remove('hc-offers-map-osm-fallback');
     mapMount.removeAttribute('aria-busy');
     mapMount.innerHTML = '';
+  }
+
+  function showLoadingUI() {
+    if (loadingEl) loadingEl.style.display = '';
+    promptEl.style.display = 'none';
+    mapMount.style.display = 'none';
   }
 
   function renderMap(userLat, userLng) {
@@ -1346,18 +1371,19 @@ function initOffersMap(container, cardlinked) {
     try {
       var raw = readStoredOfferLocationRaw();
       if (!raw) {
-        showPromptUI();
+        showLoadingUI();
         return;
       }
       var o = JSON.parse(raw);
       if (o && o.lat != null && o.lng != null) {
         showMapUI();
         renderMap(Number(o.lat), Number(o.lng));
+        showNoStoresIfEmpty(container._hcCardlinkedStores);
       } else {
-        showPromptUI();
+        showLoadingUI();
       }
     } catch (e) {
-      showPromptUI();
+      showLoadingUI();
     }
   }
 
@@ -1378,8 +1404,11 @@ function initOffersMap(container, cardlinked) {
           grid.innerHTML = gridHtml;
         }
         rebindStoresSearchClean(list);
+        showNoStoresIfEmpty(list);
       })
-      .catch(function () {})
+      .catch(function () {
+        if (noStoresEl) noStoresEl.style.display = 'none';
+      })
       .then(function () {
         showMapUI();
         renderMap(lat, lng);
@@ -1396,24 +1425,34 @@ function initOffersMap(container, cardlinked) {
   }
 
   function kickOffParallelGpsRequest() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      if (!locationKnown) showPromptUI();
+      return;
+    }
     function doRequest() {
       try {
         navigator.geolocation.getCurrentPosition(
           function (pos) {
             applyFreshLocation(pos.coords.latitude, pos.coords.longitude);
           },
-          function () {},
+          function () {
+            if (!locationKnown) showPromptUI();
+          },
           { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
         );
-      } catch (e) {}
+      } catch (e) {
+        if (!locationKnown) showPromptUI();
+      }
     }
     if (navigator.permissions && typeof navigator.permissions.query === 'function') {
       try {
         navigator.permissions
           .query({ name: 'geolocation' })
           .then(function (status) {
-            if (status && status.state === 'denied') return;
+            if (status && status.state === 'denied') {
+              if (!locationKnown) showPromptUI();
+              return;
+            }
             doRequest();
           })
           .catch(function () {
@@ -1436,6 +1475,7 @@ function initOffersMap(container, cardlinked) {
         return;
       }
       btn.disabled = true;
+      showLoadingUI();
       navigator.geolocation.getCurrentPosition(
         function (pos) {
           btn.disabled = false;
@@ -1443,6 +1483,7 @@ function initOffersMap(container, cardlinked) {
         },
         function () {
           btn.disabled = false;
+          showPromptUI();
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
       );
