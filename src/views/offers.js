@@ -560,7 +560,10 @@ function renderOnlineFeaturedCarousel(items, position) {
     html +=
       '<div class="hc-online-card" data-offer-id="' +
       escapeAttr(oid) +
-      '" data-featured-offer="' +
+      '" data-merchant-id="' +
+      escapeAttr(oid) +
+      '" data-offer-type="wildfire"' +
+      ' data-featured-offer="' +
       featuredPayload +
       '">';
     if (f.large_logo_url) {
@@ -1716,6 +1719,21 @@ async function handleOffersMarketplaceCardClick(card) {
   }
 
   if (offerId && card.classList.contains('hc-online-card')) {
+    var onlineMerchantId = card.getAttribute('data-merchant-id');
+    if (onlineMerchantId) {
+      var wildfireRedirectUrl = api.buildWildfireRedirectUrl(onlineMerchantId);
+      if (wildfireRedirectUrl) {
+        showFullscreenSpinner();
+        analytics.trackEmbedOfferLinkClick({
+          entry_point: 'embed_marketplace',
+          flow: 'wildfire_tracking',
+          merchant_id: onlineMerchantId,
+          offer_source: 'wildfire',
+        });
+        window.location.href = wildfireRedirectUrl;
+        return;
+      }
+    }
     try {
       var trackResult = await api.trackOfferClick(offerId).catch(function () {
         return null;
