@@ -312,7 +312,7 @@ function buildHomeRecentActivityBodyHtml(transactions, searchText) {
     return (
       '<div class="hc-home-activity-empty">' +
       '<div class="hc-home-activity-empty-title">No purchases yet</div>' +
-      '<div class="hc-home-activity-empty-sub">When you shop with a linked card, your transactions will show up here.</div>' +
+      '<div class="hc-home-activity-empty-sub">WWhen you shop in-person, in-app, or in the extension your transactions will show up here</div>' +
       '</div>'
     );
   }

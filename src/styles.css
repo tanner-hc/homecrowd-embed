@@ -960,8 +960,36 @@ body {
   color: #546E7A;
 }
 
+.hc-content.hc-content--rewards-list {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
 .hc-rewards-page-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 0;
+}
+
+.hc-rewards-page-inner > .hc-screen-title {
+  flex-shrink: 0;
+}
+
+.hc-rewards-page-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   padding-bottom: 100px;
+}
+
+.hc-rewards-locked-banner--list {
+  margin-bottom: 16px;
 }
 
 /* Screen Title (matches ScreenTitle component) */
@@ -4332,6 +4360,14 @@ body {
   }
 
   .hc-content.hc-content--with-tab-bar {
+    padding-bottom: max(100px, calc(84px + env(safe-area-inset-bottom, 0px)));
+  }
+
+  .hc-content.hc-content--rewards-list.hc-content--with-tab-bar {
+    padding-bottom: 0;
+  }
+
+  .hc-content.hc-content--rewards-list .hc-rewards-page-scroll {
     padding-bottom: max(100px, calc(84px + env(safe-area-inset-bottom, 0px)));
   }
 

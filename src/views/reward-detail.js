@@ -9,6 +9,7 @@ import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
 import { writeRedemptionConfirmAndNavigate } from './redemption-confirmation.js';
 import { parsePeriodEndTimestamp } from '../rewardPeriodCountdown.js';
+import { isRewardBeforeStart } from '../rewardStartLock.js';
 import { createPrizeFinalizeModalWatcher } from '../prizeFinalizeModal.js';
 import {
   buildOverallRewardContext,
@@ -91,25 +92,26 @@ function countUniversalTickets(ticketsResponse) {
   }).length;
 }
 
-function isPastEvent(product) {
-  var now = new Date();
-  if (product.redemption_type === 'raffle' && product.raffle_info && product.raffle_info.drawing_date) {
-    return new Date(product.raffle_info.drawing_date) < now;
+function parseDateEndOfDay(dateStr) {
+  if (!dateStr) return null;
+  var d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr))) {
+    d.setHours(23, 59, 59, 999);
   }
-  if (product.redemption_type === 'auction' && product.auction_info && product.auction_info.end_date) {
-    return new Date(product.auction_info.end_date) < now;
-  }
-  return false;
+  return d;
 }
 
-function isMoreThanWeekAway(product) {
-  if (product.redemption_type !== 'raffle' || !product.raffle_info || !product.raffle_info.drawing_date) {
-    return false;
+function isPastEvent(product) {
+  if (product.redemption_type === 'raffle' && product.raffle_info && product.raffle_info.drawing_date) {
+    var d = parseDateEndOfDay(product.raffle_info.drawing_date);
+    return d ? d < new Date() : false;
   }
-  var date = new Date(product.raffle_info.drawing_date);
-  var weekFromNow = new Date();
-  weekFromNow.setDate(weekFromNow.getDate() + 7);
-  return date > weekFromNow;
+  if (product.redemption_type === 'auction' && product.auction_info && product.auction_info.end_date) {
+    var d2 = parseDateEndOfDay(product.auction_info.end_date);
+    return d2 ? d2 < new Date() : false;
+  }
+  return false;
 }
 
 function formatLongDate(dateStr) {
@@ -159,8 +161,9 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
   var ticketCount = countUniversalTickets(ticketsResponse);
 
   var isPast = isPastEvent(product);
-  var completed = !product.is_active || isPast;
-  var timeLocked = isMoreThanWeekAway(product);
+  var isEventType = product.redemption_type === 'raffle' || product.redemption_type === 'auction';
+  var completed = isEventType ? isPast : !product.is_active;
+  var timeLocked = isRewardBeforeStart(product);
   var cardLockedActive = !isEarlyRelease && cardLinkStatus === 'unlinked';
   var isLocked = product.is_locked || timeLocked;
 
@@ -201,7 +204,7 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
     redemptionType === 'raffle' &&
     raffleInfo &&
     raffleInfo.drawing_date &&
-    new Date() >= new Date(raffleInfo.drawing_date);
+    (function() { var d = parseDateEndOfDay(raffleInfo.drawing_date); return d ? new Date() >= d : false; })();
   var raffleCompleteButNotDrawn = raffleDrawingPassed && !raffleCompletedByStatus;
 
   var userEntries = (raffleInfo && raffleInfo.user_entries) || 0;
@@ -406,7 +409,7 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
       redemptionType === 'auction' &&
       auctionInfo &&
       auctionInfo.end_date &&
-      new Date() >= new Date(auctionInfo.end_date),
+      (function() { var d = parseDateEndOfDay(auctionInfo.end_date); return d ? new Date() >= d : false; })(),
     weeklyReward: weeklyReward,
   });
 
@@ -787,7 +790,7 @@ function bindDetailEvents(container, product, summary, currentUser, cardLinkStat
 
   var stripeCents = Number(product.cash_price_cents != null ? product.cash_price_cents : product.cashPriceCents);
   var cardLockedActive = !isEarlyReleaseUser(currentUser) && cardLinkStatus === 'unlinked';
-  var timeLocked = isMoreThanWeekAway(product);
+  var timeLocked = isRewardBeforeStart(product);
   var isLocked = product.is_locked || timeLocked;
 
   var stripeBtn = document.getElementById('hc-detail-stripe');
