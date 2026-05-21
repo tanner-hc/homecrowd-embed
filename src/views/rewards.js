@@ -62,6 +62,8 @@ function normalizeReward(r) {
 
   var flatDrawing =
     pickNestedDate(r, ['drawing_date', 'drawingDate', 'raffle_drawing_date', 'raffleDrawingDate']);
+  var flatStart =
+    pickNestedDate(r, ['start_date', 'startDate', 'raffle_start_date', 'raffleStartDate']);
   var flatAuctionEnd =
     pickNestedDate(r, [
       'auction_end_date',
@@ -78,11 +80,16 @@ function normalizeReward(r) {
 
   var nestedDrawing =
     pickNestedDate(raffle_info, ['drawing_date', 'drawingDate']) || flatDrawing;
+  var nestedStart =
+    pickNestedDate(raffle_info, ['start_date', 'startDate']) || flatStart;
   var nestedAuctionEnd =
     pickNestedDate(auction_info, ['end_date', 'endDate', 'ends_at', 'endsAt']) || flatAuctionEnd;
 
   if (nestedDrawing) {
     raffle_info.drawing_date = nestedDrawing;
+  }
+  if (nestedStart) {
+    raffle_info.start_date = nestedStart;
   }
   if (nestedAuctionEnd) {
     auction_info.end_date = nestedAuctionEnd;
@@ -177,16 +184,6 @@ function formatDate(dateStr) {
   return date.toLocaleDateString('en-US', options);
 }
 
-function parseDateEndOfDay(dateStr) {
-  if (!dateStr) return null;
-  var d = new Date(dateStr);
-  if (isNaN(d.getTime())) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr))) {
-    d.setHours(23, 59, 59, 999);
-  }
-  return d;
-}
-
 function organizeRewardsByDate(rewards) {
   var now = new Date();
   var sections = [];
@@ -200,8 +197,8 @@ function organizeRewardsByDate(rewards) {
     if (!eventDate) {
       noDate.push(reward);
     } else {
-      var date = parseDateEndOfDay(eventDate);
-      if (!date || date < now) {
+      var date = new Date(eventDate);
+      if (date < now) {
         past.push(Object.assign({}, reward, { eventDate: eventDate }));
       } else {
         var dateKey = formatDate(eventDate);
@@ -259,8 +256,8 @@ function buildRewardCardHtml(item, section, cardLinkStatus, isEarlyRelease, getI
   var cashCents = Number(item.cash_price_cents);
   var cashPriceLabel =
     Number.isFinite(cashCents) &&
-      cashCents >= 50 &&
-      (item.redemption_type === 'first' || item.redemption_type === 'card')
+    cashCents >= 50 &&
+    (item.redemption_type === 'first' || item.redemption_type === 'card')
       ? '$' + (cashCents / 100).toFixed(2)
       : null;
 
@@ -507,7 +504,7 @@ async function loadRewards(container, routeEpoch) {
             return !ticket.raffle;
           }).length;
         }
-      } catch (tErr) { }
+      } catch (tErr) {}
     }
 
     var catalog = Array.isArray(catalogRaw)
@@ -530,10 +527,8 @@ async function loadRewards(container, routeEpoch) {
     });
     html += '</div>';
 
-    html += '<div class="hc-rewards-page-scroll">';
-
     if (!isEarlyRelease && cardLinkStatus === 'unlinked') {
-      html += '<div class="hc-rewards-locked-banner hc-rewards-locked-banner--list">';
+      html += '<div class="hc-rewards-locked-banner">';
       html += '<div class="hc-rewards-locked-banner-text">';
       html += '<div class="hc-rewards-locked-banner-title">Link a card to unlock rewards</div>';
       html +=
@@ -592,7 +587,9 @@ async function loadRewards(container, routeEpoch) {
         title: 'No Rewards Available',
         subtitle:
           currentUser && currentUser.active_school && currentUser.active_school.name
-            ? 'No rewards are currently available for redemption'
+            ? 'No auctions or raffles are currently available for ' +
+              currentUser.active_school.name +
+              '. Check back later!'
             : 'Please select a school to view available rewards.',
         className: 'hc-empty--rewards',
         iconChar: '🎁',
@@ -616,7 +613,6 @@ async function loadRewards(container, routeEpoch) {
       });
     }
 
-    html += '</div>';
     html += '</div>';
 
     var availablePts =
