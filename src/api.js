@@ -198,6 +198,10 @@ export async function fetchSchoolConfig(schoolId) {
   return request('/api/school/merchants-page-config/' + encodeURIComponent(schoolId) + '/');
 }
 
+export async function fetchPublicSchools() {
+  return request('/api/school/public-schools/');
+}
+
 export async function fetchCurrentUser() {
   return request(EMBED_BASE + '/auth/me/');
 }
