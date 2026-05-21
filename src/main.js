@@ -536,10 +536,14 @@ function render(route) {
 
   if (route === '/login') {
     appEl.innerHTML = '';
-    renderLogin(appEl, async function (u) {
-      if (schoolId) {
+    renderLogin(appEl, async function (u, loginMeta) {
+      var assignSchoolId =
+        (loginMeta && loginMeta.signupSchoolId
+          ? String(loginMeta.signupSchoolId).trim()
+          : '') || schoolId;
+      if (assignSchoolId) {
         try {
-          var assignResult = await api.assignSchool(schoolId);
+          var assignResult = await api.assignSchool(assignSchoolId);
           u = await api.fetchCurrentUser();
           if (assignResult && assignResult.auto_raffle_entries > 0) {
             showRaffleEntryModal(assignResult.auto_raffle_entries, assignResult.raffle_titles);

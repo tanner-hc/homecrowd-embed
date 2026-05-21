@@ -290,6 +290,13 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
   }
   html += '</div>';
 
+  if (timeLocked && redemptionType === 'raffle' && raffleInfo && raffleInfo.start_date) {
+    html += '<div class="hc-product-drawing-date">';
+    html += '<div class="hc-product-drawing-label">Opens</div>';
+    html += '<div class="hc-product-drawing-value">' + escapeHtml(formatLongDate(raffleInfo.start_date)) + '</div>';
+    html += '</div>';
+  }
+
   if (redemptionType === 'raffle' && raffleInfo && raffleInfo.drawing_date) {
     html += '<div class="hc-product-drawing-date">';
     html += '<div class="hc-product-drawing-label">Drawing Date</div>';

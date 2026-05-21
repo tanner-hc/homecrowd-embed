@@ -905,6 +905,46 @@ body {
   color: rgba(255, 255, 255, 0.5);
 }
 
+.hc-login-container .hc-login-school-select {
+  width: 100%;
+  cursor: pointer;
+}
+
+.hc-login-container .hc-login-school-select:disabled {
+  opacity: 0.85;
+  cursor: not-allowed;
+}
+
+.hc-login-container .hc-login-school-select option {
+  color: #111;
+  background: #fff;
+}
+
+.hc-login-container .hc-label.hc-login-label--error {
+  color: var(--hc-error);
+}
+
+.hc-login-container .hc-input.hc-login-field-error,
+.hc-login-container .hc-login-school-select.hc-login-field-error {
+  border-color: var(--hc-error) !important;
+  box-shadow: 0 0 0 1px var(--hc-error);
+}
+
+.hc-login-container .hc-input.hc-login-field-error:focus,
+.hc-login-container .hc-login-school-select.hc-login-field-error:focus {
+  border-color: var(--hc-error) !important;
+  box-shadow: 0 0 0 1px var(--hc-error);
+}
+
+.hc-login-terms.hc-login-field-error .hc-login-checkbox-label {
+  color: var(--hc-error);
+}
+
+.hc-login-terms.hc-login-field-error .hc-login-checkbox-label input[type='checkbox'] {
+  outline: 2px solid var(--hc-error);
+  outline-offset: 2px;
+}
+
 .hc-login-container .hc-toggle-pw {
   color: rgba(255, 255, 255, 0.6);
 }

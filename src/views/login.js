@@ -1,9 +1,51 @@
 import * as api from '../api.js';
 import logoUrl from '../assets/header.png';
 import Input from '../base-components/Input.js';
+import { escapeAttr, escapeHtml } from '../base-components/html.js';
+
+function sortSchoolsForPicker(schools) {
+  var list = Array.isArray(schools) ? schools.slice() : [];
+  var withLogos = [];
+  var withoutLogos = [];
+  list.forEach(function (school) {
+    if (school && school.image && String(school.image).trim()) {
+      withLogos.push(school);
+    } else {
+      withoutLogos.push(school);
+    }
+  });
+  withLogos.sort(function (a, b) {
+    return String(a.name || '').localeCompare(String(b.name || ''));
+  });
+  withoutLogos.sort(function (a, b) {
+    return String(a.name || '').localeCompare(String(b.name || ''));
+  });
+  return withLogos.concat(withoutLogos);
+}
+
+function setFieldErrorState(el, hasError) {
+  if (!el) return;
+  el.classList.toggle('hc-login-field-error', !!hasError);
+  if (el.id === 'hc-email' || el.id === 'hc-first-name' || el.id === 'hc-last-name') {
+    var group = el.closest('.hc-bc-input-group');
+    if (group) {
+      var label = group.querySelector('.hc-label');
+      if (label) label.classList.toggle('hc-login-label--error', !!hasError);
+    }
+  }
+  if (el.id === 'hc-signup-school') {
+    var schoolLabel = document.querySelector('label[for="hc-signup-school"]');
+    if (schoolLabel) schoolLabel.classList.toggle('hc-login-label--error', !!hasError);
+  }
+  if (el.id === 'hc-password' || el.id === 'hc-password-confirm') {
+    var pwLabel = document.querySelector('label[for="' + el.id + '"]');
+    if (pwLabel) pwLabel.classList.toggle('hc-login-label--error', !!hasError);
+  }
+}
 
 export function renderLogin(container, onLoginSuccess, options) {
   var schoolId = options && options.schoolId ? String(options.schoolId).trim() : '';
+  var isSchoolSelectionLocked = !!schoolId;
   container.innerHTML =
     '<div class="hc-login-shell">' +
     '<div class="hc-login-bg"></div>' +
@@ -48,15 +90,23 @@ export function renderLogin(container, onLoginSuccess, options) {
     }) +
     '</div>' +
     '</div>' +
+    '<div id="hc-signup-school-wrap" class="hc-form-group" style="display:none">' +
+    '<label class="hc-label" for="hc-signup-school">School</label>' +
+    '<select id="hc-signup-school" class="hc-input hc-login-school-select">' +
+    '<option value="">Select your school</option>' +
+    '</select>' +
+    '</div>' +
     Input({
       id: 'hc-email',
       name: 'email',
       type: 'email',
+      label: 'Email',
       placeholder: 'Email',
       autocomplete: 'email',
       value: '',
     }) +
-    '<div class="hc-form-group">' +
+    '<div class="hc-form-group" id="hc-password-wrap">' +
+    '<label class="hc-label" id="hc-password-label" for="hc-password">Password</label>' +
     '<div style="position:relative">' +
     '<input id="hc-password" class="hc-input" type="password" placeholder="Password" autocomplete="current-password" />' +
     '<button type="button" id="hc-toggle-pw" class="hc-toggle-pw">Show</button>' +
@@ -110,10 +160,106 @@ export function renderLogin(container, onLoginSuccess, options) {
   var lastNameInput = document.getElementById('hc-last-name');
   var passwordConfirmInput = document.getElementById('hc-password-confirm');
   var acceptTermsInput = document.getElementById('hc-accept-terms');
+  var signupSchoolWrap = document.getElementById('hc-signup-school-wrap');
+  var signupSchoolSelect = document.getElementById('hc-signup-school');
   var loginCardEl = container.querySelector('.hc-login-card');
   var titleEls = container.querySelectorAll('.hc-login-title');
   var subtitleEl = container.querySelector('.hc-login-subtitle');
   var mode = 'signin';
+  var schoolsLoaded = false;
+  var schoolsLoading = false;
+
+  function clearSignupFieldErrors() {
+    var fields = document.querySelectorAll(
+      '#hc-login-form .hc-login-field-error, #hc-login-form .hc-login-label--error',
+    );
+    fields.forEach(function (el) {
+      el.classList.remove('hc-login-field-error', 'hc-login-label--error');
+    });
+    if (signupTermsWrap) signupTermsWrap.classList.remove('hc-login-field-error');
+  }
+
+  function applySignupFieldErrors(fieldKeys) {
+    var map = {
+      first_name: firstNameInput,
+      last_name: lastNameInput,
+      school: signupSchoolSelect,
+      email: emailInput,
+      password: passwordInput,
+      password_confirm: passwordConfirmInput,
+    };
+    fieldKeys.forEach(function (key) {
+      setFieldErrorState(map[key], true);
+    });
+    if (fieldKeys.indexOf('terms') >= 0 && signupTermsWrap) {
+      signupTermsWrap.classList.add('hc-login-field-error');
+    }
+  }
+
+  function validateSignupFields(values) {
+    clearSignupFieldErrors();
+    var invalid = [];
+    if (!values.firstName) invalid.push('first_name');
+    if (!values.lastName) invalid.push('last_name');
+    if (!values.selectedSchoolId) invalid.push('school');
+    if (!values.email) invalid.push('email');
+    if (!values.password) invalid.push('password');
+    if (!values.passwordConfirm) invalid.push('password_confirm');
+    if (values.password && values.passwordConfirm && values.password !== values.passwordConfirm) {
+      if (invalid.indexOf('password') < 0) invalid.push('password');
+      if (invalid.indexOf('password_confirm') < 0) invalid.push('password_confirm');
+    }
+    if (!values.acceptedTerms) invalid.push('terms');
+    if (invalid.length) {
+      applySignupFieldErrors(invalid);
+    }
+    return invalid;
+  }
+
+  function bindClearOnInput(el, extraWrap) {
+    if (!el) return;
+    var evt = el.tagName === 'SELECT' ? 'change' : 'input';
+    el.addEventListener(evt, function () {
+      setFieldErrorState(el, false);
+      if (extraWrap) extraWrap.classList.remove('hc-login-field-error');
+    });
+  }
+
+  function populateSchoolSelect(schools) {
+    if (!signupSchoolSelect) return;
+    var sorted = sortSchoolsForPicker(schools);
+    var html = '<option value="">Select your school</option>';
+    sorted.forEach(function (school) {
+      if (!school || school.id == null) return;
+      var id = String(school.id);
+      var name = school.name ? String(school.name) : 'School';
+      var location = [school.city, school.state].filter(Boolean).join(', ');
+      var label = location ? name + ' (' + location + ')' : name;
+      html +=
+        '<option value="' + escapeAttr(id) + '">' + escapeHtml(label) + '</option>';
+    });
+    signupSchoolSelect.innerHTML = html;
+    if (schoolId) {
+      signupSchoolSelect.value = schoolId;
+    }
+    signupSchoolSelect.disabled = isSchoolSelectionLocked;
+  }
+
+  async function ensureSchoolsLoaded() {
+    if (schoolsLoaded || schoolsLoading) return;
+    schoolsLoading = true;
+    try {
+      var data = await api.fetchPublicSchools();
+      var list = (data && data.results) || data || [];
+      populateSchoolSelect(list);
+      schoolsLoaded = true;
+    } catch (err) {
+      errorEl.textContent = err.message || 'Failed to load schools';
+      errorEl.style.display = 'block';
+    } finally {
+      schoolsLoading = false;
+    }
+  }
 
   function applyMode(nextMode) {
     mode = nextMode === 'signup' ? 'signup' : 'signin';
@@ -122,8 +268,14 @@ export function renderLogin(container, onLoginSuccess, options) {
       loginCardEl.classList.toggle('hc-login-card--signup', isSignup);
     }
     signupNameRow.style.display = isSignup ? '' : 'none';
+    signupSchoolWrap.style.display = isSignup ? '' : 'none';
     signupConfirmWrap.style.display = isSignup ? '' : 'none';
     signupTermsWrap.style.display = isSignup ? '' : 'none';
+    if (isSignup) {
+      ensureSchoolsLoaded();
+    } else {
+      clearSignupFieldErrors();
+    }
     forgotPasswordWrap.style.display = isSignup ? 'none' : '';
     signupPrompt.style.display = isSignup ? 'none' : '';
     signupBackBtn.style.display = isSignup ? 'inline-flex' : 'none';
@@ -146,6 +298,19 @@ export function renderLogin(container, onLoginSuccess, options) {
     submitBtn.textContent = isSignup ? 'Create Account' : 'Log In';
     passwordInput.setAttribute('autocomplete', isSignup ? 'new-password' : 'current-password');
     errorEl.style.display = 'none';
+    if (!isSignup) clearSignupFieldErrors();
+  }
+
+  bindClearOnInput(firstNameInput);
+  bindClearOnInput(lastNameInput);
+  bindClearOnInput(signupSchoolSelect);
+  bindClearOnInput(emailInput);
+  bindClearOnInput(passwordInput);
+  bindClearOnInput(passwordConfirmInput);
+  if (acceptTermsInput) {
+    acceptTermsInput.addEventListener('change', function () {
+      if (signupTermsWrap) signupTermsWrap.classList.remove('hc-login-field-error');
+    });
   }
 
   toggleBtn.addEventListener('click', function () {
@@ -184,19 +349,50 @@ export function renderLogin(container, onLoginSuccess, options) {
     var lastName = lastNameInput.value.trim();
     var passwordConfirm = passwordConfirmInput.value.trim();
     var acceptedTerms = !!acceptTermsInput.checked;
-    if (!email || !password) return;
+    var selectedSchoolId =
+      signupSchoolSelect && signupSchoolSelect.value
+        ? String(signupSchoolSelect.value).trim()
+        : '';
+    if (!selectedSchoolId && isSchoolSelectionLocked) {
+      selectedSchoolId = schoolId;
+    }
     if (isSignup) {
-      if (!firstName || !lastName || !passwordConfirm) return;
-      if (password !== passwordConfirm) {
-        errorEl.textContent = "Passwords don't match";
+      if (schoolsLoading) {
+        errorEl.textContent = 'Loading schools, please wait';
         errorEl.style.display = 'block';
         return;
       }
-      if (!acceptedTerms) {
-        errorEl.textContent = 'Please accept Terms and Privacy Policy';
+      var invalidFields = validateSignupFields({
+        firstName: firstName,
+        lastName: lastName,
+        selectedSchoolId: selectedSchoolId,
+        email: email,
+        password: password,
+        passwordConfirm: passwordConfirm,
+        acceptedTerms: acceptedTerms,
+      });
+      if (invalidFields.length) {
+        if (
+          invalidFields.indexOf('password') >= 0 &&
+          invalidFields.indexOf('password_confirm') >= 0 &&
+          password &&
+          passwordConfirm &&
+          password !== passwordConfirm
+        ) {
+          errorEl.textContent = "Passwords don't match";
+        } else {
+          errorEl.textContent = 'Please fill in all required fields';
+        }
         errorEl.style.display = 'block';
         return;
       }
+    } else if (!email || !password) {
+      clearSignupFieldErrors();
+      if (!email) setFieldErrorState(emailInput, true);
+      if (!password) setFieldErrorState(passwordInput, true);
+      errorEl.textContent = 'Please enter email and password';
+      errorEl.style.display = 'block';
+      return;
     }
 
     submitBtn.disabled = true;
@@ -213,13 +409,16 @@ export function renderLogin(container, onLoginSuccess, options) {
           password_confirm: passwordConfirm,
           accepted_terms_and_policies: acceptedTerms,
           registration_source: 'homecrowd_embedded',
-          school_id: schoolId || undefined,
+          school_id: selectedSchoolId || undefined,
         });
       } else {
         await api.login(email, password);
       }
       var user = await api.fetchCurrentUser();
-      await onLoginSuccess(user, { mode: mode });
+      await onLoginSuccess(user, {
+        mode: mode,
+        signupSchoolId: isSignup ? selectedSchoolId : '',
+      });
     } catch (err) {
       errorEl.textContent = err.message || 'Login failed';
       errorEl.style.display = 'block';
