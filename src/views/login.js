@@ -45,6 +45,9 @@ function setFieldErrorState(el, hasError) {
 
 export function renderLogin(container, onLoginSuccess, options) {
   var schoolId = options && options.schoolId ? String(options.schoolId).trim() : '';
+  var initialEmail = options && options.initialEmail ? String(options.initialEmail).trim() : '';
+  var lockEmail = !!(options && options.lockEmail);
+  var initialNotice = options && options.notice ? String(options.notice) : '';
   var isSchoolSelectionLocked = !!schoolId;
   container.innerHTML =
     '<div class="hc-login-shell">' +
@@ -64,7 +67,11 @@ export function renderLogin(container, onLoginSuccess, options) {
     '<h1 class="hc-login-title">Shop Smarter.</h1>' +
     '<h1 class="hc-login-title">Cheer Louder.</h1>' +
     '</div>' +
-    '<div id="hc-login-error" class="hc-alert-error" style="display:none"></div>' +
+    '<div id="hc-login-error" class="hc-alert-error" style="' +
+    (initialNotice ? '' : 'display:none') +
+    '">' +
+    escapeHtml(initialNotice) +
+    '</div>' +
     '<form id="hc-login-form">' +
     '<div id="hc-signup-name-row" class="hc-login-signup-row" style="display:none">' +
     '<div class="hc-login-signup-col">' +
@@ -297,7 +304,12 @@ export function renderLogin(container, onLoginSuccess, options) {
     }
     submitBtn.textContent = isSignup ? 'Create Account' : 'Log In';
     passwordInput.setAttribute('autocomplete', isSignup ? 'new-password' : 'current-password');
-    errorEl.style.display = 'none';
+    if (isSignup || !initialNotice) {
+      errorEl.style.display = 'none';
+    } else {
+      errorEl.style.display = 'block';
+      errorEl.textContent = initialNotice;
+    }
     if (!isSignup) clearSignupFieldErrors();
   }
 
@@ -339,6 +351,13 @@ export function renderLogin(container, onLoginSuccess, options) {
   signupBackBtn.addEventListener('click', function () {
     applyMode('signin');
   });
+
+  if (initialEmail) {
+    emailInput.value = initialEmail;
+  }
+  if (lockEmail) {
+    emailInput.readOnly = true;
+  }
 
   form.addEventListener('submit', async function (e) {
     e.preventDefault();

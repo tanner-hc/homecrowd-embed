@@ -5914,6 +5914,27 @@ body {
   font-family: var(--hc-font);
 }
 
+.hc-home-preview-row {
+  margin-top: -4px;
+  margin-bottom: 14px;
+}
+
+.hc-home-preview-btn {
+  border: 1px solid #06235f;
+  background: #ffffff;
+  color: #06235f;
+  border-radius: 999px;
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  cursor: pointer;
+}
+
+.hc-home-preview-btn:active {
+  transform: translateY(1px);
+}
+
 .hc-dash-combined {
   background: #f8f8f8;
   border-radius: 20px;
@@ -8726,4 +8747,206 @@ body {
     font-size: 16px;
     line-height: 20px;
   }
+}
+
+.hc-preview-screen {
+  min-height: 100%;
+  padding: 8px 0 28px;
+  display: flex;
+  justify-content: center;
+}
+
+.hc-preview-card {
+  width: 100%;
+  max-width: 560px;
+  border: 1.5px solid var(--hc-border);
+  border-radius: 22px;
+  padding: 36px 20px 24px;
+  background: var(--hc-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hc-preview-title {
+  margin: 0;
+  color: var(--hc-text-primary);
+  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
+  font-size: clamp(46px, 10.2vw, 70px);
+  line-height: 0.96;
+  letter-spacing: 0.2px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.hc-preview-subtitle {
+  margin-top: 18px;
+  color: var(--hc-text-secondary);
+  font-size: 18px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.hc-preview-links {
+  margin: 18px 0 0;
+  color: var(--hc-text-secondary);
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.hc-preview-links a {
+  color: #00c8ff;
+  text-decoration: underline;
+}
+
+.hc-preview-terms {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.hc-preview-terms input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hc-preview-terms-check {
+  width: 31px;
+  height: 31px;
+  border: 2px solid var(--hc-border);
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hc-preview-terms input:checked + .hc-preview-terms-check::after {
+  content: '';
+  width: 11px;
+  height: 19px;
+  border: solid #00c8ff;
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg) translate(-1px, -2px);
+}
+
+.hc-preview-terms-text {
+  color: var(--hc-text-secondary);
+  font-size: 16px;
+  text-align: center;
+}
+
+.hc-preview-terms-text a {
+  color: #00c8ff;
+  text-decoration: underline;
+}
+
+.hc-preview-btn {
+  margin-top: 22px;
+  width: 100%;
+  min-height: 64px;
+  border-radius: 999px;
+  border: 2px solid #00c8ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 0 18px;
+  font-size: 17px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  overflow: hidden;
+}
+
+.hc-preview-btn-primary {
+  background: #00c8ff;
+  color: #000;
+}
+
+.hc-preview-btn-secondary {
+  background: var(--hc-bg);
+  color: #00c8ff;
+}
+
+.hc-preview-btn-primary:not(:disabled):hover {
+  background: #00c8ff;
+  border-color: #00c8ff;
+}
+
+.hc-preview-btn-secondary:not(:disabled):hover {
+  color: #00c8ff;
+  border-color: #00c8ff;
+}
+
+.hc-preview-btn-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.hc-preview-btn:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.hc-preview-btn-icon {
+  display: inline-flex;
+  width: 24px;
+  min-width: 24px;
+  flex-shrink: 0;
+  justify-content: center;
+}
+
+.hc-preview-btn-label {
+  min-width: 0;
+  flex: 1 1 auto;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
+
+.hc-preview-alt-wrap {
+  margin-top: 14px;
+  width: 100%;
+}
+
+.hc-preview-alt-label {
+  display: block;
+  margin: 0 0 8px;
+  color: var(--hc-text-secondary);
+  font-size: 14px;
+}
+
+.hc-preview-alt-input {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--hc-border);
+  background: #fff;
+  padding: 0 14px;
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.hc-preview-link-btn {
+  margin-top: 8px;
+  border: 0;
+  background: transparent;
+  color: #00c8ff;
+  text-decoration: underline;
+  font-size: 14px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.hc-preview-inline-status {
+  margin-top: 10px;
+  color: #0f766e;
+  font-size: 14px;
 }
