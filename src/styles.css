@@ -1714,6 +1714,51 @@ body {
   line-height: 1;
 }
 
+.hc-deactivate-modal-actions.hc-card-menu-actions,
+.hc-card-menu-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.hc-card-menu-actions .hc-btn {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.hc-card-menu-modal .hc-deactivate-modal-message {
+  margin-bottom: 16px;
+}
+
+.hc-card-menu-deactivate-btn.hc-bc-main-btn--filled {
+  background: #f44336;
+  border-color: #f44336;
+  color: #fff;
+}
+
+.hc-card-menu-deactivate-btn.hc-bc-main-btn--filled:hover:not(:disabled) {
+  background: #d32f2f;
+  border-color: #d32f2f;
+}
+
+.hc-card-nickname-modal .hc-bc-input-group {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.hc-card-nickname-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.hc-card-nickname-actions .hc-btn {
+  width: 100%;
+}
+
 .hc-cards-screen-head {
   display: flex;
   flex-direction: row;
@@ -2160,6 +2205,8 @@ body {
   padding: 24px;
   width: 90%;
   max-width: 400px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .hc-deactivate-modal-title {
@@ -2188,6 +2235,7 @@ body {
 
 .hc-deactivate-cancel-btn {
   flex: 1;
+  min-width: 0;
   padding: 12px 24px;
   border-radius: 8px;
   border: 1px solid #E0E0E0;
@@ -2198,10 +2246,13 @@ body {
   font-weight: 500;
   cursor: pointer;
   text-align: center;
+  box-sizing: border-box;
 }
 
 .hc-deactivate-confirm-btn {
   flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 12px 24px;
   border-radius: 8px;
   border: none;

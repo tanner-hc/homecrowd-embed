@@ -364,6 +364,13 @@ export async function deactivateCard(cardId) {
   });
 }
 
+export async function updateCardNickname(cardId, nickname) {
+  return request(EMBED_BASE + '/cards/' + encodeURIComponent(cardId) + '/nickname/', {
+    method: 'PATCH',
+    body: JSON.stringify({ nickname: nickname }),
+  });
+}
+
 export async function createOliveMember() {
   return request('/api/olive/createMember', {
     method: 'POST',

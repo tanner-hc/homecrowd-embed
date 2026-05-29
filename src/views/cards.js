@@ -7,6 +7,8 @@ import cardFilledIconUrl from '../assets/card-filled.svg';
 import zeroTagUrl from '../assets/icons/zero-tag.png';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import NavHeader from '../base-components/NavHeader.js';
+import MainButton from '../base-components/MainButton.js';
+import Input from '../base-components/Input.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
 
@@ -85,10 +87,12 @@ async function loadCards(container) {
         html += '</div>';
         html += '</div>';
         html +=
-          '<button type="button" class="hc-card-menu-btn" data-deactivate-id="' +
+          '<button type="button" class="hc-card-menu-btn" data-card-id="' +
           escapeAttr(card.id) +
           '" data-card-last4="' +
           escapeAttr(card.last4) +
+          '" data-card-nickname="' +
+          escapeAttr(card.nickname || '') +
           '">⋮</button>';
         html += '</div>';
       });
@@ -108,6 +112,39 @@ async function loadCards(container) {
     html += '</div>';
     html += '</div>';
 
+    html += '<div id="hc-card-menu-modal" class="hc-modal-overlay" style="display:none">';
+    html += '<div class="hc-deactivate-modal hc-card-menu-modal">';
+    html += '<div class="hc-deactivate-modal-title">Card options</div>';
+    html += '<div id="hc-card-menu-modal-text" class="hc-deactivate-modal-message"></div>';
+    html += '<div class="hc-pd-actions hc-card-menu-actions">';
+    html += MainButton({ id: 'hc-card-menu-edit', text: 'Edit nickname', outlined: true });
+    html += MainButton({
+      id: 'hc-card-menu-deactivate',
+      text: 'Deactivate',
+      className: 'hc-card-menu-deactivate-btn',
+    });
+    html += MainButton({ id: 'hc-card-menu-cancel', text: 'Cancel', outlined: true });
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div id="hc-edit-nickname-modal" class="hc-modal-overlay" style="display:none">';
+    html += '<div class="hc-deactivate-modal hc-card-nickname-modal">';
+    html += '<div class="hc-deactivate-modal-title">Edit Nickname</div>';
+    html += '<div id="hc-edit-nickname-modal-text" class="hc-deactivate-modal-message"></div>';
+    html += Input({
+      id: 'hc-edit-nickname-input',
+      label: 'Nickname (Optional)',
+      placeholder: 'My Primary Card',
+      className: 'hc-link-card-input',
+    });
+    html += '<div class="hc-pd-actions hc-card-nickname-actions">';
+    html += MainButton({ id: 'hc-edit-nickname-save', text: 'Save', loadingText: 'Saving...' });
+    html += MainButton({ id: 'hc-edit-nickname-cancel', text: 'Cancel', outlined: true });
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+
     html += '<div id="hc-deactivate-modal" class="hc-modal-overlay" style="display:none">';
     html += '<div class="hc-deactivate-modal">';
     html += '<div class="hc-deactivate-modal-title">Deactivate Card</div>';
@@ -123,6 +160,8 @@ async function loadCards(container) {
     container.innerHTML = html;
 
     var deactivateTarget = null;
+    var menuTarget = null;
+    var editNicknameTarget = null;
 
     var backBtn = document.getElementById('hc-cards-back');
     if (backBtn) {
@@ -132,17 +171,85 @@ async function loadCards(container) {
     }
 
     container.onclick = function (e) {
-      var btn = e.target.closest('[data-deactivate-id]');
+      var btn = e.target.closest('[data-card-id]');
       if (!btn || !container.contains(btn)) return;
-      deactivateTarget = {
-        id: btn.getAttribute('data-deactivate-id'),
+      menuTarget = {
+        id: btn.getAttribute('data-card-id'),
         last4: btn.getAttribute('data-card-last4'),
+        nickname: btn.getAttribute('data-card-nickname') || '',
       };
+      document.getElementById('hc-card-menu-modal-text').textContent =
+        'Card ending in ' + menuTarget.last4;
+      document.getElementById('hc-card-menu-modal').style.display = 'flex';
+    };
+
+    document.getElementById('hc-card-menu-cancel').onclick = function () {
+      document.getElementById('hc-card-menu-modal').style.display = 'none';
+      menuTarget = null;
+    };
+
+    document.getElementById('hc-card-menu-modal').onclick = function (e) {
+      if (e.target === e.currentTarget) {
+        e.currentTarget.style.display = 'none';
+        menuTarget = null;
+      }
+    };
+
+    document.getElementById('hc-card-menu-edit').onclick = function () {
+      if (!menuTarget) return;
+      editNicknameTarget = menuTarget;
+      document.getElementById('hc-card-menu-modal').style.display = 'none';
+      document.getElementById('hc-edit-nickname-modal-text').textContent =
+        'Set a nickname for card ending in ' + editNicknameTarget.last4;
+      document.getElementById('hc-edit-nickname-input').value = editNicknameTarget.nickname;
+      document.getElementById('hc-edit-nickname-modal').style.display = 'flex';
+      menuTarget = null;
+    };
+
+    document.getElementById('hc-card-menu-deactivate').onclick = function () {
+      if (!menuTarget) return;
+      deactivateTarget = menuTarget;
+      document.getElementById('hc-card-menu-modal').style.display = 'none';
       document.getElementById('hc-deactivate-modal-text').textContent =
         'Are you sure you want to deactivate this card ending in ' +
         deactivateTarget.last4 +
         '? This action cannot be undone.';
       document.getElementById('hc-deactivate-modal').style.display = 'flex';
+      menuTarget = null;
+    };
+
+    document.getElementById('hc-edit-nickname-cancel').onclick = closeEditNicknameModal;
+
+    document.getElementById('hc-edit-nickname-modal').onclick = function (e) {
+      if (e.target === e.currentTarget) {
+        closeEditNicknameModal();
+      }
+    };
+
+    function closeEditNicknameModal() {
+      document.getElementById('hc-edit-nickname-modal').style.display = 'none';
+      editNicknameTarget = null;
+    }
+
+    document.getElementById('hc-edit-nickname-save').onclick = async function () {
+      if (!editNicknameTarget) return;
+      var saveBtn = this;
+      var nicknameInput = document.getElementById('hc-edit-nickname-input');
+      var prevHtml = saveBtn.innerHTML;
+      saveBtn.disabled = true;
+      saveBtn.innerHTML =
+        '<span class="hc-bc-main-btn-loader" aria-hidden="true"></span><span>Saving...</span>';
+
+      try {
+        await api.updateCardNickname(editNicknameTarget.id, nicknameInput.value.trim());
+        closeEditNicknameModal();
+        showSuccess('Nickname updated');
+        loadCards(container);
+      } catch (err) {
+        showError('Failed: ' + (err.message || 'Unknown error'));
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = prevHtml;
+      }
     };
 
     document.getElementById('hc-deactivate-cancel').onclick = function () {
