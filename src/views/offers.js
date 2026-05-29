@@ -1,6 +1,9 @@
 import * as api from '../api.js';
 import * as analytics from '../analytics.js';
 import shopIconUrl from '../assets/icons/store.svg';
+import cardIconSvg from '../assets/icons/card-filled.svg?raw';
+import bagIconSvg from '../assets/icons/bag.svg?raw';
+import { resolveCardLinkStatus } from '../cardLinkStatus.js';
 import { mountBrowserExtensionInline } from './browser-extension.js';
 import { resolveMapKitTokenAsync, ensureMapKitLoaded, mapKitAuthFailureWasReported } from '../mapkit-embed.js';
 import { hasNativeBridge, postToNative } from '../bridge.js';
@@ -9,7 +12,108 @@ import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import ScreenTitle from '../base-components/ScreenTitle.js';
 import SearchBar from '../base-components/SearchBar.js';
 import EmptyState from '../base-components/EmptyState.js';
+import Button from '../base-components/Button.js';
+import LinkCardBanner from '../base-components/LinkCardBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
+
+var trophyIconSvg =
+  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+  '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>' +
+  '<path d="M17 5h2a2 2 0 012 2v1a4 4 0 01-4 4M7 5H5a2 2 0 00-2 2v1a4 4 0 004 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>' +
+  '</svg>';
+
+var checkCircleIconSvg =
+  '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+  '<circle cx="12" cy="12" r="9" stroke="#1d6dff" stroke-width="2"/>' +
+  '<path d="M8 12.5l2.8 2.8L16 10" stroke="#1d6dff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+  '</svg>';
+
+var clockIconSvg =
+  '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+  '<circle cx="12" cy="12" r="9" stroke="#1d6dff" stroke-width="2"/>' +
+  '<path d="M12 7v5l3 2" stroke="#1d6dff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+  '</svg>';
+
+function buildLinkCardBannerHtml() {
+  return LinkCardBanner({
+    title: 'Link a card and use it in-person',
+    subtitleHtml:
+      'Earn points for you and dollars for ' +
+      '<span data-hc-school-name>your school</span>' +
+      ' on every in-network purchase.',
+  });
+}
+
+function buildInAppBannerHtml() {
+  return (
+    '<div class="hc-be-info-card-code hc-inapp-info-card">' +
+    '<div class="hc-be-info-item hc-be-info-item--primary">' +
+    '<div class="hc-be-info-icon hc-be-info-icon--puzzle">' + bagIconSvg + '</div>' +
+    '<div class="hc-be-info-text">' +
+    '<div class="hc-be-info-heading">No card needed. Just shop in-app.</div>' +
+    '<div class="hc-be-info-body">Earn points automatically on every in-app purchase.</div>' +
+    '</div>' +
+    '</div>' +
+    '<div class="hc-be-info-divider" aria-hidden="true"></div>' +
+    '<div class="hc-be-info-item hc-be-info-item--secondary">' +
+    '<div class="hc-be-info-icon hc-be-info-icon--clock">' + clockIconSvg + '</div>' +
+    '<div class="hc-be-info-text">' +
+    '<div class="hc-be-info-body">Points may take <span class="hc-be-info-emphasis">up to 24 hours</span> to appear.</div>' +
+    '</div>' +
+    '</div>' +
+    '</div>'
+  );
+}
+
+function buildInAppHowItWorksHtml() {
+  return (
+    '<div class="hc-stores-howitworks">' +
+    '<div class="hc-stores-howitworks-step">' +
+    '<div class="hc-stores-howitworks-icon" aria-hidden="true">' + bagIconSvg + '</div>' +
+    '<div class="hc-stores-howitworks-text">' +
+    '<div class="hc-stores-howitworks-step-title">1. Shop in-app</div>' +
+    '<div class="hc-stores-howitworks-step-desc">Browse offers and make your purchase right here in the app.</div>' +
+    '</div></div>' +
+    '<div class="hc-stores-howitworks-arrow" aria-hidden="true">&rarr;</div>' +
+    '<div class="hc-stores-howitworks-step">' +
+    '<div class="hc-stores-howitworks-icon" aria-hidden="true">' + checkCircleIconSvg + '</div>' +
+    '<div class="hc-stores-howitworks-text">' +
+    '<div class="hc-stores-howitworks-step-title">2. Earn automatically</div>' +
+    '<div class="hc-stores-howitworks-step-desc">Points are added to your account automatically.</div>' +
+    '</div></div>' +
+    '</div>'
+  );
+}
+
+function buildHowItWorksHtml() {
+  return (
+    '<div class="hc-stores-howitworks">' +
+    '<div class="hc-stores-howitworks-step">' +
+    '<div class="hc-stores-howitworks-icon" aria-hidden="true">' + cardIconSvg + '</div>' +
+    '<div class="hc-stores-howitworks-text">' +
+    '<div class="hc-stores-howitworks-step-title">1. Link a card</div>' +
+    '<div class="hc-stores-howitworks-step-desc">Connect aa visa or mastercard.</div>' +
+    '</div></div>' +
+    '<div class="hc-stores-howitworks-arrow" aria-hidden="true">&rarr;</div>' +
+    '<div class="hc-stores-howitworks-step">' +
+    '<div class="hc-stores-howitworks-icon" aria-hidden="true">' + bagIconSvg + '</div>' +
+    '<div class="hc-stores-howitworks-text">' +
+    '<div class="hc-stores-howitworks-step-title">2. Shop</div>' +
+    '<div class="hc-stores-howitworks-step-desc">Shop with your card at partner locations.</div>' +
+    '</div></div>' +
+    '<div class="hc-stores-howitworks-arrow" aria-hidden="true">&rarr;</div>' +
+    '<div class="hc-stores-howitworks-step">' +
+    '<div class="hc-stores-howitworks-icon" aria-hidden="true">' + trophyIconSvg + '</div>' +
+    '<div class="hc-stores-howitworks-text">' +
+    '<div class="hc-stores-howitworks-step-title">3. Earn</div>' +
+    '<div class="hc-stores-howitworks-step-desc">' +
+    'Get points for you and dollars for ' +
+    '<span data-hc-school-name>your school</span>.' +
+    '</div>' +
+    '</div></div>' +
+    '</div>'
+  );
+}
 
 var OFFER_LOC_KEY = 'hc_embed_offer_location';
 
@@ -58,6 +162,7 @@ export function renderOffers(container) {
 
   wireUpOffersTabs(container);
   wireUpOffersCardClicks(container, carouselTapDedupe);
+  initStoresBannerAndSchoolName(container);
 
   var userLoc = getStoredOfferLocation();
 
@@ -186,7 +291,10 @@ function buildOffersShell(activeTab) {
     subtitle: 'Explore our marketplace of exclusive earnings',
   });
   html += '</div>';
-  html += '<div id="hc-stores-featured-area"></div>';
+  html += '<div id="hc-stores-banner-slot"></div>';
+  html += '<div id="hc-stores-featured-top"></div>';
+  html += buildHowItWorksHtml();
+  html += '<div id="hc-stores-featured-bottom"></div>';
   html += renderLocationMapSection();
   html +=
     '<div class="hc-search-wrap">' +
@@ -208,7 +316,10 @@ function buildOffersShell(activeTab) {
     subtitle: 'Explore our marketplace of exclusive earnings',
   });
   html += '</div>';
-  html += '<div id="hc-online-featured-area"></div>';
+  html += buildInAppBannerHtml();
+  html += '<div id="hc-online-featured-top"></div>';
+  html += '<div id="hc-online-featured-bottom"></div>';
+  html += buildInAppHowItWorksHtml();
   html +=
     '<div class="hc-search-wrap">' +
     SearchBar({ id: 'hc-search-online', placeholder: 'Search', value: '' }) +
@@ -267,6 +378,45 @@ function clearOffersSearchInputs(container) {
   });
 }
 
+function initStoresBannerAndSchoolName(container) {
+  Promise.all([
+    api.fetchCurrentUser(),
+    api.getCards().catch(function () { return null; }),
+  ])
+    .then(function (results) {
+      if (!container.isConnected) return;
+      var user = results[0];
+      var paymentCards = results[1];
+      var cardLinkStatus = resolveCardLinkStatus(user, paymentCards) || 'unknown';
+      var isEarlyRelease =
+        !!(user && user.active_school && user.active_school.early_release);
+      var showBanner = !isEarlyRelease && cardLinkStatus === 'unlinked';
+
+      if (showBanner) {
+        var slot = container.querySelector('#hc-stores-banner-slot');
+        if (slot) {
+          slot.innerHTML = buildLinkCardBannerHtml();
+          var btn = slot.querySelector('.hc-stores-link-card-btn');
+          if (btn) {
+            btn.addEventListener('click', function (e) {
+              e.stopPropagation();
+              window.location.hash = '#/cards';
+            });
+          }
+        }
+      }
+
+      var schoolName =
+        (user && user.active_school && user.active_school.name) || '';
+      if (schoolName) {
+        container.querySelectorAll('[data-hc-school-name]').forEach(function (node) {
+          node.textContent = schoolName;
+        });
+      }
+    })
+    .catch(function () {});
+}
+
 function wireUpOffersCardClicks(container, dedupe) {
   container.addEventListener('click', async function (e) {
     var card = e.target.closest('[data-offer-id], [data-offer-type]');
@@ -281,32 +431,42 @@ function wireUpOffersCardClicks(container, dedupe) {
 }
 
 function populateFeaturedStores(container, all) {
-  var area = container.querySelector('#hc-stores-featured-area');
-  if (!area) return;
+  var topArea = container.querySelector('#hc-stores-featured-top');
+  var bottomArea = container.querySelector('#hc-stores-featured-bottom');
+  if (!topArea && !bottomArea) return;
   var top = all.filter(function (f) { return f.is_active && f.top_featured; });
   var bottom = all.filter(function (f) { return f.is_active && f.bottom_featured; });
-  var html = '';
-  if (top.length > 0) html += renderStoresHeroCarousel(top);
-  if (bottom.length > 0) html += renderFeaturedGrid(bottom);
-  area.innerHTML = html;
-  initOffersCarousels(area);
-  initOffersCarouselTapOpensInto(area, container._hcCarouselDedupe);
+  if (topArea) {
+    topArea.innerHTML = top.length > 0 ? renderStoresHeroCarousel(top) : '';
+    initOffersCarousels(topArea);
+    initOffersCarouselTapOpensInto(topArea, container._hcCarouselDedupe);
+  }
+  if (bottomArea) {
+    bottomArea.innerHTML = bottom.length > 0 ? renderFeaturedGrid(bottom) : '';
+    initOffersCarousels(bottomArea);
+    initOffersCarouselTapOpensInto(bottomArea, container._hcCarouselDedupe);
+  }
   container._hcStoresLoaded.featured = true;
   container._hcStoresFeaturedHasItems = top.length > 0 || bottom.length > 0;
   maybeShowStoresEmptyState(container);
 }
 
 function populateFeaturedOnline(container, all) {
-  var area = container.querySelector('#hc-online-featured-area');
-  if (!area) return;
+  var topArea = container.querySelector('#hc-online-featured-top');
+  var bottomArea = container.querySelector('#hc-online-featured-bottom');
+  if (!topArea && !bottomArea) return;
   var top = all.filter(function (f) { return f.is_active && f.top_featured; });
   var bottom = all.filter(function (f) { return f.is_active && f.bottom_featured; });
-  var html = '';
-  if (top.length > 0) html += renderOnlineFeaturedCarousel(top, 'top');
-  if (bottom.length > 0) html += renderOnlineFeaturedCarousel(bottom, 'bottom');
-  area.innerHTML = html;
-  initOffersCarousels(area);
-  initOffersCarouselTapOpensInto(area, container._hcCarouselDedupe);
+  if (topArea) {
+    topArea.innerHTML = top.length > 0 ? renderOnlineFeaturedCarousel(top, 'top') : '';
+    initOffersCarousels(topArea);
+    initOffersCarouselTapOpensInto(topArea, container._hcCarouselDedupe);
+  }
+  if (bottomArea) {
+    bottomArea.innerHTML = bottom.length > 0 ? renderOnlineFeaturedCarousel(bottom, 'bottom') : '';
+    initOffersCarousels(bottomArea);
+    initOffersCarouselTapOpensInto(bottomArea, container._hcCarouselDedupe);
+  }
   container._hcOnlineLoaded.featured = true;
   container._hcOnlineFeaturedHasItems = top.length > 0 || bottom.length > 0;
   maybeShowOnlineEmptyState(container);

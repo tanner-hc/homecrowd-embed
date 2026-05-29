@@ -6,6 +6,7 @@ import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import ScreenTitle from '../base-components/ScreenTitle.js';
 import EmptyState from '../base-components/EmptyState.js';
 import Button from '../base-components/Button.js';
+import LinkCardBanner from '../base-components/LinkCardBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { getNavEpoch } from '../router.js';
 import {
@@ -528,18 +529,16 @@ async function loadRewards(container, routeEpoch) {
     html += '</div>';
 
     if (!isEarlyRelease && cardLinkStatus === 'unlinked') {
-      html += '<div class="hc-rewards-locked-banner">';
-      html += '<div class="hc-rewards-locked-banner-text">';
-      html += '<div class="hc-rewards-locked-banner-title">Link a card to unlock rewards</div>';
-      html +=
-        '<div class="hc-rewards-locked-banner-subtitle">You can browse, but you won\'t be able to redeem rewards until a card is linked.</div>';
-      html += '</div>';
-      html += Button({
-        title: 'Link card',
-        variant: 'primary',
-        className: 'hc-rewards-link-card-btn',
+      var rewardsSchoolName =
+        (currentUser && currentUser.active_school && currentUser.active_school.name) ||
+        'your school';
+      html += LinkCardBanner({
+        title: 'Link a card to unlock rewards',
+        subtitleHtml:
+          'Earn points for you and dollars for ' +
+          escapeHtml(rewardsSchoolName) +
+          ' on every in-network purchase.',
       });
-      html += '</div>';
     }
 
     var weeklyRewardItem = weeklyReward ? buildWeeklyRewardListItem(weeklyReward) : null;
@@ -679,7 +678,7 @@ async function loadRewards(container, routeEpoch) {
       window.location.hash = '#/rewards/' + encodeURIComponent(rewardId);
     };
 
-    var linkBtn = container.querySelector('.hc-rewards-link-card-btn');
+    var linkBtn = container.querySelector('.hc-stores-link-card-btn');
     if (linkBtn) {
       linkBtn.onclick = function (ev) {
         ev.stopPropagation();

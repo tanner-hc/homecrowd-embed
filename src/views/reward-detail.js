@@ -5,6 +5,7 @@ import { formatDisplayNumber } from '../formatNumber.js';
 import RafflePill, { attachRafflePillAuction } from '../base-components/RafflePill.js';
 import MainButton from '../base-components/MainButton.js';
 import NavHeader from '../base-components/NavHeader.js';
+import LinkCardBanner from '../base-components/LinkCardBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
 import { writeRedemptionConfirmAndNavigate } from './redemption-confirmation.js';
@@ -239,18 +240,17 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
   html += '<div class="hc-product-detail-scroll">';
 
   if (showLockedBanner) {
-    html += '<div class="hc-rewards-locked-banner hc-rewards-locked-banner--detail">';
-    html += '<div class="hc-rewards-locked-banner-text">';
-    html += '<div class="hc-rewards-locked-banner-title">Link a card to unlock rewards</div>';
-    html +=
-      '<div class="hc-rewards-locked-banner-subtitle">You can browse, but you won\'t be able to redeem rewards until a card is linked.</div>';
-    html += '</div>';
-    html += MainButton({
-      text: 'Link card',
-      large: false,
-      className: 'hc-rewards-link-card-btn',
+    var detailSchoolName =
+      (currentUser && currentUser.active_school && currentUser.active_school.name) ||
+      'your school';
+    html += LinkCardBanner({
+      title: 'Link a card to unlock rewards',
+      subtitleHtml:
+        'Earn points for you and dollars for ' +
+        escapeHtml(detailSchoolName) +
+        ' on every in-network purchase.',
+      bannerClassName: 'hc-rewards-locked-banner--detail',
     });
-    html += '</div>';
   }
 
   html += '<div class="' + (completed ? 'hc-product-completed-wrap' : '') + '">';
@@ -769,7 +769,7 @@ function bindDetailEvents(container, product, summary, currentUser, cardLinkStat
     });
   }
 
-  var linkBtn = container.querySelector('.hc-rewards-link-card-btn');
+  var linkBtn = container.querySelector('.hc-stores-link-card-btn');
   if (linkBtn) {
     linkBtn.addEventListener('click', function (e) {
       e.stopPropagation();
