@@ -146,12 +146,17 @@ async function loadCards(container) {
     html += '</div>';
 
     html += '<div id="hc-deactivate-modal" class="hc-modal-overlay" style="display:none">';
-    html += '<div class="hc-deactivate-modal">';
+    html += '<div class="hc-deactivate-modal hc-card-deactivate-modal">';
     html += '<div class="hc-deactivate-modal-title">Deactivate Card</div>';
     html += '<div id="hc-deactivate-modal-text" class="hc-deactivate-modal-message"></div>';
-    html += '<div class="hc-deactivate-modal-actions">';
-    html += '<button type="button" id="hc-deactivate-cancel" class="hc-deactivate-cancel-btn">Cancel</button>';
-    html += '<button type="button" id="hc-deactivate-confirm" class="hc-deactivate-confirm-btn">Deactivate</button>';
+    html += '<div class="hc-pd-actions hc-card-deactivate-actions">';
+    html += MainButton({
+      id: 'hc-deactivate-confirm',
+      text: 'Deactivate',
+      className: 'hc-card-menu-deactivate-btn',
+      loadingText: 'Deactivating...',
+    });
+    html += MainButton({ id: 'hc-deactivate-cancel', text: 'Cancel', outlined: true });
     html += '</div>';
     html += '</div>';
     html += '</div>';
@@ -267,8 +272,10 @@ async function loadCards(container) {
     document.getElementById('hc-deactivate-confirm').onclick = async function () {
       if (!deactivateTarget) return;
       var confirmBtn = this;
+      var prevHtml = confirmBtn.innerHTML;
       confirmBtn.disabled = true;
-      confirmBtn.textContent = 'Deactivating...';
+      confirmBtn.innerHTML =
+        '<span class="hc-bc-main-btn-loader" aria-hidden="true"></span><span>Deactivating...</span>';
 
       try {
         await api.deactivateCard(deactivateTarget.id);
@@ -279,7 +286,7 @@ async function loadCards(container) {
       } catch (err) {
         showError('Failed: ' + (err.message || 'Unknown error'));
         confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Deactivate';
+        confirmBtn.innerHTML = prevHtml;
       }
     };
   } catch (err) {

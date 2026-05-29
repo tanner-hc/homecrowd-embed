@@ -1726,6 +1726,7 @@ body {
 .hc-card-menu-actions .hc-btn {
   width: 100%;
   box-sizing: border-box;
+  white-space: nowrap;
 }
 
 .hc-card-menu-modal .hc-deactivate-modal-message {
@@ -1757,6 +1758,24 @@ body {
 
 .hc-card-nickname-actions .hc-btn {
   width: 100%;
+}
+
+.hc-card-deactivate-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.hc-card-deactivate-actions .hc-btn {
+  width: 100%;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.hc-card-deactivate-modal .hc-deactivate-modal-message {
+  margin-bottom: 16px;
 }
 
 .hc-cards-screen-head {
