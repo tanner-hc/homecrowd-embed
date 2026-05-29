@@ -5,6 +5,22 @@ export function pickSchoolName(user) {
   return 'your school';
 }
 
+export function pickSchoolAbbreviation(user) {
+  if (!user || typeof user !== 'object') return '';
+  var s = user.active_school || user.activeSchool;
+  if (!s || typeof s !== 'object') return '';
+  var raw = s.abbreviation != null ? s.abbreviation : s.abbr;
+  if (raw == null) return '';
+  var str = String(raw).trim();
+  return str;
+}
+
+export function pickSchoolDisplay(user) {
+  var abbr = pickSchoolAbbreviation(user);
+  if (abbr) return abbr;
+  return pickSchoolName(user);
+}
+
 export function computeSchoolCashback(transactionsRes) {
   if (!transactionsRes) return 0;
   var txns =

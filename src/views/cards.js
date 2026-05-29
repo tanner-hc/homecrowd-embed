@@ -4,6 +4,7 @@ import visaLogoUrl from '../assets/visa-logo.png';
 import mastercardLogoUrl from '../assets/mastercard-logo.png';
 import shieldIconUrl from '../assets/shield.svg';
 import cardFilledIconUrl from '../assets/card-filled.svg';
+import zeroTagUrl from '../assets/icons/zero-tag.png';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import NavHeader from '../base-components/NavHeader.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
@@ -29,6 +30,36 @@ async function loadCards(container) {
       title: 'Linked Cards',
       backButtonId: 'hc-cards-back',
     });
+    html += '</div>';
+
+    var noCostTagSvg = '<img src="' + zeroTagUrl + '" alt="" />';
+    var heartSvg =
+      '<svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<path d="M18 30.5l-1.85-1.7C9.4 22.7 5 18.7 5 13.85A6.85 6.85 0 0 1 11.85 7c2.1 0 4.1 1 5.4 2.55l.75.9.75-.9A7.07 7.07 0 0 1 24.15 7 6.85 6.85 0 0 1 31 13.85c0 4.85-4.4 8.85-11.15 14.95L18 30.5z" fill="#2f5d36"/>' +
+      '</svg>';
+
+    html += '<div class="hc-cards-info hc-cards-info--blue">';
+    html += '<div class="hc-cards-info-row">';
+    html += '<div class="hc-cards-info-icon hc-cards-info-icon--circle">' + noCostTagSvg + '</div>';
+    html += '<div class="hc-cards-info-text">';
+    html += '<div class="hc-cards-info-title hc-cards-info-title--blue">No cost to you. Ever.</div>';
+    html += '<div class="hc-cards-info-body">Link your card for free&mdash;there are no hidden fees and no extra charges.</div>';
+    html += '</div>';
+    html += '</div>';
+    html += '<div class="hc-cards-info-divider" aria-hidden="true"></div>';
+    html += '<div class="hc-cards-info-subrow">';
+    html += '<div class="hc-cards-info-subtext">Automatically earn dollars for your school every time you shop.</div>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div class="hc-cards-info hc-cards-info--green">';
+    html += '<div class="hc-cards-info-row">';
+    html += '<div class="hc-cards-info-icon hc-cards-info-icon--circle">' + heartSvg + '</div>';
+    html += '<div class="hc-cards-info-text">';
+    html += '<div class="hc-cards-info-title hc-cards-info-title--green">You earn points. Your school earns dollars.</div>';
+    html += '<div class="hc-cards-info-body">Every purchase you make helps you earn points while dollars are sent to your school.</div>';
+    html += '</div>';
+    html += '</div>';
     html += '</div>';
 
     html += '<div class="hc-security-banner">';

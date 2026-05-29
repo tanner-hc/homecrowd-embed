@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import { computeSchoolCashback, pickSchoolName } from '../school-contribution.js';
+import { computeSchoolCashback, pickSchoolName, pickSchoolDisplay } from '../school-contribution.js';
 import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
@@ -14,6 +14,7 @@ import {
 import chartUpIconSvg from '../assets/icons/chart-up.svg?raw';
 import activityIconSvg from '../assets/icons/activity.svg?raw';
 import checkmarkIconSvg from '../assets/icons/checkmark.svg?raw';
+import homeBagUrl from '../assets/icons/home-bag.png';
 import cardImageUrl from '../assets/intro_images/card.png';
 import linkCardImageUrl from '../assets/intro_images/link_card.png';
 import screenOneImageUrl from '../assets/intro_images/screen_one.png';
@@ -584,6 +585,7 @@ function buildHomeHtml(ctx) {
       : 0;
   var showSchoolContrib = schoolCashback > 0;
   var schoolName = pickSchoolName(user);
+  var schoolDisplay = pickSchoolDisplay(user);
 
   var first = user && (user.firstName || user.first_name) ? user.firstName || user.first_name : '';
   var last = user && (user.lastName || user.last_name) ? user.lastName || user.last_name : '';
@@ -654,6 +656,23 @@ function buildHomeHtml(ctx) {
     currentTierLevel: userTier && userTier.level,
   });
 
+  var schoolNameForCta = schoolDisplay ? schoolDisplay : 'your school';
+  var ctaHtml =
+    '<div class="hc-home-cta">' +
+    '<div class="hc-home-cta-icon">' +
+    '<img src="' + homeBagUrl + '" alt="" />' +
+    '</div>' +
+    '<div class="hc-home-cta-text">' +
+    '<div class="hc-home-cta-heading">' +
+    '<span class="hc-home-cta-accent">Shop.</span> Earn points. ' +
+    '<span class="hc-home-cta-accent">' + escapeHtml(schoolNameForCta) + '</span> ' +
+    'benefits' +
+    '.' +
+    '</div>' +
+    '<div class="hc-home-cta-subtext">Your everyday purchases support your school.</div>' +
+    '</div>' +
+    '</div>';
+
   return (
     '<div class="hc-home">' +
     '<div class="hc-home-page-pad">' +
@@ -665,6 +684,7 @@ function buildHomeHtml(ctx) {
     '</div></div>' +
     welcomeContribHtml +
     '</div>' +
+    ctaHtml +
     combined +
     rewardTilesHtml +
     stats +
