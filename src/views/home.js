@@ -1022,6 +1022,7 @@ function loadHome(container) {
             return;
           }
           closeIntroModal();
+          window.dispatchEvent(new CustomEvent('homecrowd:walkthrough-complete'));
         });
       }
 
@@ -1033,6 +1034,11 @@ function loadHome(container) {
           mountInstructionOverlay(container);
         });
       }
+      window.dispatchEvent(
+        new CustomEvent('homecrowd:home-ready', {
+          detail: { showInstructionOverlay: !!ctx.showInstructionOverlay },
+        }),
+      );
       container._hcLeaderboardRes = ctx.leaderboardRes || null;
       var weeklyLbBtn = container.querySelector('[data-home-lb-tile="weekly"]');
       if (weeklyLbBtn) {

@@ -71,6 +71,9 @@ var postLoginStripeThanksId = null;
 var pendingSchoolAuthContext = null;
 var pendingSchoolEmailConfirmationId = '';
 var schoolEmailConfirmationPollTimer = null;
+var pendingAutoRaffleModal = null;
+var pendingDailyBonusModal = null;
+var holdOnboardingModals = true;
 var pendingPasswordLinkStorageKey = 'hc_embed_pending_school_link';
 var pendingLoginEmailStorageKey = 'hc_embed_pending_login_email';
 
@@ -150,6 +153,9 @@ function completeLoginState(nextUser, tokenUsed) {
     schoolEmailConfirmationPollTimer = null;
   }
   pendingSchoolEmailConfirmationId = '';
+  pendingAutoRaffleModal = null;
+  pendingDailyBonusModal = null;
+  holdOnboardingModals = true;
   user = nextUser;
   profileUserForTabs = null;
   suppressPartnerAutologinAfterLogout = false;
@@ -299,7 +305,10 @@ async function handleAlternateSchoolChoice(selectedEmail) {
   var result = await api.completeSchoolAuth(payload);
   if (result && result.requiresEmailConfirmation) {
     startSchoolEmailConfirmationPolling(result.confirmationId);
-    throw new Error('We sent a confirmation email to ' + selectedEmail + '. Please check your inbox and follow the instructions to complete your sign in.');
+    return {
+      emailConfirmationSent: true,
+      message: 'Confirmation email sent. Open email, approve sign in, then return to embed.',
+    };
   }
   if (result && result.requiresPassword) {
     return {
@@ -391,6 +400,21 @@ onNativeMessage('homecrowd:navigate', function (data) {
   }
 });
 
+window.addEventListener('homecrowd:walkthrough-complete', function () {
+  holdOnboardingModals = false;
+  flushPendingAutoRaffleModal();
+  flushPendingDailyBonusModal();
+});
+
+window.addEventListener('homecrowd:home-ready', function (event) {
+  var detail = event && event.detail ? event.detail : {};
+  if (!detail.showInstructionOverlay) {
+    holdOnboardingModals = false;
+    flushPendingAutoRaffleModal();
+    flushPendingDailyBonusModal();
+  }
+});
+
 function handleStripeReturnQuery() {
   var sp = new URLSearchParams(window.location.search);
   if (sp.get('stripe_success') === '1') {
@@ -469,6 +493,11 @@ function showDailyBonus(dailyBonus) {
     console.log('🎯 [embed] No daily bonus in response');
     return;
   }
+  if (holdOnboardingModals) {
+    console.log('🎯 [embed] Deferring daily bonus until onboarding complete');
+    pendingDailyBonusModal = dailyBonus;
+    return;
+  }
   if (showDailyLoginBonusModal(dailyBonus)) {
     console.log('🎯 [embed] Showing daily bonus modal with raffle list');
     return;
@@ -480,6 +509,21 @@ function showRaffleEntryModal(count, titles) {
   var msg = titles && titles.length > 0
     ? "You've been entered into: <strong>" + titles.join(', ') + '</strong>!'
     : "You've been entered into " + count + ' raffle' + (count > 1 ? 's' : '') + '!';
+  showBonusModal("You're In!", msg);
+}
+
+function flushPendingAutoRaffleModal() {
+  if (!pendingAutoRaffleModal) return;
+  var payload = pendingAutoRaffleModal;
+  pendingAutoRaffleModal = null;
+  showRaffleEntryModal(payload.count, payload.titles);
+}
+
+function flushPendingDailyBonusModal() {
+  if (!pendingDailyBonusModal) return;
+  var payload = pendingDailyBonusModal;
+  pendingDailyBonusModal = null;
+  showDailyBonus(payload);
 }
 
 async function checkDailyVisit() {
@@ -598,6 +642,9 @@ async function init() {
       schoolEmailConfirmationPollTimer = null;
     }
     pendingSchoolEmailConfirmationId = '';
+    pendingAutoRaffleModal = null;
+    pendingDailyBonusModal = null;
+    holdOnboardingModals = true;
     clearPendingPasswordLink();
     clearPendingLoginEmail();
     api.clearTokens();
@@ -796,7 +843,10 @@ function render(route) {
           var assignResult = await api.assignSchool(assignSchoolId);
           u = await api.fetchCurrentUser();
           if (assignResult && assignResult.auto_raffle_entries > 0) {
-            showRaffleEntryModal(assignResult.auto_raffle_entries, assignResult.raffle_titles);
+            pendingAutoRaffleModal = {
+              count: assignResult.auto_raffle_entries,
+              titles: assignResult.raffle_titles,
+            };
           }
         } catch (e) { }
       }

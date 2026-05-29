@@ -8947,6 +8947,11 @@ body {
 
 .hc-preview-inline-status {
   margin-top: 10px;
-  color: #0f766e;
+  color: #0b5fa7;
+  background: #e8f7ff;
+  border: 1px solid #8bd9ff;
+  border-radius: 12px;
+  padding: 10px 12px;
   font-size: 14px;
+  line-height: 1.4;
 }
