@@ -1012,7 +1012,10 @@ body {
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  padding-bottom: 0;
+  padding-bottom: 100px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
 .hc-rewards-page-inner > .hc-screen-title {
@@ -1844,29 +1847,9 @@ body {
 }
 
 .hc-link-cards-page .hc-account-settings-nav {
-  z-index: 120;
-  isolation: isolate;
   padding-bottom: 12px;
   margin-bottom: 0;
   border-bottom: 1px solid #f0f0f0;
-}
-
-.hc-link-cards-page .hc-account-settings-nav::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -12px;
-  bottom: 0;
-  background-color: #ffffff;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.hc-link-cards-page .hc-account-settings-nav .hc-bc-nav-header {
-  position: relative;
-  z-index: 1;
-  background-color: #ffffff;
 }
 
 .hc-link-cards-scroll {
@@ -6950,9 +6933,6 @@ body {
 }
 
 .hc-account-settings-nav {
-  position: sticky;
-  top: 0;
-  z-index: 90;
   background-color: #ffffff;
   background: #ffffff;
   padding-bottom: 8px;
@@ -7153,30 +7133,10 @@ body {
 }
 
 .hc-invite-friend .hc-account-settings-nav {
-  z-index: 120;
-  isolation: isolate;
   padding-bottom: 12px;
   margin-top: 0;
   margin-bottom: 0;
   border-bottom: 1px solid #f0f0f0;
-}
-
-.hc-invite-friend .hc-account-settings-nav::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -12px;
-  bottom: 0;
-  background-color: #ffffff;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.hc-invite-friend .hc-account-settings-nav .hc-bc-nav-header {
-  position: relative;
-  z-index: 1;
-  background-color: #ffffff;
 }
 
 .hc-invite-body {
@@ -7754,29 +7714,9 @@ body {
 }
 
 .hc-support-page .hc-account-settings-nav {
-  z-index: 120;
-  isolation: isolate;
   padding-bottom: 12px;
   margin-bottom: 0;
   border-bottom: 1px solid #f0f0f0;
-}
-
-.hc-support-page .hc-account-settings-nav::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -12px;
-  bottom: 0;
-  background-color: #ffffff;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.hc-support-page .hc-account-settings-nav .hc-bc-nav-header {
-  position: relative;
-  z-index: 1;
-  background-color: #ffffff;
 }
 
 .hc-support-body {
@@ -8177,9 +8117,6 @@ body {
 }
 
 .hc-al-sticky-block {
-  position: sticky;
-  top: calc(56px - var(--hc-spacing-lg));
-  z-index: 70;
   background: #ffffff;
   padding-top: 2px;
   padding-bottom: 10px;
