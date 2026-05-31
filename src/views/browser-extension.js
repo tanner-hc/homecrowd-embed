@@ -5,6 +5,7 @@ import NavHeader from '../base-components/NavHeader.js';
 import ScreenTitle from '../base-components/ScreenTitle.js';
 import MainButton from '../base-components/MainButton.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
+import PointsPerDollarBanner from '../base-components/PointsPerDollarBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { showError } from '../base-components/toastApi.js';
 import extensionBodyImg from '../assets/images/extension-body.png';
@@ -42,7 +43,8 @@ function userExtensionEnabled(embedUser, profileUser) {
   return false;
 }
 
-function buildExtensionHeaderHtml() {
+function buildExtensionHeaderHtml(opts) {
+  opts = opts || {};
   var puzzleSvg =
     '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
     '<path d="M14.5 3a1.5 1.5 0 0 0-1.5 1.5V6H8.75A1.75 1.75 0 0 0 7 7.75V11H5.5a1.5 1.5 0 1 0 0 3H7v3.25C7 18.216 7.784 19 8.75 19H12v-1.5a1.5 1.5 0 1 1 3 0V19h3.25A1.75 1.75 0 0 0 20 17.25V13h-1.5a1.5 1.5 0 1 1 0-3H20V7.75A1.75 1.75 0 0 0 18.25 6H16V4.5A1.5 1.5 0 0 0 14.5 3Z" fill="#1d6dff"/>' +
@@ -58,6 +60,9 @@ function buildExtensionHeaderHtml() {
     subtitle: 'Offers appear as you browse in Safari',
     className: 'hc-be-header',
   });
+  if (opts.afterTitleHtml) {
+    html += opts.afterTitleHtml;
+  }
   html += '<div class="hc-be-info-card-code">';
   html += '<div class="hc-be-info-item hc-be-info-item--primary">';
   html += '<div class="hc-be-info-icon hc-be-info-icon--puzzle">' + puzzleSvg + '</div>';
@@ -319,7 +324,7 @@ export async function mountBrowserExtensionInline(panelEl) {
   panelEl.innerHTML =
     '<div class="hc-browser-extension hc-browser-extension--inline">' +
     '<div class="hc-be-body">' +
-    buildExtensionHeaderHtml() +
+    buildExtensionHeaderHtml({ afterTitleHtml: PointsPerDollarBanner({ attached: true }) }) +
     buildExtensionContentHtml(enabled, installId) +
     '</div></div>';
   bindExtensionInstallButton(document.getElementById(installId));
