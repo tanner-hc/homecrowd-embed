@@ -2034,6 +2034,18 @@ body {
   margin-bottom: 24px;
 }
 
+@keyframes hc-link-card-autofill-start {}
+
+@keyframes hc-link-card-autofill-cancel {}
+
+.hc-link-card-input:-webkit-autofill {
+  animation-name: hc-link-card-autofill-start;
+}
+
+.hc-link-card-input:not(:-webkit-autofill) {
+  animation-name: hc-link-card-autofill-cancel;
+}
+
 .hc-link-card-field {
   margin-bottom: 16px;
 }
