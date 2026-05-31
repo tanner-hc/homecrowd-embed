@@ -14,18 +14,13 @@ import SearchBar from '../base-components/SearchBar.js';
 import EmptyState from '../base-components/EmptyState.js';
 import Button from '../base-components/Button.js';
 import LinkCardBanner from '../base-components/LinkCardBanner.js';
+import PointsPerDollarBanner from '../base-components/PointsPerDollarBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 
 var trophyIconSvg =
   '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
   '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>' +
   '<path d="M17 5h2a2 2 0 012 2v1a4 4 0 01-4 4M7 5H5a2 2 0 00-2 2v1a4 4 0 004 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>' +
-  '</svg>';
-
-var checkCircleIconSvg =
-  '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-  '<circle cx="12" cy="12" r="9" stroke="#1d6dff" stroke-width="2"/>' +
-  '<path d="M8 12.5l2.8 2.8L16 10" stroke="#1d6dff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
   '</svg>';
 
 var clockIconSvg =
@@ -65,26 +60,6 @@ function buildInAppBannerHtml() {
   );
 }
 
-function buildInAppHowItWorksHtml() {
-  return (
-    '<div class="hc-stores-howitworks">' +
-    '<div class="hc-stores-howitworks-step">' +
-    '<div class="hc-stores-howitworks-icon" aria-hidden="true">' + bagIconSvg + '</div>' +
-    '<div class="hc-stores-howitworks-text">' +
-    '<div class="hc-stores-howitworks-step-title">1. Shop in-app</div>' +
-    '<div class="hc-stores-howitworks-step-desc">Browse offers and make your purchase right here in the app.</div>' +
-    '</div></div>' +
-    '<div class="hc-stores-howitworks-arrow" aria-hidden="true">&rarr;</div>' +
-    '<div class="hc-stores-howitworks-step">' +
-    '<div class="hc-stores-howitworks-icon" aria-hidden="true">' + checkCircleIconSvg + '</div>' +
-    '<div class="hc-stores-howitworks-text">' +
-    '<div class="hc-stores-howitworks-step-title">2. Earn automatically</div>' +
-    '<div class="hc-stores-howitworks-step-desc">Points are added to your account automatically.</div>' +
-    '</div></div>' +
-    '</div>'
-  );
-}
-
 function buildHowItWorksHtml() {
   return (
     '<div class="hc-stores-howitworks">' +
@@ -92,7 +67,7 @@ function buildHowItWorksHtml() {
     '<div class="hc-stores-howitworks-icon" aria-hidden="true">' + cardIconSvg + '</div>' +
     '<div class="hc-stores-howitworks-text">' +
     '<div class="hc-stores-howitworks-step-title">1. Link a card</div>' +
-    '<div class="hc-stores-howitworks-step-desc">Connect aa visa or mastercard.</div>' +
+    '<div class="hc-stores-howitworks-step-desc">Connect a visa or mastercard.</div>' +
     '</div></div>' +
     '<div class="hc-stores-howitworks-arrow" aria-hidden="true">&rarr;</div>' +
     '<div class="hc-stores-howitworks-step">' +
@@ -293,6 +268,7 @@ function buildOffersShell(activeTab) {
   html += '</div>';
   html += '<div id="hc-stores-banner-slot"></div>';
   html += '<div id="hc-stores-featured-top"></div>';
+  html += PointsPerDollarBanner({ attached: true });
   html += buildHowItWorksHtml();
   html += '<div id="hc-stores-featured-bottom"></div>';
   html += renderLocationMapSection();
@@ -316,10 +292,10 @@ function buildOffersShell(activeTab) {
     subtitle: 'Explore our marketplace of exclusive earnings',
   });
   html += '</div>';
-  html += buildInAppBannerHtml();
   html += '<div id="hc-online-featured-top"></div>';
   html += '<div id="hc-online-featured-bottom"></div>';
-  html += buildInAppHowItWorksHtml();
+  html += PointsPerDollarBanner({ attached: true });
+  html += buildInAppBannerHtml();
   html +=
     '<div class="hc-search-wrap">' +
     SearchBar({ id: 'hc-search-online', placeholder: 'Search', value: '' }) +

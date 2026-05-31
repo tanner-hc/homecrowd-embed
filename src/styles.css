@@ -3309,6 +3309,59 @@ body {
   line-height: 1;
 }
 
+/* "1 point per $1" value-prop banner — flush under the screen title */
+.hc-stores-points-banner {
+  margin: -16px 0 16px;
+  padding: 8px 20px;
+  background-color: #f3f8fd;
+  text-align: center;
+}
+
+.hc-stores-points-banner-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a2b6b;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.hc-stores-points-banner--attached {
+  margin: 0 var(--hc-spacing-lg);
+  padding: 12px 20px 4px;
+  border-radius: 14px 14px 0 0;
+  background-color: #f3f8fd;
+}
+
+.hc-stores-points-banner--attached .hc-stores-points-banner-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1d6dff;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hc-stores-points-banner--attached + .hc-stores-howitworks {
+  margin-top: 0;
+  border-radius: 0 0 14px 14px;
+  padding-top: 12px;
+  background-color: #f3f8fd;
+}
+
+.hc-stores-points-banner--attached + .hc-inapp-info-card {
+  margin-top: 0;
+  border-radius: 0 0 14px 14px;
+}
+
+.hc-browser-extension--inline .hc-stores-points-banner--attached {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.hc-stores-points-banner--attached + .hc-be-info-card-code {
+  margin-top: 0;
+  border-radius: 0 0 14px 14px;
+}
+
 /* In-app tab: reused .hc-be-info-card-code with inset margins */
 .hc-inapp-info-card {
   margin: 0 var(--hc-spacing-lg) 16px;
