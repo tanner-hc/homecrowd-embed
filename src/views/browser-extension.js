@@ -45,15 +45,6 @@ function userExtensionEnabled(embedUser, profileUser) {
 
 function buildExtensionHeaderHtml(opts) {
   opts = opts || {};
-  var puzzleSvg =
-    '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-    '<path d="M14.5 3a1.5 1.5 0 0 0-1.5 1.5V6H8.75A1.75 1.75 0 0 0 7 7.75V11H5.5a1.5 1.5 0 1 0 0 3H7v3.25C7 18.216 7.784 19 8.75 19H12v-1.5a1.5 1.5 0 1 1 3 0V19h3.25A1.75 1.75 0 0 0 20 17.25V13h-1.5a1.5 1.5 0 1 1 0-3H20V7.75A1.75 1.75 0 0 0 18.25 6H16V4.5A1.5 1.5 0 0 0 14.5 3Z" fill="#1d6dff"/>' +
-    '</svg>';
-  var clockSvg =
-    '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-    '<circle cx="12" cy="12" r="9" stroke="#1d6dff" stroke-width="2"/>' +
-    '<path d="M12 7v5l3 2" stroke="#1d6dff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
-    '</svg>';
   var html = '';
   html += ScreenTitle({
     title: 'Safari extension',
@@ -63,28 +54,13 @@ function buildExtensionHeaderHtml(opts) {
   if (opts.afterTitleHtml) {
     html += opts.afterTitleHtml;
   }
-  html += '<div class="hc-be-info-card-code">';
-  html += '<div class="hc-be-info-item hc-be-info-item--primary">';
-  html += '<div class="hc-be-info-icon hc-be-info-icon--puzzle">' + puzzleSvg + '</div>';
-  html += '<div class="hc-be-info-text">';
-  html += '<div class="hc-be-info-heading">Shop in Safari. Earn automatically.</div>';
   html +=
-    '<div class="hc-be-info-body">We&rsquo;ll find and apply offers for you as you browse participating sites in Safari.</div>';
-  html += '</div>';
-  html += '</div>';
-  html += '<div class="hc-be-info-divider" aria-hidden="true"></div>';
-  html += '<div class="hc-be-info-item hc-be-info-item--secondary">';
-  html += '<div class="hc-be-info-icon hc-be-info-icon--clock">' + clockSvg + '</div>';
-  html += '<div class="hc-be-info-text">';
-  html +=
-    '<div class="hc-be-info-body">Points may take <span class="hc-be-info-emphasis">up to 24 hours</span> to appear.</div>';
-  html += '</div>';
-  html += '</div>';
-  html += '</div>';
-  html +=
+    '<div class="hc-be-body-image-wrap">' +
     '<img class="hc-be-body-image" src="' +
     extensionBodyImg +
-    '" alt="Find offers. Earn points. Offers show up automatically as you browse in Safari." />';
+    '" alt="Find offers. Earn points. Offers show up automatically as you browse in Safari." />' +
+    '<div class="hc-be-body-image-logo" data-be-body-logo aria-hidden="true"></div>' +
+    '</div>';
   var compassSvg =
     '<img src="' + safariThinUrl + '" alt="" class="hc-be-step-img hc-be-step-img--safari" />';
   var tagSvg =
@@ -97,11 +73,14 @@ function buildExtensionHeaderHtml(opts) {
     '<path d="M16 18v5" stroke="#1d6dff" stroke-width="2" stroke-linecap="round"/>' +
     '<path d="M11 28h10a1 1 0 0 0 1-1v-2a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v2a1 1 0 0 0 1 1z" stroke="#1d6dff" stroke-width="2" stroke-linejoin="round"/>' +
     '</svg>';
+  if (opts.beforeStepsHtml) {
+    html += opts.beforeStepsHtml;
+  }
   html += '<div class="hc-be-steps-card">';
   var steps = [
     { svg: compassSvg, num: '1.', title: 'Browse in Safari', body: 'Visit your favorite stores like you normally do.' },
-    { svg: tagSvg, num: '2.', title: 'See offers', body: 'We&rsquo;ll notify you when a better offer is available.' },
-    { svg: trophySvg, num: '3.', title: 'Earn points', body: 'Complete your purchase and earn automatically.' },
+    { svg: tagSvg, num: '2.', title: 'See offers', body: 'We&rsquo;ll notify you when a brand is in network.' },
+    { svg: trophySvg, num: '3.', title: 'Earn points', body: 'Complete your purchase and earn points. <span class="hc-be-step-body-muted">*points may take up to 24 hours to appear.</span>' },
   ];
   for (var i = 0; i < steps.length; i++) {
     var s = steps[i];
@@ -257,10 +236,20 @@ async function populatePopularOffers(rootEl) {
       else if (Array.isArray(raw)) items = raw;
     }
     listEl.innerHTML = renderPopularOffersHtml(items.slice(0, 4));
+    setBodyImageLogo(items[0]);
   } catch (_err) {
     if (!rootEl.isConnected) return;
     listEl.innerHTML = '<div class="hc-be-popular-empty">Couldn&rsquo;t load offers.</div>';
   }
+}
+
+function setBodyImageLogo(offer) {
+  var slot = document.querySelector('[data-be-body-logo]');
+  if (!slot) return;
+  var logo = offer && (offer.logoUrl || offer.logo);
+  if (!logo) return;
+  slot.innerHTML =
+    '<img src="' + escapeAttr(logo) + '" alt="" />';
 }
 
 function bindExtensionInstallButton(installBtn) {
@@ -324,7 +313,7 @@ export async function mountBrowserExtensionInline(panelEl) {
   panelEl.innerHTML =
     '<div class="hc-browser-extension hc-browser-extension--inline">' +
     '<div class="hc-be-body">' +
-    buildExtensionHeaderHtml({ afterTitleHtml: PointsPerDollarBanner({ attached: true }) }) +
+    buildExtensionHeaderHtml({ beforeStepsHtml: PointsPerDollarBanner({ attached: true }) }) +
     buildExtensionContentHtml(enabled, installId) +
     '</div></div>';
   bindExtensionInstallButton(document.getElementById(installId));
