@@ -5,10 +5,10 @@ import * as api from './api.js';
 import * as analytics from './analytics.js';
 import { postToNative, onNativeMessage } from './bridge.js';
 import { navigate, getRoute, onRouteChange, startRouter, nextNavEpoch } from './router.js';
+import { applyBrandConfig, clearBrandConfig, renderBrandLockup } from './brand.js';
 import { renderLogin } from './views/login.js';
 import { renderHome } from './views/home.js';
 import { renderRewards } from './views/rewards.js';
-import logoUrl from './assets/header.png';
 import { renderCards } from './views/cards.js';
 import { renderLinkCards } from './views/link-cards.js';
 import { renderRewardDetail } from './views/reward-detail.js';
@@ -80,19 +80,17 @@ var pendingLoginEmailStorageKey = 'hc_embed_pending_login_email';
 async function applySchoolConfig(nextSchoolId) {
   schoolId = nextSchoolId || '';
   if (!schoolId) {
-    document.documentElement.style.removeProperty('--hc-primary');
+    clearBrandConfig();
     return;
   }
 
   try {
     var config = await api.fetchSchoolConfig(schoolId);
-    if (config && config.primaryColor) {
-      document.documentElement.style.setProperty('--hc-primary', config.primaryColor);
-      return;
-    }
+    applyBrandConfig(config);
+    return;
   } catch (e) { }
 
-  document.documentElement.style.removeProperty('--hc-primary');
+  clearBrandConfig();
 }
 
 function readPendingPasswordLink() {
@@ -360,7 +358,9 @@ onNativeMessage('homecrowd:configure', function (config) {
     api.setEmbedContext({ wildfireAppId: wildfireAppId });
   }
   if (configSchoolId) {
-    applySchoolConfig(configSchoolId);
+    applySchoolConfig(configSchoolId).then(function () {
+      render(getRoute());
+    });
   }
   if (config.token) {
     if (suppressPartnerAutologinAfterLogout) {
@@ -1110,24 +1110,21 @@ function renderLayout(route) {
       : '';
 
   var tabBarHtml = hideTabBar ? '' : buildBottomTabBarHtml(pathOnly, contentTabEnabled);
-
   appEl.innerHTML =
     '<div class="hc-embed">\
-      <div class="hc-sticky-top' +
-    (isRewardDetailPage ? ' hc-sticky-top--reward-detail' : '') +
-    '">\
-        <div class="hc-header">\
-          <img src="' +
-    logoUrl +
-    '" alt="Homecrowd" class="hc-header-logo" />\
-        </div>\
-      </div>\
-      <main id="hc-content" class="hc-content' +
+      <main class="hc-content' +
     (isRewardDetailPage ? ' hc-content--reward-detail' : '') +
     (isRewardsListPage ? ' hc-content--rewards-list' : '') +
     (hideTabBar ? '' : ' hc-content--with-tab-bar') +
     flushTopContentClass +
-    '"></main>' +
+    '">\
+        <div class="hc-content-brand">\
+          ' +
+    renderBrandLockup() +
+    '\
+        </div>\
+        <div id="hc-content"></div>\
+      </main>' +
     tabBarHtml +
     '</div>';
 

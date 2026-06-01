@@ -1,8 +1,9 @@
 import { escapeHtml } from './html.js';
+import { getHeaderLogoUrl } from '../brand.js';
 
 export default function Header(props) {
   props = props || {};
-  var src = props.src || props.logoSrc;
+  var src = props.src || props.logoSrc || getHeaderLogoUrl();
   var alt = escapeHtml(props.alt || 'Homecrowd');
   var extra = props.className ? ' ' + escapeHtml(props.className) : '';
 

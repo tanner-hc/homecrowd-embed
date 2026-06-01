@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import logoUrl from '../assets/header.png';
+import { getHeaderLogoUrl } from '../brand.js';
 import Input from '../base-components/Input.js';
 import Button from '../base-components/Button.js';
 import { escapeHtml } from '../base-components/html.js';
@@ -9,6 +9,7 @@ function isValidEmail(value) {
 }
 
 export function renderForgotPassword(container) {
+  var logoUrl = getHeaderLogoUrl();
   container.innerHTML =
     '<div class="hc-login-shell">' +
     '<div class="hc-login-bg"></div>' +

@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import logoUrl from '../assets/header.png';
+import { getHeaderLogoUrl } from '../brand.js';
 import Input from '../base-components/Input.js';
 import { escapeAttr, escapeHtml } from '../base-components/html.js';
 
@@ -44,6 +44,7 @@ function setFieldErrorState(el, hasError) {
 }
 
 export function renderLogin(container, onLoginSuccess, options) {
+  var logoUrl = getHeaderLogoUrl();
   var schoolId = options && options.schoolId ? String(options.schoolId).trim() : '';
   var initialEmail = options && options.initialEmail ? String(options.initialEmail).trim() : '';
   var lockEmail = !!(options && options.lockEmail);
