@@ -3700,7 +3700,7 @@ body {
   min-width: 160px;
   border: none;
   border-radius: 25px;
-  background: var(--hc-primary);
+  background: #00C8FF;
   color: #fff;
   font-size: 16px;
   font-weight: 700;
@@ -3792,7 +3792,7 @@ body {
   width: 28px;
   height: 28px;
   border: 3px solid rgba(0, 0, 0, 0.1);
-  border-top-color: var(--hc-primary, #007aff);
+  border-top-color: #00C8FF;
   border-radius: 50%;
   animation: hc-offers-spinner-spin 0.75s linear infinite;
   margin: 0 auto 24px;
