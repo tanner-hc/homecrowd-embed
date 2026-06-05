@@ -6,7 +6,7 @@ import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import ScreenTitle from '../base-components/ScreenTitle.js';
 import EmptyState from '../base-components/EmptyState.js';
 import Button from '../base-components/Button.js';
-import LinkCardBanner from '../base-components/LinkCardBanner.js';
+import { buildRewardsLinkCardBanner } from '../rewardsLinkCardBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { getNavEpoch } from '../router.js';
 import {
@@ -15,7 +15,7 @@ import {
   buildWeeklyRewardContext,
   openWeeklyLeaderboardModalFromHome,
 } from '../weekly-reward.js';
-import { isRewardBeforeStart } from '../rewardStartLock.js';
+import { getRewardEndDate, getRewardStartDate, isRewardBeforeStart } from '../rewardStartLock.js';
 var weeklyCountdownCleanup = null;
 
 function removeFloatingPointsOverlay() {
@@ -130,35 +130,6 @@ function normalizeReward(r) {
   };
 }
 
-function getEventDate(reward) {
-  var ri = reward.raffle_info || reward.raffleInfo;
-  var ai = reward.auction_info || reward.auctionInfo;
-
-  var fromRaffle = ri && pickNestedDate(ri, ['drawing_date', 'drawingDate']);
-  if (fromRaffle) {
-    return fromRaffle;
-  }
-
-  var fromAuction = ai && pickNestedDate(ai, ['end_date', 'endDate', 'ends_at', 'endsAt']);
-  if (fromAuction) {
-    return fromAuction;
-  }
-
-  return (
-    pickNestedDate(reward, [
-      'drawing_date',
-      'drawingDate',
-      'eventDate',
-      'auction_end_date',
-      'auctionEndDate',
-      'ends_at',
-      'endsAt',
-      'end_date',
-      'endDate',
-    ]) || null
-  );
-}
-
 function getRewardImageUrl(item, getImageUrl) {
   if (item.image_url) {
     return getImageUrl(item.image_url);
@@ -193,24 +164,25 @@ function organizeRewardsByDate(rewards) {
   var noDate = [];
 
   rewards.forEach(function (reward) {
-    var eventDate = getEventDate(reward);
+    var sortDate = getRewardStartDate(reward);
+    var endDate = getRewardEndDate(reward);
 
-    if (!eventDate) {
+    if (!sortDate) {
       noDate.push(reward);
     } else {
-      var date = new Date(eventDate);
-      if (date < now) {
-        past.push(Object.assign({}, reward, { eventDate: eventDate }));
+      var closedAt = endDate ? new Date(endDate) : null;
+      if (closedAt && closedAt < now) {
+        past.push(Object.assign({}, reward, { eventDate: endDate }));
       } else {
-        var dateKey = formatDate(eventDate);
+        var dateKey = formatDate(sortDate);
         if (!upcoming[dateKey]) {
           upcoming[dateKey] = {
             title: dateKey,
             data: [],
-            rawDate: eventDate,
+            rawDate: sortDate,
           };
         }
-        upcoming[dateKey].data.push(Object.assign({}, reward, { eventDate: eventDate }));
+        upcoming[dateKey].data.push(Object.assign({}, reward, { eventDate: sortDate }));
       }
     }
   });
@@ -519,7 +491,8 @@ async function loadRewards(container, routeEpoch) {
 
     var html = '';
 
-    html += '<div class="hc-rewards-page-inner">';
+    html += '<div class="hc-rewards-page">';
+    html += '<div class="hc-rewards-page-pad">';
 
     html += '<div class="hc-screen-title">';
     html += ScreenTitle({
@@ -529,16 +502,7 @@ async function loadRewards(container, routeEpoch) {
     html += '</div>';
 
     if (!isEarlyRelease && cardLinkStatus === 'unlinked') {
-      var rewardsSchoolName =
-        (currentUser && currentUser.active_school && currentUser.active_school.name) ||
-        'your school';
-      html += LinkCardBanner({
-        title: 'Link a card to unlock rewards',
-        subtitleHtml:
-          'Earn points for you and dollars for ' +
-          escapeHtml(rewardsSchoolName) +
-          ' on every in-network purchase.',
-      });
+      html += buildRewardsLinkCardBanner(currentUser);
     }
 
     var weeklyRewardItem = weeklyReward ? buildWeeklyRewardListItem(weeklyReward) : null;
@@ -612,6 +576,7 @@ async function loadRewards(container, routeEpoch) {
       });
     }
 
+    html += '</div>';
     html += '</div>';
 
     var availablePts =

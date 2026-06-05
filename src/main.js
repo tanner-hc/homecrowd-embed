@@ -1096,7 +1096,6 @@ function renderLayout(route) {
     /^\/rewards\/[^/]+$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/confirm$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/thanks$/.test(pathOnly);
-  var isRewardsListPage = pathOnly === '/rewards';
   var isOfferDetailPage = /^\/offers\/[^/]+$/.test(pathOnly);
   var isContentDetailPage = /^\/content\/[^/]+$/.test(pathOnly);
   var isPreviewPage = pathOnly === '/preview';
@@ -1111,7 +1110,6 @@ function renderLayout(route) {
     '<div class="hc-embed">\
       <main class="hc-content' +
     (isRewardDetailPage ? ' hc-content--reward-detail' : '') +
-    (isRewardsListPage ? ' hc-content--rewards-list' : '') +
     (hideTabBar ? '' : ' hc-content--with-tab-bar') +
     flushTopContentClass +
     '">\

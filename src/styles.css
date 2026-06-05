@@ -1080,10 +1080,6 @@ body {
   padding-bottom: 100px;
 }
 
-.hc-rewards-locked-banner--list {
-  margin-bottom: 16px;
-}
-
 /* Screen Title (matches ScreenTitle component) */
 .hc-screen-title {
   padding: 0 var(--hc-spacing-lg);
@@ -1128,46 +1124,6 @@ body {
   color: var(--hc-text-primary);
   padding: 0 var(--hc-spacing-lg);
   margin-bottom: var(--hc-spacing-md);
-}
-
-/* Rewards locked banner (RewardsLockedBanner) */
-.hc-rewards-locked-banner {
-  margin: 0 var(--hc-spacing-lg) 12px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background-color: rgba(0, 0, 0, 0.04);
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.hc-rewards-locked-banner-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.hc-rewards-locked-banner-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: #000;
-  margin-bottom: 2px;
-}
-
-.hc-rewards-locked-banner-subtitle {
-  font-size: 12px;
-  font-weight: 300;
-  color: rgba(0, 0, 0, 0.60);
-  line-height: 16px;
-}
-
-.hc-rewards-link-card-btn {
-  flex-shrink: 0;
-  min-width: 100px;
-  min-height: 40px;
-  padding: 8px 16px;
-  font-size: 14px;
 }
 
 .hc-rewards-section {
@@ -2771,7 +2727,7 @@ body {
   min-height: 0;
 }
 
-.hc-detail-bottom.hc-product-bottom .hc-btn-primary:not(.hc-stripe-pay):not(:disabled):not(.hc-split-half),
+.hc-detail-bottom.hc-product-bottom .hc-btn-primary:not(.hc-stripe-pay):not(.hc-stores-link-card-btn):not(:disabled):not(.hc-split-half),
 .hc-detail-bottom.hc-product-bottom #hc-bid-submit.hc-btn-primary:not(:disabled) {
   background: var(--hc-detail-cta-bg);
   color: #fff;
@@ -2783,11 +2739,11 @@ body {
   box-shadow: var(--hc-shadow-cta);
 }
 
-.hc-detail-bottom.hc-product-bottom .hc-btn-primary:not(.hc-stripe-pay):not(:disabled):not(.hc-split-half):hover {
+.hc-detail-bottom.hc-product-bottom .hc-btn-primary:not(.hc-stripe-pay):not(.hc-stores-link-card-btn):not(:disabled):not(.hc-split-half):hover {
   background: var(--hc-detail-cta-hover);
 }
 
-.hc-detail-bottom.hc-product-bottom .hc-btn-primary:not(.hc-stripe-pay):disabled:not(.hc-split-half),
+.hc-detail-bottom.hc-product-bottom .hc-btn-primary:not(.hc-stripe-pay):not(.hc-stores-link-card-btn):disabled:not(.hc-split-half),
 .hc-detail-bottom.hc-product-bottom #hc-bid-submit.hc-btn-primary:disabled {
   background: #cbd5e1;
   color: #64748b;
@@ -2858,14 +2814,11 @@ body {
   padding-bottom: 120px;
 }
 
-.hc-rewards-locked-banner--detail {
-  margin-top: 0;
-  margin-bottom: 10px;
-}
-
-.hc-detail-bottom.hc-product-bottom .hc-rewards-locked-banner--detail {
+.hc-detail-bottom.hc-product-bottom .hc-stores-link-card-banner {
   margin-left: 0;
   margin-right: 0;
+  margin-top: 0;
+  margin-bottom: 10px;
 }
 
 .hc-carousel {
@@ -5765,7 +5718,7 @@ body {
   background: rgba(25, 118, 210, 0.06);
 }
 
-.hc-detail-bottom.hc-product-bottom .hc-btn-primary:not(.hc-split-half) strong {
+.hc-detail-bottom.hc-product-bottom .hc-btn-primary:not(.hc-split-half):not(.hc-stores-link-card-btn) strong {
   font-weight: inherit;
 }
 

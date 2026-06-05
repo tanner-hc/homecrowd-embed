@@ -10,6 +10,18 @@ export function getRewardStartDate(reward) {
   return null;
 }
 
+export function getRewardEndDate(reward) {
+  var ri = reward && (reward.raffle_info || reward.raffleInfo);
+  var ai = reward && (reward.auction_info || reward.auctionInfo);
+  if (ri && (ri.drawing_date || ri.drawingDate)) {
+    return ri.drawing_date || ri.drawingDate;
+  }
+  if (ai && (ai.end_date || ai.endDate)) {
+    return ai.end_date || ai.endDate;
+  }
+  return null;
+}
+
 export function isRewardBeforeStart(reward, now) {
   var startDate = getRewardStartDate(reward);
   if (!startDate) return false;

@@ -5,7 +5,7 @@ import { formatDisplayNumber } from '../formatNumber.js';
 import RafflePill, { attachRafflePillAuction } from '../base-components/RafflePill.js';
 import MainButton from '../base-components/MainButton.js';
 import NavHeader from '../base-components/NavHeader.js';
-import LinkCardBanner from '../base-components/LinkCardBanner.js';
+import { buildRewardsLinkCardBanner } from '../rewardsLinkCardBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
 import { writeRedemptionConfirmAndNavigate } from './redemption-confirmation.js';
@@ -637,20 +637,6 @@ function buildAuctionPillHtml(auctionInfo) {
   });
 }
 
-function buildLinkCardBannerForDetail(currentUser) {
-  var detailSchoolName =
-    (currentUser && currentUser.active_school && currentUser.active_school.name) ||
-    'your school';
-  return LinkCardBanner({
-    title: 'Link a card to unlock rewards',
-    subtitleHtml:
-      'Earn points for you and dollars for ' +
-      escapeHtml(detailSchoolName) +
-      ' on every in-network purchase.',
-    bannerClassName: 'hc-rewards-locked-banner--detail',
-  });
-}
-
 function buildBottomBarHtml(o) {
   var product = o.product;
   var rt = o.redemptionType;
@@ -669,7 +655,7 @@ function buildBottomBarHtml(o) {
   var html = '<div class="hc-detail-bottom hc-product-bottom" id="hc-detail-bottom">';
 
   if (o.showLockedBanner) {
-    html += buildLinkCardBannerForDetail(o.currentUser);
+    html += buildRewardsLinkCardBanner(o.currentUser);
   }
 
   if (rt === 'auction' && o.auctionInfo) {
