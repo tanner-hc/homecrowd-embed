@@ -5723,19 +5723,31 @@ body {
 }
 
 .hc-detail-bottom.hc-product-bottom #hc-detail-redeem.hc-btn-primary:not(:disabled),
-.hc-detail-bottom.hc-product-bottom #hc-detail-redeem.hc-bc-main-btn--filled:not(:disabled) {
+.hc-detail-bottom.hc-product-bottom #hc-detail-redeem.hc-bc-main-btn--filled:not(:disabled),
+.hc-detail-bottom.hc-product-bottom #hc-redeem-raffle.hc-btn-primary:not(:disabled),
+.hc-detail-bottom.hc-product-bottom #hc-redeem-raffle.hc-bc-main-btn--filled:not(:disabled),
+.hc-detail-bottom.hc-product-bottom #hc-place-bid-toggle.hc-btn-primary:not(:disabled),
+.hc-detail-bottom.hc-product-bottom #hc-place-bid-toggle.hc-bc-main-btn--filled:not(:disabled) {
   background: #00c8ff;
   color: #000;
 }
 
 .hc-detail-bottom.hc-product-bottom #hc-detail-redeem.hc-btn-primary:not(:disabled):hover,
-.hc-detail-bottom.hc-product-bottom #hc-detail-redeem.hc-bc-main-btn--filled:not(:disabled):hover {
+.hc-detail-bottom.hc-product-bottom #hc-detail-redeem.hc-bc-main-btn--filled:not(:disabled):hover,
+.hc-detail-bottom.hc-product-bottom #hc-redeem-raffle.hc-btn-primary:not(:disabled):hover,
+.hc-detail-bottom.hc-product-bottom #hc-redeem-raffle.hc-bc-main-btn--filled:not(:disabled):hover,
+.hc-detail-bottom.hc-product-bottom #hc-place-bid-toggle.hc-btn-primary:not(:disabled):hover,
+.hc-detail-bottom.hc-product-bottom #hc-place-bid-toggle.hc-bc-main-btn--filled:not(:disabled):hover {
   background: #00b4e6;
   color: #000;
 }
 
 .hc-detail-bottom.hc-product-bottom #hc-detail-redeem.hc-btn-primary:disabled,
-.hc-detail-bottom.hc-product-bottom #hc-detail-redeem.hc-bc-main-btn--filled:disabled {
+.hc-detail-bottom.hc-product-bottom #hc-detail-redeem.hc-bc-main-btn--filled:disabled,
+.hc-detail-bottom.hc-product-bottom #hc-redeem-raffle.hc-btn-primary:disabled,
+.hc-detail-bottom.hc-product-bottom #hc-redeem-raffle.hc-bc-main-btn--filled:disabled,
+.hc-detail-bottom.hc-product-bottom #hc-place-bid-toggle.hc-btn-primary:disabled,
+.hc-detail-bottom.hc-product-bottom #hc-place-bid-toggle.hc-bc-main-btn--filled:disabled {
   background: #cbd5e1;
   color: #64748b;
   opacity: 1;

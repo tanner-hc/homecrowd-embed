@@ -718,9 +718,9 @@ function buildBottomBarHtml(o) {
       text: o.isLocked ? 'Locked' : '',
       html: o.isLocked
         ? null
-        : 'Redeem for&nbsp;<strong>' +
+        : 'Redeem 1 raffle entry (' +
           formatDisplayNumber(product.points_cost || 0) +
-          ' pts</strong>',
+          ' points)',
     });
     html += '</div>';
     return html;
