@@ -2855,11 +2855,17 @@ body {
 }
 
 .hc-product-detail-scroll {
-  padding-bottom: 140px;
+  padding-bottom: 120px;
 }
 
 .hc-rewards-locked-banner--detail {
-  margin-top: 8px;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.hc-detail-bottom.hc-product-bottom .hc-rewards-locked-banner--detail {
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .hc-carousel {
