@@ -1,7 +1,8 @@
 import * as api from '../api.js';
-import { getHeaderLogoUrl } from '../brand.js';
+import defaultHeaderLogoUrl from '../assets/header.png';
 import Input from '../base-components/Input.js';
 import { escapeAttr, escapeHtml } from '../base-components/html.js';
+import { PRIVACY_URL, TERMS_URL } from '../legal-urls.js';
 
 function sortSchoolsForPicker(schools) {
   var list = Array.isArray(schools) ? schools.slice() : [];
@@ -44,7 +45,6 @@ function setFieldErrorState(el, hasError) {
 }
 
 export function renderLogin(container, onLoginSuccess, options) {
-  var logoUrl = getHeaderLogoUrl();
   var schoolId = options && options.schoolId ? String(options.schoolId).trim() : '';
   var initialEmail = options && options.initialEmail ? String(options.initialEmail).trim() : '';
   var lockEmail = !!(options && options.lockEmail);
@@ -57,7 +57,7 @@ export function renderLogin(container, onLoginSuccess, options) {
     '<div class="hc-login-container">' +
     '<div class="hc-login-logo">' +
     '<img src="' +
-    logoUrl +
+    defaultHeaderLogoUrl +
     '" alt="Homecrowd" class="hc-login-logo-img" />' +
     '</div>' +
     '<div class="hc-login-card">' +
@@ -137,7 +137,11 @@ export function renderLogin(container, onLoginSuccess, options) {
     '<div id="hc-signup-terms-wrap" class="hc-form-group hc-login-terms" style="display:none">' +
     '<label class="hc-login-checkbox-label">' +
     '<input id="hc-accept-terms" type="checkbox" />' +
-    '<span>I agree to Terms and Privacy Policy</span>' +
+    '<span>I agree to <a href="' +
+    escapeHtml(TERMS_URL) +
+    '" target="_blank" rel="noopener noreferrer">Terms and Conditions</a> and <a href="' +
+    escapeHtml(PRIVACY_URL) +
+    '" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
     '</label>' +
     '</div>' +
     '</form>' +

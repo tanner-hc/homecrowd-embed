@@ -647,13 +647,10 @@ async function init() {
     holdOnboardingModals = true;
     clearPendingPasswordLink();
     clearPendingLoginEmail();
+    pendingSchoolAuthContext = null;
     api.clearTokens();
     postToNative('homecrowd:logout');
-    if (partnerToken) {
-      navigate('/preview');
-    } else {
-      navigate('/login');
-    }
+    navigate('/login');
     api.logout().catch(function () { });
   });
   startRouter();

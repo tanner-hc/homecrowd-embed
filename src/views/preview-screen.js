@@ -1,4 +1,5 @@
 import { escapeHtml } from '../base-components/html.js';
+import { PRIVACY_URL, TERMS_URL } from '../legal-urls.js';
 
 function envelopeIcon() {
   var stroke = 'currentColor';
@@ -17,8 +18,8 @@ function envelopeIcon() {
 export function renderPreviewScreen(container, options) {
   var opts = options || {};
   var signedEmail = String(opts.schoolEmail || '').trim() || 'school email';
-  var termsUrl = String(opts.termsUrl || 'https://app.gethomecrowd.com/terms-and-conditions').trim();
-  var privacyUrl = String(opts.privacyUrl || 'https://app.gethomecrowd.com/privacy-policy/').trim();
+  var termsUrl = String(opts.termsUrl || TERMS_URL).trim();
+  var privacyUrl = String(opts.privacyUrl || PRIVACY_URL).trim();
 
   container.innerHTML =
     '<div class="hc-preview-screen">' +
