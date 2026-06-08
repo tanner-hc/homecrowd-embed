@@ -5,7 +5,7 @@ import { formatDisplayNumber } from '../formatNumber.js';
 import RafflePill, { attachRafflePillAuction } from '../base-components/RafflePill.js';
 import MainButton from '../base-components/MainButton.js';
 import NavHeader from '../base-components/NavHeader.js';
-import LinkCardBanner from '../base-components/LinkCardBanner.js';
+import { buildRewardsLinkCardBanner } from '../rewardsLinkCardBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
 import { writeRedemptionConfirmAndNavigate } from './redemption-confirmation.js';
@@ -239,20 +239,6 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
 
   html += '<div class="hc-product-detail-scroll">';
 
-  if (showLockedBanner) {
-    var detailSchoolName =
-      (currentUser && currentUser.active_school && currentUser.active_school.name) ||
-      'your school';
-    html += LinkCardBanner({
-      title: 'Link a card to unlock rewards',
-      subtitleHtml:
-        'Earn points for you and dollars for ' +
-        escapeHtml(detailSchoolName) +
-        ' on every in-network purchase.',
-      bannerClassName: 'hc-rewards-locked-banner--detail',
-    });
-  }
-
   html += '<div class="' + (completed ? 'hc-product-completed-wrap' : '') + '">';
   html += buildCarouselHtml(images);
   html += '</div>';
@@ -394,6 +380,8 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
   html += buildBottomBarHtml({
     product: product,
     summary: summary,
+    showLockedBanner: showLockedBanner,
+    currentUser: currentUser,
     canPayWithStripe: canPayWithStripe && !cardLockedActive && !isLocked,
     isCardOnly: isCardOnly,
     stripeCents: stripeCents,
@@ -591,7 +579,7 @@ function buildWeeklyDetailHtml(weeklyReward) {
     html += '<div class="hc-weekly-detail-card">';
     html +=
       '<div class="hc-weekly-detail-title">' +
-      escapeHtml(isOverall ? 'Overall leaderboard' : 'Weekly leaderboard') +
+      escapeHtml(isOverall ? 'Overall Leaderboard' : 'Weekly Leaderboard') +
       '</div>';
     html += buildWeeklyLeaderboardHtml(weeklyReward.rows, 10);
     html += '</div>';
@@ -653,7 +641,7 @@ function buildBottomBarHtml(o) {
   var product = o.product;
   var rt = o.redemptionType;
   if (o.weeklyReward) {
-    return '<div class="hc-detail-bottom hc-detail-bottom--empty"></div>';
+    return '<div class="hc-detail-bottom hc-detail-bottom--empty" id="hc-detail-bottom"></div>';
   }
   var hideFooter =
     (o.completed && rt !== 'auction' && rt !== 'raffle') ||
@@ -661,10 +649,14 @@ function buildBottomBarHtml(o) {
     (rt === 'raffle' && o.userWonRaffle);
 
   if (hideFooter) {
-    return '<div class="hc-detail-bottom hc-detail-bottom--empty"></div>';
+    return '<div class="hc-detail-bottom hc-detail-bottom--empty" id="hc-detail-bottom"></div>';
   }
 
-  var html = '<div class="hc-detail-bottom hc-product-bottom">';
+  var html = '<div class="hc-detail-bottom hc-product-bottom" id="hc-detail-bottom">';
+
+  if (o.showLockedBanner) {
+    html += buildRewardsLinkCardBanner(o.currentUser);
+  }
 
   if (rt === 'auction' && o.auctionInfo) {
     if (o.userWonAuction) {
@@ -726,9 +718,9 @@ function buildBottomBarHtml(o) {
       text: o.isLocked ? 'Locked' : '',
       html: o.isLocked
         ? null
-        : 'Redeem for&nbsp;<strong>' +
+        : 'Redeem 1 raffle entry (' +
           formatDisplayNumber(product.points_cost || 0) +
-          ' pts</strong>',
+          ' points)',
     });
     html += '</div>';
     return html;
@@ -778,6 +770,7 @@ function bindDetailEvents(container, product, summary, currentUser, cardLinkStat
   }
 
   initCarouselDots(container);
+  syncDetailScrollPadding(container);
 
   attachRafflePillAuction(container);
 
@@ -876,6 +869,7 @@ function bindDetailEvents(container, product, summary, currentUser, cardLinkStat
       if (bidToggle.disabled) return;
       bidPanel.style.display = bidPanel.style.display === 'none' ? 'block' : 'none';
       bidToggle.style.display = bidPanel.style.display === 'block' ? 'none' : 'block';
+      syncDetailScrollPadding(container);
     });
   }
 
@@ -899,6 +893,42 @@ function bindDetailEvents(container, product, summary, currentUser, cardLinkStat
         bidSubmit.disabled = false;
       }
     });
+  }
+}
+
+function syncDetailScrollPadding(container) {
+  var scrollEl = container.querySelector('.hc-product-detail-scroll');
+  var bottomEl = container.querySelector('#hc-detail-bottom');
+  if (!scrollEl || !bottomEl) return;
+
+  var applyPadding = function () {
+    var height = bottomEl.getBoundingClientRect().height;
+    scrollEl.style.paddingBottom = height
+      ? Math.ceil(height + 16) + 'px'
+      : '24px';
+  };
+
+  applyPadding();
+
+  if (typeof ResizeObserver !== 'undefined') {
+    var observer = new ResizeObserver(applyPadding);
+    observer.observe(bottomEl);
+    window.addEventListener(
+      'hashchange',
+      function () {
+        observer.disconnect();
+      },
+      { once: true },
+    );
+  } else {
+    window.addEventListener('resize', applyPadding);
+    window.addEventListener(
+      'hashchange',
+      function () {
+        window.removeEventListener('resize', applyPadding);
+      },
+      { once: true },
+    );
   }
 }
 

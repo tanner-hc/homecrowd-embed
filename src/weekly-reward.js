@@ -2,7 +2,7 @@ import * as api from './api.js';
 import lottie from 'lottie-web';
 import confettiAnimation from './assets/Confetti.json';
 import trophyIconSvg from './assets/icons/trophy.svg?raw';
-import headerLogoUrl from './assets/header.png';
+import { renderBrandLockup } from './brand.js';
 import { escapeHtml, escapeAttr } from './base-components/html.js';
 import NavHeader from './base-components/NavHeader.js';
 import {
@@ -543,8 +543,8 @@ export function buildWeeklyRewardCardHtml(meta, className) {
   var cls = className ? ' ' + className : '';
   var html = '<div class="hc-weekly-reward-card' + cls + '"' + clickable + '>';
   html += '<div class="hc-weekly-reward-copy">';
-  html += '<div class="hc-weekly-reward-label">Weekly reward</div>';
-  html += '<div class="hc-weekly-reward-title">' + escapeHtml(meta.title || 'Weekly reward') + '</div>';
+  html += '<div class="hc-weekly-reward-label">Weekly Leaderboard</div>';
+  html += '<div class="hc-weekly-reward-title">' + escapeHtml(meta.title || 'Weekly Leaderboard') + '</div>';
   html += '<div class="hc-weekly-reward-subtitle">' + escapeHtml(meta.subtitle || '') + '</div>';
   html += '</div>';
   if (meta.imageUrl) {
@@ -552,7 +552,7 @@ export function buildWeeklyRewardCardHtml(meta, className) {
       '<div class="hc-weekly-reward-image-wrap"><img class="hc-weekly-reward-image" src="' +
       escapeAttr(meta.imageUrl) +
       '" alt="' +
-      escapeAttr(meta.title || 'Weekly reward') +
+      escapeAttr(meta.title || 'Weekly Leaderboard') +
       '" /></div>';
   } else {
     html += '<div class="hc-weekly-reward-image-wrap hc-weekly-reward-image-wrap--empty">Gift</div>';
@@ -582,7 +582,7 @@ export function buildWeeklyRewardHomeTileHtml(title, rewardId, opts) {
   var idStr = rewardId != null ? String(rewardId).trim() : '';
   if (!idStr) return '';
   var name = String(title || '').trim();
-  var eyebrow = opts.eyebrow != null ? String(opts.eyebrow) : 'Weekly reward';
+  var eyebrow = opts.eyebrow != null ? String(opts.eyebrow) : 'Weekly Leaderboard';
   var tileKind = opts.tileKind === 'overall' ? 'overall' : 'weekly';
   var html =
     '<button type="button" class="hc-weekly-reward-home-tile" data-home-lb-tile="' +
@@ -662,7 +662,7 @@ export function openWeeklyLeaderboardModal(options) {
     var html = '<div class="hc-weekly-lb-countdown-card">';
     html +=
       '<div class="hc-weekly-lb-countdown-eyebrow">' +
-      escapeHtml(contextLabel + ' reward') +
+      escapeHtml(contextLabel + ' Leaderboard') +
       '</div>';
     html +=
       '<div class="hc-weekly-lb-countdown-value' +
@@ -786,9 +786,7 @@ export function openWeeklyLeaderboardModal(options) {
   overlay.setAttribute('aria-modal', 'true');
   overlay.innerHTML =
     '<div class="hc-weekly-lb-modal-header">' +
-    '<div class="hc-header"><img src="' +
-    escapeAttr(headerLogoUrl) +
-    '" alt="Homecrowd" class="hc-header-logo" /></div>' +
+    renderBrandLockup() +
     NavHeader({ title: 'Home', backButtonId: 'hc-weekly-lb-back' }) +
     '</div>' +
     '<div class="hc-weekly-lb-modal-scroll">' +
@@ -964,7 +962,7 @@ export function showWeeklyWinnerModal(prize, fallbackTitle, options) {
       prizeTitle:
         (prize.cover_title || prize.coverTitle || prize.title || prize.name) ||
         fallbackTitle ||
-        (prizeKind === 'overall' ? 'Overall reward' : 'Weekly reward'),
+        (prizeKind === 'overall' ? 'Overall Leaderboard' : 'Weekly Leaderboard'),
       winnerBadgeLabel: prizeKind === 'overall' ? 'Overall Winner' : 'Weekly Winner',
     };
   }
@@ -978,7 +976,7 @@ export function showWeeklyWinnerModal(prize, fallbackTitle, options) {
     alert.prizeTitle ||
     (prize && (prize.cover_title || prize.coverTitle || prize.title || prize.name)) ||
     fallbackTitle ||
-    (prizeKind === 'overall' ? 'Overall reward' : 'Weekly reward');
+    (prizeKind === 'overall' ? 'Overall Leaderboard' : 'Weekly Leaderboard');
 
   var winnerBadgeLabel =
     opts.winnerBadgeLabel != null
@@ -1039,7 +1037,7 @@ export function tryShowMissedWinnerModalFromLeaderboard(leaderboardRes, fallback
   if (!alert) return false;
   markWinnerAlertBeenShown(alert.key);
   var fallbackTitle =
-    alert.kind === 'overall' ? fallbackOverallTitle || 'Overall reward' : fallbackWeeklyTitle || 'Weekly reward';
+    alert.kind === 'overall' ? fallbackOverallTitle || 'Overall Leaderboard' : fallbackWeeklyTitle || 'Weekly Leaderboard';
   showWeeklyWinnerModal(
     {
       winner_name: alert.winnerName,

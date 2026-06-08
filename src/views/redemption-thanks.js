@@ -59,6 +59,7 @@ export function navigateToRedemptionThanks(product, opts) {
     pointsSpent: opts.pointsSpent != null ? opts.pointsSpent : 0,
     isAuctionBid: !!opts.isAuctionBid,
     ticketsUsed: opts.ticketsUsed != null ? opts.ticketsUsed : 0,
+    entriesUsed: opts.entriesUsed != null ? opts.entriesUsed : 0,
     paidWithStripe: !!opts.paidWithStripe,
     amountPaidCents: opts.amountPaidCents != null ? opts.amountPaidCents : null,
   };
@@ -141,6 +142,8 @@ export function renderRedemptionThanks(container, rewardId) {
   var pointsSpent = state.pointsSpent != null ? state.pointsSpent : 0;
   var isAuctionBid = !!state.isAuctionBid;
   var ticketsUsed = state.ticketsUsed != null ? state.ticketsUsed : 0;
+  var entriesUsed = state.entriesUsed != null ? state.entriesUsed : 0;
+  var raffleEntries = entriesUsed || ticketsUsed;
   var paidWithStripe = !!state.paidWithStripe;
   var amountPaidCents = state.amountPaidCents;
 
@@ -166,9 +169,9 @@ export function renderRedemptionThanks(container, rewardId) {
       'Your bid has been placed successfully! You can view the current auction status and place additional bids if needed.';
   } else if (rt === 'raffle') {
     successMessage =
-      ticketsUsed > 1
+      raffleEntries > 1
         ? 'Thank you for entering the raffle! Your ' +
-          ticketsUsed +
+          raffleEntries +
           ' entries have been recorded and you will be notified if you win.'
         : 'Thank you for entering the raffle! Your entry has been recorded and you will be notified if you win.';
   } else {
@@ -180,8 +183,13 @@ export function renderRedemptionThanks(container, rewardId) {
     pointsLine = 'Amount paid: $' + paidUsd + ' (card)';
   } else if (isAuctionBid) {
     pointsLine = 'Bid Amount: ' + formatDisplayNumber(pointsSpent) + ' pts';
-  } else if (rt === 'raffle' && ticketsUsed > 0) {
-    pointsLine = 'Tickets Used: ' + formatDisplayNumber(ticketsUsed);
+  } else if (rt === 'raffle' && raffleEntries > 0) {
+    pointsLine =
+      raffleEntries > 1
+        ? 'Entries: ' + formatDisplayNumber(raffleEntries) + ' (' + formatDisplayNumber(pointsSpent) + ' pts)'
+        : ticketsUsed > 0
+          ? 'Entries Used: ' + formatDisplayNumber(raffleEntries)
+          : 'Points Spent: ' + formatDisplayNumber(pointsSpent) + ' pts';
   } else {
     pointsLine = 'Points Spent: ' + formatDisplayNumber(pointsSpent) + ' pts';
   }

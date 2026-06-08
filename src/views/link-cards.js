@@ -140,38 +140,39 @@ export function renderLinkCards(container) {
   html += '<div class="hc-link-card-preview-brand" data-preview-brand></div>';
   html += '</div></div>';
 
-  html += '<div class="hc-link-card-form">';
+  html +=
+    '<form id="hc-lc-form" class="hc-link-card-form" autocomplete="on" novalidate>';
   html += '<div class="hc-link-card-field">';
   html += '<label class="hc-link-card-label" for="hc-lc-number">Card Number</label>';
   html +=
-    '<input id="hc-lc-number" class="hc-input hc-link-card-input" type="text" inputmode="numeric" autocomplete="cc-number" maxlength="19" placeholder="1234 5678 9012 3456" />';
+    '<input id="hc-lc-number" name="cc-number" class="hc-input hc-link-card-input" type="text" inputmode="numeric" autocomplete="cc-number" maxlength="19" placeholder="1234 5678 9012 3456" />';
   html += '</div>';
   html += '<div class="hc-link-card-row">';
   html += '<div class="hc-link-card-field hc-link-card-field--half">';
   html += '<label class="hc-link-card-label" for="hc-lc-mm">Month</label>';
   html +=
-    '<input id="hc-lc-mm" class="hc-input hc-link-card-input" type="text" inputmode="numeric" maxlength="2" placeholder="MM" autocomplete="cc-exp-month" />';
+    '<input id="hc-lc-mm" name="cc-exp-month" class="hc-input hc-link-card-input" type="text" inputmode="numeric" maxlength="2" placeholder="MM" autocomplete="cc-exp-month" />';
   html += '</div>';
   html += '<div class="hc-link-card-field hc-link-card-field--half">';
   html += '<label class="hc-link-card-label" for="hc-lc-yy">Year</label>';
   html +=
-    '<input id="hc-lc-yy" class="hc-input hc-link-card-input" type="text" inputmode="numeric" maxlength="2" placeholder="YY" autocomplete="cc-exp-year" />';
+    '<input id="hc-lc-yy" name="cc-exp-year" class="hc-input hc-link-card-input" type="text" inputmode="numeric" maxlength="2" placeholder="YY" autocomplete="cc-exp-year" />';
   html += '</div></div>';
   html += '<div class="hc-link-card-field">';
   html += '<label class="hc-link-card-label" for="hc-lc-cvc">CVC</label>';
   html +=
-    '<input id="hc-lc-cvc" class="hc-input hc-link-card-input" type="password" inputmode="numeric" maxlength="4" placeholder="123" autocomplete="cc-csc" />';
+    '<input id="hc-lc-cvc" name="cc-csc" class="hc-input hc-link-card-input" type="password" inputmode="numeric" maxlength="4" placeholder="123" autocomplete="cc-csc" />';
   html += '</div>';
   html += '<div class="hc-link-card-field">';
   html += '<label class="hc-link-card-label" for="hc-lc-name">Cardholder Name</label>';
   html +=
-    '<input id="hc-lc-name" class="hc-input hc-link-card-input" type="text" autocomplete="cc-name" placeholder="John Doe" />';
+    '<input id="hc-lc-name" name="cc-name" class="hc-input hc-link-card-input" type="text" autocomplete="cc-name" placeholder="John Doe" />';
   html += '</div>';
   html += '<div class="hc-link-card-field">';
   html += '<label class="hc-link-card-label" for="hc-lc-nick">Nickname (Optional)</label>';
   html +=
-    '<input id="hc-lc-nick" class="hc-input hc-link-card-input" type="text" placeholder="My Primary Card" />';
-  html += '</div></div>';
+    '<input id="hc-lc-nick" name="nickname" class="hc-input hc-link-card-input" type="text" autocomplete="off" placeholder="My Primary Card" />';
+  html += '</div></form>';
 
   html +=
     '<p class="hc-link-card-legal">By clicking Link Card below you authorize the payment card network to monitor your payment card and share data about all your purchases as required to participate in the Program per the <button type="button" class="hc-link-card-legal-link" id="hc-lc-terms">Program Terms</button> and <button type="button" class="hc-link-card-legal-link" id="hc-lc-privacy">Privacy Policy</button>. Your purchase data (date/time, purchase amount, merchant category) will be shared with the Program provider Olive, and with HomeCrowd in order to enable card linked offers and to provide notifications about reward status, additional data for qualifying transactions (merchant name and location) will be shared with Olive, with HomeCrowd, and with merchant partners funding the rewards. Data will be accessible until such a time when you revoke authorization via Program settings.<br><br>1) Link your card<br>2) Make qualifying purchases at participating merchants<br>3) Cashback rewards are sent to your selected school</p>';
@@ -200,15 +201,40 @@ export function renderLinkCards(container) {
     navigate('/cards');
   });
 
+  function applyField(el, key, transform) {
+    if (!el) return;
+    var v = el.value;
+    if (transform) v = transform(v);
+    if (el.value !== v) el.value = v;
+    state[key] = v;
+    syncPreview(container, state);
+  }
+
   function bindInput(id, key, transform) {
     var el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener('input', function () {
-      var v = el.value;
-      if (transform) v = transform(v);
-      el.value = v;
-      state[key] = v;
-      syncPreview(container, state);
+    var sync = function () {
+      applyField(el, key, transform);
+    };
+    el.addEventListener('input', sync);
+    el.addEventListener('change', sync);
+    el.addEventListener('animationstart', function (e) {
+      if (e.animationName === 'hc-link-card-autofill-start') sync();
+    });
+  }
+
+  function syncAllFieldsFromDom() {
+    applyField(document.getElementById('hc-lc-number'), 'cardNumber', formatCardNumber);
+    applyField(document.getElementById('hc-lc-mm'), 'expiryMonth', formatExpiryMonth);
+    applyField(document.getElementById('hc-lc-yy'), 'expiryYear', formatExpiryYear);
+    applyField(document.getElementById('hc-lc-cvc'), 'cvc', function (t) {
+      return t.replace(/\D/g, '').substring(0, 4);
+    });
+    applyField(document.getElementById('hc-lc-name'), 'cardholderName', function (t) {
+      return t;
+    });
+    applyField(document.getElementById('hc-lc-nick'), 'nickname', function (t) {
+      return t;
     });
   }
 
@@ -224,6 +250,17 @@ export function renderLinkCards(container) {
   bindInput('hc-lc-nick', 'nickname', function (t) {
     return t;
   });
+
+  var form = document.getElementById('hc-lc-form');
+  if (form) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+    });
+  }
+
+  setTimeout(syncAllFieldsFromDom, 0);
+  setTimeout(syncAllFieldsFromDom, 250);
+  setTimeout(syncAllFieldsFromDom, 1000);
 
   document.getElementById('hc-lc-terms').addEventListener('click', function () {
     showWebviewOverlay(TERMS_URL);

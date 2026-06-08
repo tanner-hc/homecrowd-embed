@@ -194,6 +194,56 @@ export async function loginWithPartnerTokenAndSchool(token, schoolId) {
   return data;
 }
 
+export async function getSchoolAuthStatus(token, schoolId) {
+  var payload = { token: token };
+  if (schoolId) {
+    payload.schoolId = schoolId;
+  }
+  return request(EMBED_BASE + '/auth/school-auth-status/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function completeSchoolAuth(payload) {
+  var body = Object.assign({}, payload || {});
+  return request(EMBED_BASE + '/auth/school-auth/', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  }).then(function (data) {
+    if (data && data.access) {
+      setTokens(data.access, data.refresh);
+    }
+    return data;
+  });
+}
+
+export async function getSchoolAuthEmailConfirmationStatus(confirmationId) {
+  return request(EMBED_BASE + '/auth/school-auth-email-confirmation-status/', {
+    method: 'POST',
+    body: JSON.stringify({ confirmationId: confirmationId }),
+  });
+}
+
+export async function consumeSchoolAuthEmailConfirmation(confirmationId) {
+  return request(EMBED_BASE + '/auth/school-auth-email-confirmation-consume/', {
+    method: 'POST',
+    body: JSON.stringify({ confirmationId: confirmationId }),
+  }).then(function (data) {
+    if (data && data.access) {
+      setTokens(data.access, data.refresh);
+    }
+    return data;
+  });
+}
+
+export async function linkSchoolEmail(payload) {
+  return request(EMBED_BASE + '/auth/link-school-email/', {
+    method: 'POST',
+    body: JSON.stringify(payload || {}),
+  });
+}
+
 export async function fetchSchoolConfig(schoolId) {
   return request('/api/school/merchants-page-config/' + encodeURIComponent(schoolId) + '/');
 }
@@ -361,6 +411,13 @@ export async function createCardLinkSession() {
 export async function deactivateCard(cardId) {
   return request(EMBED_BASE + '/cards/' + encodeURIComponent(cardId) + '/deactivate/', {
     method: 'POST',
+  });
+}
+
+export async function updateCardNickname(cardId, nickname) {
+  return request(EMBED_BASE + '/cards/' + encodeURIComponent(cardId) + '/nickname/', {
+    method: 'PATCH',
+    body: JSON.stringify({ nickname: nickname }),
   });
 }
 

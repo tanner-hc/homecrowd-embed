@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import logoUrl from '../assets/header.png';
+import { getHeaderLogoUrl } from '../brand.js';
 import Button from '../base-components/Button.js';
 
 function getResetParams(route) {
@@ -55,6 +55,7 @@ function passwordField(id, label, placeholder) {
 }
 
 export function renderResetPassword(container, route) {
+  var logoUrl = getHeaderLogoUrl();
   var params = getResetParams(route || '');
   var isInvalid = !params.uid || !params.token;
   container.innerHTML =

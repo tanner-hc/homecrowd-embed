@@ -6,7 +6,7 @@ import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import ScreenTitle from '../base-components/ScreenTitle.js';
 import EmptyState from '../base-components/EmptyState.js';
 import Button from '../base-components/Button.js';
-import LinkCardBanner from '../base-components/LinkCardBanner.js';
+import { buildRewardsLinkCardBanner } from '../rewardsLinkCardBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { getNavEpoch } from '../router.js';
 import {
@@ -15,7 +15,7 @@ import {
   buildWeeklyRewardContext,
   openWeeklyLeaderboardModalFromHome,
 } from '../weekly-reward.js';
-import { isRewardBeforeStart } from '../rewardStartLock.js';
+import { getRewardEndDate, getRewardStartDate, isRewardBeforeStart } from '../rewardStartLock.js';
 var weeklyCountdownCleanup = null;
 
 function removeFloatingPointsOverlay() {
@@ -130,35 +130,6 @@ function normalizeReward(r) {
   };
 }
 
-function getEventDate(reward) {
-  var ri = reward.raffle_info || reward.raffleInfo;
-  var ai = reward.auction_info || reward.auctionInfo;
-
-  var fromRaffle = ri && pickNestedDate(ri, ['drawing_date', 'drawingDate']);
-  if (fromRaffle) {
-    return fromRaffle;
-  }
-
-  var fromAuction = ai && pickNestedDate(ai, ['end_date', 'endDate', 'ends_at', 'endsAt']);
-  if (fromAuction) {
-    return fromAuction;
-  }
-
-  return (
-    pickNestedDate(reward, [
-      'drawing_date',
-      'drawingDate',
-      'eventDate',
-      'auction_end_date',
-      'auctionEndDate',
-      'ends_at',
-      'endsAt',
-      'end_date',
-      'endDate',
-    ]) || null
-  );
-}
-
 function getRewardImageUrl(item, getImageUrl) {
   if (item.image_url) {
     return getImageUrl(item.image_url);
@@ -193,24 +164,25 @@ function organizeRewardsByDate(rewards) {
   var noDate = [];
 
   rewards.forEach(function (reward) {
-    var eventDate = getEventDate(reward);
+    var sortDate = getRewardStartDate(reward);
+    var endDate = getRewardEndDate(reward);
 
-    if (!eventDate) {
+    if (!sortDate) {
       noDate.push(reward);
     } else {
-      var date = new Date(eventDate);
-      if (date < now) {
-        past.push(Object.assign({}, reward, { eventDate: eventDate }));
+      var closedAt = endDate ? new Date(endDate) : null;
+      if (closedAt && closedAt < now) {
+        past.push(Object.assign({}, reward, { eventDate: endDate }));
       } else {
-        var dateKey = formatDate(eventDate);
+        var dateKey = formatDate(sortDate);
         if (!upcoming[dateKey]) {
           upcoming[dateKey] = {
             title: dateKey,
             data: [],
-            rawDate: eventDate,
+            rawDate: sortDate,
           };
         }
-        upcoming[dateKey].data.push(Object.assign({}, reward, { eventDate: eventDate }));
+        upcoming[dateKey].data.push(Object.assign({}, reward, { eventDate: sortDate }));
       }
     }
   });
@@ -298,7 +270,11 @@ function buildRewardCardHtml(item, section, cardLinkStatus, isEarlyRelease, getI
         escapeAttr(item.redemption_type === 'overall' ? 'overall' : 'weekly') +
         '"' +
         '>' +
-        escapeHtml(item.weeklyCountdownLabel || item.description || 'Weekly reward') +
+        escapeHtml(
+          item.weeklyCountdownLabel ||
+            item.description ||
+            (item.redemption_type === 'overall' ? 'Overall Leaderboard' : 'Weekly Leaderboard'),
+        ) +
         '</span>';
     } else if (item.redemption_type === 'card') {
       if (cashPriceLabel) {
@@ -353,7 +329,7 @@ function buildWeeklyRewardListItem(weeklyReward) {
   if (!weeklyReward || !weeklyReward.rewardId) return null;
   return {
     id: weeklyReward.rewardId,
-    title: weeklyReward.title || 'Weekly Reward',
+    title: weeklyReward.title || 'Weekly Leaderboard',
     description: weeklyReward.subtitle || '',
     points_cost: 0,
     cash_price_cents: null,
@@ -374,7 +350,7 @@ function buildOverallRewardListItem(overallReward) {
   if (!overallReward || !overallReward.rewardId) return null;
   return {
     id: overallReward.rewardId,
-    title: overallReward.title || 'Overall Reward',
+    title: overallReward.title || 'Overall Leaderboard',
     description: overallReward.subtitle || '',
     points_cost: 0,
     cash_price_cents: null,
@@ -519,7 +495,8 @@ async function loadRewards(container, routeEpoch) {
 
     var html = '';
 
-    html += '<div class="hc-rewards-page-inner">';
+    html += '<div class="hc-rewards-page">';
+    html += '<div class="hc-rewards-page-pad">';
 
     html += '<div class="hc-screen-title">';
     html += ScreenTitle({
@@ -529,16 +506,7 @@ async function loadRewards(container, routeEpoch) {
     html += '</div>';
 
     if (!isEarlyRelease && cardLinkStatus === 'unlinked') {
-      var rewardsSchoolName =
-        (currentUser && currentUser.active_school && currentUser.active_school.name) ||
-        'your school';
-      html += LinkCardBanner({
-        title: 'Link a card to unlock rewards',
-        subtitleHtml:
-          'Earn points for you and dollars for ' +
-          escapeHtml(rewardsSchoolName) +
-          ' on every in-network purchase.',
-      });
+      html += buildRewardsLinkCardBanner(currentUser);
     }
 
     var weeklyRewardItem = weeklyReward ? buildWeeklyRewardListItem(weeklyReward) : null;
@@ -546,12 +514,12 @@ async function loadRewards(container, routeEpoch) {
     if (weeklyRewardItem) {
       html += '<div class="hc-rewards-section hc-rewards-weekly-section">';
       html += '<div class="hc-section-header hc-rewards-section-header">';
-      html += '<div class="hc-section-title">Weekly Reward</div>';
+      html += '<div class="hc-section-title">Weekly Leaderboard</div>';
       html += '</div>';
       html += '<div class="hc-rewards-list">';
       html += buildRewardCardHtml(
         weeklyRewardItem,
-        { title: 'Weekly Reward', isPast: false },
+        { title: 'Weekly Leaderboard', isPast: false },
         cardLinkStatus,
         isEarlyRelease,
         getImageUrl,
@@ -563,12 +531,12 @@ async function loadRewards(container, routeEpoch) {
     if (overallRewardItem) {
       html += '<div class="hc-rewards-section hc-rewards-overall-section">';
       html += '<div class="hc-section-header hc-rewards-section-header">';
-      html += '<div class="hc-section-title">Overall Reward</div>';
+      html += '<div class="hc-section-title">Overall Leaderboard</div>';
       html += '</div>';
       html += '<div class="hc-rewards-list">';
       html += buildRewardCardHtml(
         overallRewardItem,
-        { title: 'Overall Reward', isPast: false },
+        { title: 'Overall Leaderboard', isPast: false },
         cardLinkStatus,
         isEarlyRelease,
         getImageUrl,
@@ -612,6 +580,7 @@ async function loadRewards(container, routeEpoch) {
       });
     }
 
+    html += '</div>';
     html += '</div>';
 
     var availablePts =

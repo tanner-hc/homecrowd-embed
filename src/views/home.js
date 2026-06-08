@@ -719,6 +719,21 @@ function clearInstructionOverlay() {
   instructionOverlayEl = null;
 }
 
+function getInstructionScrollContainer(container) {
+  if (!container || !container.closest) return container;
+  return container.closest('.hc-content') || container;
+}
+
+function scrollInstructionTargetIntoView(container) {
+  var targetHelpBtn =
+    container && container.querySelector ? container.querySelector('[data-intro-open="1"]') : null;
+  if (!targetHelpBtn || typeof targetHelpBtn.scrollIntoView !== 'function') return;
+  targetHelpBtn.scrollIntoView({
+    block: 'center',
+    inline: 'nearest',
+  });
+}
+
 function mountInstructionOverlay(container) {
   clearInstructionOverlay();
   var embedRoot = container.closest('.hc-embed');
@@ -797,7 +812,7 @@ function mountInstructionOverlay(container) {
     });
   }
   embedRoot.appendChild(instructionOverlayEl);
-  instructionScrollEl = container;
+  instructionScrollEl = getInstructionScrollContainer(container);
   window.addEventListener('resize', instructionRepositionHandler);
   if (instructionScrollEl) {
     instructionScrollEl.addEventListener('scroll', instructionRepositionHandler);
@@ -1042,6 +1057,7 @@ function loadHome(container) {
             return;
           }
           closeIntroModal();
+          window.dispatchEvent(new CustomEvent('homecrowd:walkthrough-complete'));
         });
       }
 
@@ -1050,9 +1066,17 @@ function loadHome(container) {
       });
       if (ctx.showInstructionOverlay) {
         window.requestAnimationFrame(function () {
-          mountInstructionOverlay(container);
+          scrollInstructionTargetIntoView(container);
+          window.requestAnimationFrame(function () {
+            mountInstructionOverlay(container);
+          });
         });
       }
+      window.dispatchEvent(
+        new CustomEvent('homecrowd:home-ready', {
+          detail: { showInstructionOverlay: !!ctx.showInstructionOverlay },
+        }),
+      );
       container._hcLeaderboardRes = ctx.leaderboardRes || null;
       var weeklyLbBtn = container.querySelector('[data-home-lb-tile="weekly"]');
       if (weeklyLbBtn) {

@@ -5,10 +5,10 @@ import * as api from './api.js';
 import * as analytics from './analytics.js';
 import { postToNative, onNativeMessage } from './bridge.js';
 import { navigate, getRoute, onRouteChange, startRouter, nextNavEpoch } from './router.js';
+import { applyBrandConfig, clearBrandConfig, renderBrandLockup } from './brand.js';
 import { renderLogin } from './views/login.js';
 import { renderHome } from './views/home.js';
 import { renderRewards } from './views/rewards.js';
-import logoUrl from './assets/header.png';
 import { renderCards } from './views/cards.js';
 import { renderLinkCards } from './views/link-cards.js';
 import { renderRewardDetail } from './views/reward-detail.js';
@@ -35,6 +35,7 @@ import { renderInviteFriend } from './views/invite-friend.js';
 import { renderActivityLog } from './views/activity-log.js';
 import { renderBrowserExtension } from './views/browser-extension.js';
 import { renderSupport } from './views/support.js';
+import { renderPreviewScreen } from './views/preview-screen.js';
 import LoadingSpinner from './base-components/LoadingSpinner.js';
 import { preloadMapKitForEmbed } from './mapkit-embed.js';
 import houseFilledSvg from './assets/icons/house-filled.svg?raw';
@@ -67,23 +68,149 @@ var partnerToken = (hostConfig && hostConfig.token) || params.get('token') || ''
 var initialView = (hostConfig && hostConfig.view) || params.get('view') || 'home';
 
 var postLoginStripeThanksId = null;
+var pendingSchoolAuthContext = null;
+var pendingSchoolEmailConfirmationId = '';
+var schoolEmailConfirmationPollTimer = null;
+var pendingAutoRaffleModal = null;
+var pendingDailyBonusModal = null;
+var holdOnboardingModals = true;
+var pendingPasswordLinkStorageKey = 'hc_embed_pending_school_link';
+var pendingLoginEmailStorageKey = 'hc_embed_pending_login_email';
 
 async function applySchoolConfig(nextSchoolId) {
   schoolId = nextSchoolId || '';
   if (!schoolId) {
-    document.documentElement.style.removeProperty('--hc-primary');
+    clearBrandConfig();
     return;
   }
 
   try {
     var config = await api.fetchSchoolConfig(schoolId);
-    if (config && config.primaryColor) {
-      document.documentElement.style.setProperty('--hc-primary', config.primaryColor);
-      return;
-    }
+    applyBrandConfig(config);
+    return;
   } catch (e) { }
 
-  document.documentElement.style.removeProperty('--hc-primary');
+  clearBrandConfig();
+}
+
+function readPendingPasswordLink() {
+  try {
+    var raw = window.sessionStorage.getItem(pendingPasswordLinkStorageKey);
+    if (!raw) return null;
+    var parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!parsed.token) return null;
+    return parsed;
+  } catch (_e) {
+    return null;
+  }
+}
+
+function writePendingPasswordLink(token, linkedEmail) {
+  try {
+    window.sessionStorage.setItem(
+      pendingPasswordLinkStorageKey,
+      JSON.stringify({
+        token: token,
+        schoolId: schoolId || '',
+        linkedEmail: linkedEmail || '',
+      }),
+    );
+  } catch (_e) { }
+}
+
+function clearPendingPasswordLink() {
+  try {
+    window.sessionStorage.removeItem(pendingPasswordLinkStorageKey);
+  } catch (_e) { }
+}
+
+function readPendingLoginEmail() {
+  try {
+    return (window.sessionStorage.getItem(pendingLoginEmailStorageKey) || '').trim();
+  } catch (_e) {
+    return '';
+  }
+}
+
+function writePendingLoginEmail(email) {
+  try {
+    window.sessionStorage.setItem(pendingLoginEmailStorageKey, String(email || '').trim());
+  } catch (_e) { }
+}
+
+function clearPendingLoginEmail() {
+  try {
+    window.sessionStorage.removeItem(pendingLoginEmailStorageKey);
+  } catch (_e) { }
+}
+
+function completeLoginState(nextUser, tokenUsed) {
+  if (schoolEmailConfirmationPollTimer) {
+    window.clearInterval(schoolEmailConfirmationPollTimer);
+    schoolEmailConfirmationPollTimer = null;
+  }
+  pendingSchoolEmailConfirmationId = '';
+  pendingAutoRaffleModal = null;
+  pendingDailyBonusModal = null;
+  holdOnboardingModals = true;
+  user = nextUser;
+  profileUserForTabs = null;
+  suppressPartnerAutologinAfterLogout = false;
+  if (tokenUsed) {
+    lastAutologinTokenApplied = tokenUsed;
+  }
+  postToNative('homecrowd:login', { user: nextUser });
+  preloadMapKitForEmbed();
+  scheduleDailyVisitCheck();
+  refreshProfileUserForTabs();
+}
+
+function startSchoolEmailConfirmationPolling(confirmationId) {
+  pendingSchoolEmailConfirmationId = String(confirmationId || '').trim();
+  if (!pendingSchoolEmailConfirmationId) return;
+  if (schoolEmailConfirmationPollTimer) {
+    window.clearInterval(schoolEmailConfirmationPollTimer);
+    schoolEmailConfirmationPollTimer = null;
+  }
+  var isChecking = false;
+  schoolEmailConfirmationPollTimer = window.setInterval(function () {
+    if (isChecking || !pendingSchoolEmailConfirmationId) return;
+    isChecking = true;
+    api
+      .getSchoolAuthEmailConfirmationStatus(pendingSchoolEmailConfirmationId)
+      .then(function (statusData) {
+        if (!statusData || statusData.expired || statusData.consumed) {
+          if (schoolEmailConfirmationPollTimer) {
+            window.clearInterval(schoolEmailConfirmationPollTimer);
+            schoolEmailConfirmationPollTimer = null;
+          }
+          pendingSchoolEmailConfirmationId = '';
+          return;
+        }
+        if (!statusData.approved) {
+          return;
+        }
+        return api
+          .consumeSchoolAuthEmailConfirmation(pendingSchoolEmailConfirmationId)
+          .then(function (consumeData) {
+            if (!consumeData || !consumeData.access) return;
+            return api.fetchCurrentUser().then(function (nextUser) {
+              completeLoginState(
+                nextUser,
+                pendingSchoolAuthContext && pendingSchoolAuthContext.token
+                  ? pendingSchoolAuthContext.token
+                  : '',
+              );
+              navigate('/' + initialView);
+            });
+          });
+      })
+      .catch(function () { })
+      .finally(function () {
+        isChecking = false;
+      });
+  }, 4000);
 }
 
 async function applyAutologinToken(token, view, nextSchoolId) {
@@ -125,6 +252,104 @@ async function applyAutologinToken(token, view, nextSchoolId) {
   }
 }
 
+async function resolveSchoolPartnerFlow(token, view, nextSchoolId) {
+  if (!token || suppressPartnerAutologinAfterLogout) {
+    return false;
+  }
+  try {
+    var statusResult = await api.getSchoolAuthStatus(token, nextSchoolId || schoolId);
+    if (statusResult && statusResult.canAutoLogin) {
+      var authResult = await api.completeSchoolAuth({
+        token: token,
+        schoolId: nextSchoolId || schoolId || '',
+        mode: 'primary',
+        acceptedTerms: true,
+      });
+      if (authResult && authResult.access) {
+        var authUser = await api.fetchCurrentUser();
+        pendingSchoolAuthContext = {
+          token: token,
+          schoolEmail: statusResult.schoolEmail || '',
+          schoolId: statusResult.schoolId || nextSchoolId || schoolId || '',
+        };
+        completeLoginState(authUser, token);
+        navigate('/' + (view || initialView));
+        return true;
+      }
+    }
+    pendingSchoolAuthContext = {
+      token: token,
+      schoolEmail: (statusResult && statusResult.schoolEmail) || '',
+      schoolId: (statusResult && statusResult.schoolId) || nextSchoolId || schoolId || '',
+    };
+    navigate('/preview');
+    return false;
+  } catch (_e) {
+    return applyAutologinToken(token, view, nextSchoolId);
+  }
+}
+
+async function handleAlternateSchoolChoice(selectedEmail) {
+  if (!pendingSchoolAuthContext || !pendingSchoolAuthContext.token) {
+    throw new Error('Missing school auth context');
+  }
+  var payload = {
+    token: pendingSchoolAuthContext.token,
+    schoolId: pendingSchoolAuthContext.schoolId || schoolId || '',
+    mode: 'alternate',
+    email: selectedEmail,
+    acceptedTerms: true,
+  };
+  var result = await api.completeSchoolAuth(payload);
+  if (result && result.requiresEmailConfirmation) {
+    startSchoolEmailConfirmationPolling(result.confirmationId);
+    return {
+      emailConfirmationSent: true,
+      message: 'Confirmation email sent. Open email, approve sign in, then return to embed.',
+    };
+  }
+  if (result && result.requiresPassword) {
+    return {
+      requiresPassword: true,
+      email: result.email || selectedEmail,
+    };
+  }
+  if (result && result.access) {
+    var nextUser = await api.fetchCurrentUser();
+    completeLoginState(nextUser, pendingSchoolAuthContext.token);
+    navigate('/' + initialView);
+    return;
+  }
+  throw new Error('Could not sign in with selected email');
+}
+
+async function handlePreviewPasswordSignIn(email, password) {
+  if (!pendingSchoolAuthContext || !pendingSchoolAuthContext.token) {
+    throw new Error('Missing school auth context');
+  }
+  var emailValue = String(email || '').trim().toLowerCase();
+  var passwordValue = String(password || '');
+  if (!emailValue || !passwordValue) {
+    throw new Error('Enter email and password');
+  }
+  await api.login(emailValue, passwordValue);
+  await api.linkSchoolEmail({
+    token: pendingSchoolAuthContext.token,
+    schoolId: pendingSchoolAuthContext.schoolId || schoolId || '',
+  });
+  var nextUser = await api.fetchCurrentUser();
+  completeLoginState(nextUser, pendingSchoolAuthContext.token);
+  navigate('/' + initialView);
+}
+
+async function handlePreviewForgotPassword(email) {
+  var emailValue = String(email || '').trim().toLowerCase();
+  if (!emailValue) {
+    throw new Error('Missing email');
+  }
+  await api.forgotPassword(emailValue);
+}
+
 // Listen for runtime config from native layer
 onNativeMessage('homecrowd:configure', function (config) {
   var configSchoolId = getSchoolIdFromConfig(config);
@@ -133,7 +358,9 @@ onNativeMessage('homecrowd:configure', function (config) {
     api.setEmbedContext({ wildfireAppId: wildfireAppId });
   }
   if (configSchoolId) {
-    applySchoolConfig(configSchoolId);
+    applySchoolConfig(configSchoolId).then(function () {
+      render(getRoute());
+    });
   }
   if (config.token) {
     if (suppressPartnerAutologinAfterLogout) {
@@ -143,9 +370,11 @@ onNativeMessage('homecrowd:configure', function (config) {
     if (configSchoolId) {
       schoolId = configSchoolId;
     }
-    applyAutologinToken(partnerToken, config.view || 'rewards', configSchoolId || schoolId).then(function (didLogin) {
+    resolveSchoolPartnerFlow(partnerToken, config.view || 'rewards', configSchoolId || schoolId).then(function (didLogin) {
       if (!didLogin) {
-        navigate('/login');
+        if (!pendingSchoolAuthContext) {
+          navigate('/login');
+        }
       }
     });
     return;
@@ -168,6 +397,21 @@ onNativeMessage('homecrowd:navigate', function (data) {
       return;
     }
     navigate('/' + data.view);
+  }
+});
+
+window.addEventListener('homecrowd:walkthrough-complete', function () {
+  holdOnboardingModals = false;
+  flushPendingAutoRaffleModal();
+  flushPendingDailyBonusModal();
+});
+
+window.addEventListener('homecrowd:home-ready', function (event) {
+  var detail = event && event.detail ? event.detail : {};
+  if (!detail.showInstructionOverlay) {
+    holdOnboardingModals = false;
+    flushPendingAutoRaffleModal();
+    flushPendingDailyBonusModal();
   }
 });
 
@@ -249,6 +493,11 @@ function showDailyBonus(dailyBonus) {
     console.log('🎯 [embed] No daily bonus in response');
     return;
   }
+  if (holdOnboardingModals) {
+    console.log('🎯 [embed] Deferring daily bonus until onboarding complete');
+    pendingDailyBonusModal = dailyBonus;
+    return;
+  }
   if (showDailyLoginBonusModal(dailyBonus)) {
     console.log('🎯 [embed] Showing daily bonus modal with raffle list');
     return;
@@ -261,6 +510,20 @@ function showRaffleEntryModal(count, titles) {
     ? "You've been entered into: <strong>" + titles.join(', ') + '</strong>!'
     : "You've been entered into " + count + ' raffle' + (count > 1 ? 's' : '') + '!';
   showBonusModal("You're In!", msg);
+}
+
+function flushPendingAutoRaffleModal() {
+  if (!pendingAutoRaffleModal) return;
+  var payload = pendingAutoRaffleModal;
+  pendingAutoRaffleModal = null;
+  showRaffleEntryModal(payload.count, payload.titles);
+}
+
+function flushPendingDailyBonusModal() {
+  if (!pendingDailyBonusModal) return;
+  var payload = pendingDailyBonusModal;
+  pendingDailyBonusModal = null;
+  showDailyBonus(payload);
 }
 
 async function checkDailyVisit() {
@@ -346,7 +609,7 @@ async function init() {
   }
   await applySchoolConfig(schoolId);
   if (partnerToken) {
-    await applyAutologinToken(partnerToken, initialView, schoolId);
+    await resolveSchoolPartnerFlow(partnerToken, initialView, schoolId);
   } else if (api.isAuthenticated()) {
     try {
       user = await api.fetchCurrentUser();
@@ -374,6 +637,17 @@ async function init() {
     user = null;
     profileUserForTabs = null;
     lastAutologinTokenApplied = '';
+    if (schoolEmailConfirmationPollTimer) {
+      window.clearInterval(schoolEmailConfirmationPollTimer);
+      schoolEmailConfirmationPollTimer = null;
+    }
+    pendingSchoolEmailConfirmationId = '';
+    pendingAutoRaffleModal = null;
+    pendingDailyBonusModal = null;
+    holdOnboardingModals = true;
+    clearPendingPasswordLink();
+    clearPendingLoginEmail();
+    pendingSchoolAuthContext = null;
     api.clearTokens();
     postToNative('homecrowd:logout');
     navigate('/login');
@@ -382,9 +656,13 @@ async function init() {
   startRouter();
   setupDailyVisitForegroundCheck();
 
-  if (!user && getRoute() !== '/login') {
-    navigate('/login');
-  } else if (user && (getRoute() === '/login' || getRoute() === '/')) {
+  if (!user && getRoute() !== '/login' && getRoute() !== '/preview') {
+    if (partnerToken) {
+      navigate('/preview');
+    } else {
+      navigate('/login');
+    }
+  } else if (user && (getRoute() === '/login' || getRoute() === '/' || getRoute() === '/preview')) {
     navigate('/' + initialView);
   }
 
@@ -525,40 +803,58 @@ function cleanupOverlays() {
 function render(route) {
   var routeEpoch = nextNavEpoch();
   removeRewardsPointsOverlay();
-  if (!user && route !== '/login') {
-    navigate('/login');
+  if (!user && route !== '/login' && route !== '/preview') {
+    navigate(partnerToken ? '/preview' : '/login');
     return;
   }
-  if (user && route === '/login') {
+  if (user && (route === '/login' || route === '/preview')) {
     navigate('/' + initialView);
     return;
   }
 
   if (route === '/login') {
+    var pendingLink = readPendingPasswordLink();
+    var pendingEmail = readPendingLoginEmail();
+    var noticeText = pendingLink
+      ? 'Account exists. Enter password to continue.'
+      : '';
     appEl.innerHTML = '';
     renderLogin(appEl, async function (u, loginMeta) {
       var assignSchoolId =
         (loginMeta && loginMeta.signupSchoolId
           ? String(loginMeta.signupSchoolId).trim()
           : '') || schoolId;
+      var linkData = readPendingPasswordLink();
+      if (linkData && linkData.token) {
+        try {
+          await api.linkSchoolEmail({
+            token: linkData.token,
+            schoolId: linkData.schoolId || schoolId || '',
+          });
+          clearPendingPasswordLink();
+          clearPendingLoginEmail();
+        } catch (_e) { }
+      }
       if (assignSchoolId) {
         try {
           var assignResult = await api.assignSchool(assignSchoolId);
           u = await api.fetchCurrentUser();
           if (assignResult && assignResult.auto_raffle_entries > 0) {
-            showRaffleEntryModal(assignResult.auto_raffle_entries, assignResult.raffle_titles);
+            pendingAutoRaffleModal = {
+              count: assignResult.auto_raffle_entries,
+              titles: assignResult.raffle_titles,
+            };
           }
         } catch (e) { }
       }
-      user = u;
-      profileUserForTabs = null;
-      suppressPartnerAutologinAfterLogout = false;
-      postToNative('homecrowd:login', { user: u });
-      preloadMapKitForEmbed();
-      scheduleDailyVisitCheck();
-      refreshProfileUserForTabs();
+      completeLoginState(u);
       navigate('/' + initialView);
-    }, { schoolId: schoolId });
+    }, {
+      schoolId: schoolId,
+      initialEmail: pendingEmail,
+      lockEmail: !!pendingLink,
+      notice: noticeText,
+    });
     return;
   }
 
@@ -743,6 +1039,42 @@ function render(route) {
     renderBrowserExtension(contentEl);
   } else if (pathOnly === '/support') {
     renderSupport(contentEl);
+  } else if (pathOnly === '/preview') {
+    var previewCtx = pendingSchoolAuthContext || {
+      token: partnerToken || '',
+      schoolEmail: '',
+      schoolId: schoolId || '',
+    };
+    pendingSchoolAuthContext = previewCtx;
+    renderPreviewScreen(contentEl, {
+      schoolEmail: previewCtx.schoolEmail || '',
+      onPrimaryChoice: async function () {
+        if (!previewCtx.token) {
+          throw new Error('Missing school token');
+        }
+        var authResult = await api.completeSchoolAuth({
+          token: previewCtx.token,
+          schoolId: previewCtx.schoolId || schoolId || '',
+          mode: 'primary',
+          acceptedTerms: true,
+        });
+        if (!authResult || !authResult.access) {
+          throw new Error('Could not sign in with school email');
+        }
+        var nextUser = await api.fetchCurrentUser();
+        completeLoginState(nextUser, previewCtx.token);
+        navigate('/' + initialView);
+      },
+      onAlternateChoice: function (email) {
+        return handleAlternateSchoolChoice(email);
+      },
+      onPasswordChoice: function (email, password) {
+        return handlePreviewPasswordSignIn(email, password);
+      },
+      onForgotPassword: function (email) {
+        return handlePreviewForgotPassword(email);
+      },
+    });
   } else if (pathOnly === '/offers') {
     renderOffers(contentEl);
   } else {
@@ -764,34 +1096,30 @@ function renderLayout(route) {
     /^\/rewards\/[^/]+$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/confirm$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/thanks$/.test(pathOnly);
-  var isRewardsListPage = pathOnly === '/rewards';
   var isOfferDetailPage = /^\/offers\/[^/]+$/.test(pathOnly);
   var isContentDetailPage = /^\/content\/[^/]+$/.test(pathOnly);
-  var hideTabBar = isRewardDetailPage || isOfferDetailPage || isContentDetailPage;
+  var isPreviewPage = pathOnly === '/preview';
+  var hideTabBar = isRewardDetailPage || isOfferDetailPage || isContentDetailPage || isPreviewPage;
   var flushTopContentClass =
     pathOnly === '/invite-friend' || pathOnly === '/support' || pathOnly === '/cards/link'
       ? ' hc-content--flush-top'
       : '';
 
   var tabBarHtml = hideTabBar ? '' : buildBottomTabBarHtml(pathOnly, contentTabEnabled);
-
   appEl.innerHTML =
     '<div class="hc-embed">\
-      <div class="hc-sticky-top' +
-    (isRewardDetailPage ? ' hc-sticky-top--reward-detail' : '') +
-    '">\
-        <div class="hc-header">\
-          <img src="' +
-    logoUrl +
-    '" alt="Homecrowd" class="hc-header-logo" />\
-        </div>\
-      </div>\
-      <main id="hc-content" class="hc-content' +
+      <main class="hc-content' +
     (isRewardDetailPage ? ' hc-content--reward-detail' : '') +
-    (isRewardsListPage ? ' hc-content--rewards-list' : '') +
     (hideTabBar ? '' : ' hc-content--with-tab-bar') +
     flushTopContentClass +
-    '"></main>' +
+    '">\
+        <div class="hc-content-brand">\
+          ' +
+    renderBrandLockup() +
+    '\
+        </div>\
+        <div id="hc-content"></div>\
+      </main>' +
     tabBarHtml +
     '</div>';
 

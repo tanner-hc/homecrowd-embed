@@ -78,6 +78,39 @@ function getRedemptionType(product) {
   return String(product.redemption_type || product.redemptionType || '').toLowerCase();
 }
 
+function computeMaxEntryQuantity(product, rt, payWithStripe, useRaffleTicket, availableTickets, pointsSummaryPts) {
+  if (rt !== 'raffle' || payWithStripe) {
+    return 1;
+  }
+
+  var ptsCost = product.points_cost != null ? product.points_cost : product.pointsCost || 0;
+  var ri = product.raffle_info || product.raffleInfo;
+  var userEntries = (ri && ri.user_entries) || 0;
+  var maxPerUser = ri && ri.max_entries_per_user;
+  var maxTotal = ri && ri.max_total_entries;
+  var totalEntries = (ri && ri.total_entries) || 0;
+  var limits = [];
+
+  if (useRaffleTicket) {
+    limits.push(availableTickets);
+  } else if (ptsCost > 0) {
+    limits.push(Math.floor(pointsSummaryPts / ptsCost));
+  }
+
+  if (maxPerUser) {
+    limits.push(maxPerUser - userEntries);
+  }
+  if (maxTotal) {
+    limits.push(maxTotal - totalEntries);
+  }
+
+  if (limits.length === 0) {
+    return 1;
+  }
+
+  return Math.max(0, Math.min.apply(null, limits));
+}
+
 export function renderRedemptionConfirmation(container, rewardId) {
   var state = readState();
   if (
@@ -120,10 +153,18 @@ export function renderRedemptionConfirmation(container, rewardId) {
       '" alt="" /></div>'
     : '<div class="hc-rc-image-ph"><span class="hc-rc-image-ph-text">No Image</span></div>';
 
-  var showTicketQty = rt === 'raffle' && useRaffleTicket && availableTickets > 1;
+  var ptsCost = product.points_cost != null ? product.points_cost : product.pointsCost || 0;
+  var maxEntryQuantity = computeMaxEntryQuantity(
+    product,
+    rt,
+    payWithStripe,
+    useRaffleTicket,
+    availableTickets,
+    pointsSummaryPts,
+  );
+  var showEntryQuantitySelector = rt === 'raffle' && !payWithStripe && maxEntryQuantity > 1;
 
   var costLabel = payWithStripe ? 'Price (USD):' : 'Cost:';
-  var ptsCost = product.points_cost != null ? product.points_cost : product.pointsCost || 0;
 
   var initialQty = 1;
   var costValueHtml = '';
@@ -133,9 +174,18 @@ export function renderRedemptionConfirmation(container, rewardId) {
     costValueHtml =
       '<span id="hc-rc-cost-val">' +
       initialQty +
-      ' ticket' +
-      (initialQty !== 1 ? 's' : '') +
+      ' entry' +
+      (initialQty !== 1 ? ' entries' : '') +
       '</span>';
+  } else if (rt === 'raffle' && showEntryQuantitySelector) {
+    costValueHtml =
+      '<span id="hc-rc-cost-val">' +
+      initialQty +
+      ' entry' +
+      (initialQty !== 1 ? ' entries' : '') +
+      ' (' +
+      formatDisplayNumber(ptsCost * initialQty) +
+      ' pts)</span>';
   } else {
     costValueHtml = formatDisplayNumber(ptsCost) + ' pts';
   }
@@ -159,9 +209,14 @@ export function renderRedemptionConfirmation(container, rewardId) {
       remVal =
         '<span id="hc-rc-remaining-val">' +
         (availableTickets - initialQty) +
-        ' ticket' +
-        (availableTickets - initialQty !== 1 ? 's' : '') +
+        ' entry' +
+        (availableTickets - initialQty !== 1 ? ' entries' : '') +
         '</span>';
+    } else if (rt === 'raffle' && showEntryQuantitySelector) {
+      remVal =
+        '<span id="hc-rc-remaining-val">' +
+        formatDisplayNumber(Math.max(0, pointsSummaryPts - ptsCost * initialQty)) +
+        ' pts</span>';
     } else {
       remVal = formatDisplayNumber(Math.max(0, pointsSummaryPts - ptsCost)) + ' pts';
     }
@@ -176,17 +231,17 @@ export function renderRedemptionConfirmation(container, rewardId) {
   }
 
   var qtyHtml = '';
-  if (showTicketQty) {
+  if (showEntryQuantitySelector) {
     qtyHtml =
       '<div class="hc-rc-qty">' +
-      '<div class="hc-rc-qty-label">Tickets to use</div>' +
+      '<div class="hc-rc-qty-label">Entries to buy</div>' +
       '<div class="hc-rc-qty-row">' +
       '<button type="button" class="hc-rc-qty-btn" id="hc-rc-qty-minus" aria-label="Decrease">−</button>' +
       '<span class="hc-rc-qty-num" id="hc-rc-qty-val">1</span>' +
       '<button type="button" class="hc-rc-qty-btn" id="hc-rc-qty-plus" aria-label="Increase">+</button>' +
       '</div>' +
       '<div class="hc-rc-qty-avail">' +
-      availableTickets +
+      maxEntryQuantity +
       ' available</div>' +
       '</div>';
   }
@@ -198,13 +253,24 @@ export function renderRedemptionConfirmation(container, rewardId) {
   } else if (rt === 'raffle') {
     confirmText = raffleDrawingDatePassed
       ? 'This raffle has ended and is no longer accepting entries.'
-      : 'Are you sure you want to enter this raffle? You will be entered into the drawing and your entry cannot be undone.';
+      : showEntryQuantitySelector
+        ? 'Are you sure you want to buy entries for this raffle? Your points will be spent and entries cannot be undone.'
+        : 'Are you sure you want to enter this raffle? You will be entered into the drawing and your entry cannot be undone.';
   } else {
     confirmText = 'Are you sure you want to redeem this item? This action cannot be undone.';
   }
 
+  var totalPointsCost =
+    rt === 'raffle' && !useRaffleTicket ? ptsCost * initialQty : ptsCost;
+  var hasInsufficientPoints =
+    !payWithStripe && !useRaffleTicket && pointsSummaryPts < totalPointsCost;
   var confirmDisabled =
-    !payWithStripe && rt === 'raffle' && raffleDrawingDatePassed;
+    hasInsufficientPoints || (!payWithStripe && rt === 'raffle' && raffleDrawingDatePassed);
+  var confirmBtnLabel = hasInsufficientPoints
+    ? 'Insufficient Points'
+    : payWithStripe
+      ? 'Continue to payment'
+      : 'Confirm';
 
   var html =
     '<div class="hc-product-detail hc-redemption-confirm">' +
@@ -250,7 +316,7 @@ export function renderRedemptionConfirmation(container, rewardId) {
     '" id="hc-rc-submit"' +
     (confirmDisabled ? ' disabled' : '') +
     '>' +
-    (payWithStripe ? 'Continue to payment' : 'Confirm') +
+    escapeHtml(confirmBtnLabel) +
     '</button>' +
     '<div class="hc-rc-loading" id="hc-rc-loading" style="display:none" aria-hidden="true">' +
     '<span class="hc-rc-spinner"></span>' +
@@ -260,37 +326,87 @@ export function renderRedemptionConfirmation(container, rewardId) {
 
   var selectedQuantity = initialQty;
 
-  function syncTicketUi() {
+  function syncQuantityUi() {
     var costEl = document.getElementById('hc-rc-cost-val');
     var remEl = document.getElementById('hc-rc-remaining-val');
     if (costEl) {
-      costEl.textContent =
-        selectedQuantity + ' ticket' + (selectedQuantity !== 1 ? 's' : '');
+      if (useRaffleTicket) {
+        costEl.textContent =
+          selectedQuantity + ' entry' + (selectedQuantity !== 1 ? ' entries' : '');
+      } else {
+        costEl.textContent =
+          selectedQuantity +
+          ' entry' +
+          (selectedQuantity !== 1 ? ' entries' : '') +
+          ' (' +
+          formatDisplayNumber(ptsCost * selectedQuantity) +
+          ' pts)';
+      }
     }
     if (remEl) {
-      var rem = availableTickets - selectedQuantity;
-      remEl.textContent = rem + ' ticket' + (rem !== 1 ? 's' : '');
+      if (useRaffleTicket) {
+        var ticketRem = availableTickets - selectedQuantity;
+        remEl.textContent =
+          ticketRem + ' entry' + (ticketRem !== 1 ? ' entries' : '');
+      } else {
+        remEl.textContent =
+          formatDisplayNumber(Math.max(0, pointsSummaryPts - ptsCost * selectedQuantity)) +
+          ' pts';
+      }
     }
     var qv = document.getElementById('hc-rc-qty-val');
     if (qv) qv.textContent = String(selectedQuantity);
+
+    var totalCost = rt === 'raffle' && !useRaffleTicket ? ptsCost * selectedQuantity : ptsCost;
+    var insufficient = !payWithStripe && !useRaffleTicket && pointsSummaryPts < totalCost;
+    var drawingBlocked = !payWithStripe && rt === 'raffle' && raffleDrawingDatePassed;
+    if (submitBtn) {
+      submitBtn.disabled = insufficient || drawingBlocked;
+      submitBtn.textContent = insufficient
+        ? 'Insufficient Points'
+        : payWithStripe
+          ? 'Continue to payment'
+          : 'Confirm';
+      if (insufficient || drawingBlocked) {
+        submitBtn.classList.add('hc-rc-confirm--disabled');
+      } else {
+        submitBtn.classList.remove('hc-rc-confirm--disabled');
+      }
+    }
+
+    var confirmTextEl = document.querySelector('.hc-rc-confirm-text');
+    if (confirmTextEl && rt === 'raffle' && !payWithStripe) {
+      if (raffleDrawingDatePassed) {
+        confirmTextEl.textContent =
+          'This raffle has ended and is no longer accepting entries.';
+      } else if (selectedQuantity > 1) {
+        confirmTextEl.textContent =
+          'Are you sure you want to buy ' +
+          selectedQuantity +
+          ' entries for this raffle? Your points will be spent and entries cannot be undone.';
+      } else {
+        confirmTextEl.textContent =
+          'Are you sure you want to enter this raffle? You will be entered into the drawing and your entry cannot be undone.';
+      }
+    }
   }
 
   var minus = document.getElementById('hc-rc-qty-minus');
   var plus = document.getElementById('hc-rc-qty-plus');
-  if (minus && plus && showTicketQty) {
+  if (minus && plus && showEntryQuantitySelector) {
     minus.addEventListener('click', function () {
       if (selectedQuantity <= 1) return;
       selectedQuantity -= 1;
       minus.disabled = selectedQuantity <= 1;
-      plus.disabled = selectedQuantity >= availableTickets;
-      syncTicketUi();
+      plus.disabled = selectedQuantity >= maxEntryQuantity;
+      syncQuantityUi();
     });
     plus.addEventListener('click', function () {
-      if (selectedQuantity >= availableTickets) return;
+      if (selectedQuantity >= maxEntryQuantity) return;
       selectedQuantity += 1;
       minus.disabled = selectedQuantity <= 1;
-      plus.disabled = selectedQuantity >= availableTickets;
-      syncTicketUi();
+      plus.disabled = selectedQuantity >= maxEntryQuantity;
+      syncQuantityUi();
     });
     minus.disabled = true;
   }
@@ -312,6 +428,8 @@ export function renderRedemptionConfirmation(container, rewardId) {
 
   var submitBtn = document.getElementById('hc-rc-submit');
   var loadingEl = document.getElementById('hc-rc-loading');
+
+  syncQuantityUi();
 
   submitBtn.addEventListener('click', async function () {
     if (submitBtn.disabled) return;
@@ -342,15 +460,42 @@ export function renderRedemptionConfirmation(container, rewardId) {
         return;
       }
 
+      var entryTotalCost =
+        rt === 'raffle' && !useRaffleTicket ? ptsCost * selectedQuantity : ptsCost;
+      if (!payWithStripe && !useRaffleTicket && pointsSummaryPts < entryTotalCost) {
+        showError(
+          'You need ' +
+            formatDisplayNumber(entryTotalCost) +
+            ' points but only have ' +
+            formatDisplayNumber(pointsSummaryPts) +
+            ' available.',
+        );
+        submitBtn.disabled = false;
+        loadingEl.style.display = 'none';
+        syncQuantityUi();
+        return;
+      }
+
       var ticketsUsed = 0;
+      var entriesUsed = 0;
       if (rt === 'raffle' && useRaffleTicket) {
-        var n = showTicketQty ? selectedQuantity : 1;
+        var n = showEntryQuantitySelector ? selectedQuantity : 1;
         ticketsUsed = n;
+        entriesUsed = n;
         for (var i = 0; i < n; i++) {
           await api.createRedemptionMain({
             reward: product.id,
             points_spent: 0,
             use_raffle_ticket: true,
+          });
+        }
+      } else if (rt === 'raffle') {
+        entriesUsed = selectedQuantity;
+        for (var j = 0; j < selectedQuantity; j++) {
+          await api.createRedemptionMain({
+            reward: product.id,
+            points_spent: ptsCost,
+            use_raffle_ticket: false,
           });
         }
       } else {
@@ -363,7 +508,8 @@ export function renderRedemptionConfirmation(container, rewardId) {
 
       clearRedemptionConfirmState();
       navigateToRedemptionThanks(product, {
-        pointsSpent: rt === 'raffle' && useRaffleTicket ? 0 : ptsCost,
+        pointsSpent: rt === 'raffle' && !useRaffleTicket ? entryTotalCost : useRaffleTicket ? 0 : ptsCost,
+        entriesUsed: rt === 'raffle' ? entriesUsed : 0,
         ticketsUsed: ticketsUsed,
         isAuctionBid: false,
         paidWithStripe: false,
@@ -373,6 +519,7 @@ export function renderRedemptionConfirmation(container, rewardId) {
       showError(msg);
       submitBtn.disabled = false;
       loadingEl.style.display = 'none';
+      syncQuantityUi();
     }
   });
 }
