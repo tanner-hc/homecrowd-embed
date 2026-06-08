@@ -270,7 +270,11 @@ function buildRewardCardHtml(item, section, cardLinkStatus, isEarlyRelease, getI
         escapeAttr(item.redemption_type === 'overall' ? 'overall' : 'weekly') +
         '"' +
         '>' +
-        escapeHtml(item.weeklyCountdownLabel || item.description || 'Weekly reward') +
+        escapeHtml(
+          item.weeklyCountdownLabel ||
+            item.description ||
+            (item.redemption_type === 'overall' ? 'Overall Leaderboard' : 'Weekly Leaderboard'),
+        ) +
         '</span>';
     } else if (item.redemption_type === 'card') {
       if (cashPriceLabel) {
@@ -325,7 +329,7 @@ function buildWeeklyRewardListItem(weeklyReward) {
   if (!weeklyReward || !weeklyReward.rewardId) return null;
   return {
     id: weeklyReward.rewardId,
-    title: weeklyReward.title || 'Weekly Reward',
+    title: weeklyReward.title || 'Weekly Leaderboard',
     description: weeklyReward.subtitle || '',
     points_cost: 0,
     cash_price_cents: null,
@@ -346,7 +350,7 @@ function buildOverallRewardListItem(overallReward) {
   if (!overallReward || !overallReward.rewardId) return null;
   return {
     id: overallReward.rewardId,
-    title: overallReward.title || 'Overall Reward',
+    title: overallReward.title || 'Overall Leaderboard',
     description: overallReward.subtitle || '',
     points_cost: 0,
     cash_price_cents: null,
@@ -510,12 +514,12 @@ async function loadRewards(container, routeEpoch) {
     if (weeklyRewardItem) {
       html += '<div class="hc-rewards-section hc-rewards-weekly-section">';
       html += '<div class="hc-section-header hc-rewards-section-header">';
-      html += '<div class="hc-section-title">Weekly Reward</div>';
+      html += '<div class="hc-section-title">Weekly Leaderboard</div>';
       html += '</div>';
       html += '<div class="hc-rewards-list">';
       html += buildRewardCardHtml(
         weeklyRewardItem,
-        { title: 'Weekly Reward', isPast: false },
+        { title: 'Weekly Leaderboard', isPast: false },
         cardLinkStatus,
         isEarlyRelease,
         getImageUrl,
@@ -527,12 +531,12 @@ async function loadRewards(container, routeEpoch) {
     if (overallRewardItem) {
       html += '<div class="hc-rewards-section hc-rewards-overall-section">';
       html += '<div class="hc-section-header hc-rewards-section-header">';
-      html += '<div class="hc-section-title">Overall Reward</div>';
+      html += '<div class="hc-section-title">Overall Leaderboard</div>';
       html += '</div>';
       html += '<div class="hc-rewards-list">';
       html += buildRewardCardHtml(
         overallRewardItem,
-        { title: 'Overall Reward', isPast: false },
+        { title: 'Overall Leaderboard', isPast: false },
         cardLinkStatus,
         isEarlyRelease,
         getImageUrl,

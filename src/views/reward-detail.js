@@ -579,7 +579,7 @@ function buildWeeklyDetailHtml(weeklyReward) {
     html += '<div class="hc-weekly-detail-card">';
     html +=
       '<div class="hc-weekly-detail-title">' +
-      escapeHtml(isOverall ? 'Overall leaderboard' : 'Weekly leaderboard') +
+      escapeHtml(isOverall ? 'Overall Leaderboard' : 'Weekly Leaderboard') +
       '</div>';
     html += buildWeeklyLeaderboardHtml(weeklyReward.rows, 10);
     html += '</div>';
