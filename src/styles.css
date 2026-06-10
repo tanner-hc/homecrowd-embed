@@ -9736,3 +9736,159 @@ body {
   font-size: 14px;
   line-height: 1.4;
 }
+
+.hc-school-selection-shell {
+  min-height: 100%;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #f8f9fa;
+}
+
+.hc-school-selection-fixed {
+  flex: 0 0 auto;
+  padding: 20px 24px 10px;
+  background: #f8f9fa;
+}
+
+.hc-school-selection-heading {
+  margin-top: 20px;
+  margin-bottom: 24px;
+}
+
+.hc-school-selection-title {
+  margin: 0 0 12px;
+  color: #000;
+  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
+  font-size: 36px;
+  line-height: 1;
+}
+
+.hc-school-selection-subtitle {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.5);
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.hc-school-selection-error {
+  margin-bottom: 12px;
+}
+
+.hc-school-selection-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 24px 200px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hc-school-selection-loading,
+.hc-school-selection-empty {
+  padding: 24px 0;
+  color: #666;
+  text-align: center;
+  font-size: 16px;
+}
+
+.hc-school-selection-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.hc-school-selection-card--selected {
+  border-color: #40c4ff;
+  background: #f0f9ff;
+}
+
+.hc-school-selection-card--disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.hc-school-selection-card-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hc-school-selection-card-image {
+  flex: 0 0 auto;
+  min-width: 60px;
+  max-width: 100px;
+  height: 60px;
+  width: auto;
+  object-fit: contain;
+}
+
+.hc-school-selection-card-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hc-school-selection-card-name {
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.hc-school-selection-card-location {
+  margin-top: 4px;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.hc-school-selection-radio {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e5e5e5;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hc-school-selection-radio--selected {
+  border-color: #40c4ff;
+}
+
+.hc-school-selection-radio-inner {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #40c4ff;
+}
+
+.hc-school-selection-footer {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  flex: 0 0 auto;
+  padding: 16px 24px calc(env(safe-area-inset-bottom, 0px) + 24px);
+  background: linear-gradient(180deg, rgba(248, 249, 250, 0) 0%, #f8f9fa 28%, #f8f9fa 100%);
+}
+
+.hc-school-selection-continue-btn {
+  width: 100%;
+}

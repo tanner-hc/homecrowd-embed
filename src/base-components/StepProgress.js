@@ -24,9 +24,9 @@ export default function StepProgress(props) {
     joinClasses('hc-bc-step-progress', extra) +
     '">' +
     '<div class="hc-bc-step-progress-meta">' +
-    '<span class="hc-bc-step-progress-label">Step ' +
+    '<span class="hc-bc-step-progress-label">' +
     currentStep +
-    ' of ' +
+    ' / ' +
     totalSteps +
     '</span>' +
     '<span class="hc-bc-step-progress-pct">' +

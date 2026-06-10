@@ -36,6 +36,7 @@ import { renderActivityLog } from './views/activity-log.js';
 import { renderBrowserExtension } from './views/browser-extension.js';
 import { renderSupport } from './views/support.js';
 import { renderPreviewScreen } from './views/preview-screen.js';
+import { renderSchoolSelection } from './views/school-selection.js';
 import LoadingSpinner from './base-components/LoadingSpinner.js';
 import { preloadMapKitForEmbed } from './mapkit-embed.js';
 import houseFilledSvg from './assets/icons/house-filled.svg?raw';
@@ -662,8 +663,18 @@ async function init() {
     } else {
       navigate('/login');
     }
-  } else if (user && (getRoute() === '/login' || getRoute() === '/' || getRoute() === '/preview')) {
-    navigate('/' + initialView);
+  } else if (
+    user &&
+    (getRoute() === '/login' ||
+      getRoute() === '/' ||
+      getRoute() === '/preview' ||
+      getRoute() === '/school-selection')
+  ) {
+    if (!hasActiveSchool(user)) {
+      navigate('/school-selection');
+    } else {
+      navigate('/' + initialView);
+    }
   }
 
   // Tell the native app we're ready
@@ -676,6 +687,19 @@ async function init() {
 function routePathOnly(route) {
   var q = route.indexOf('?');
   return q >= 0 ? route.slice(0, q) : route;
+}
+
+function getActiveSchool(currentUser) {
+  if (!currentUser || typeof currentUser !== 'object') return null;
+  return currentUser.active_school || currentUser.activeSchool || null;
+}
+
+function hasActiveSchool(currentUser) {
+  var school = getActiveSchool(currentUser);
+  if (!school || typeof school !== 'object') return false;
+  var schoolIdValue =
+    school.id != null ? school.id : school.schoolId != null ? school.schoolId : school.school_id;
+  return String(schoolIdValue || '').trim() !== '';
 }
 
 function refreshProfileUserForTabs() {
@@ -807,8 +831,16 @@ function render(route) {
     navigate(partnerToken ? '/preview' : '/login');
     return;
   }
-  if (user && (route === '/login' || route === '/preview')) {
+  if (user && !hasActiveSchool(user) && route !== '/school-selection') {
+    navigate('/school-selection');
+    return;
+  }
+  if (user && hasActiveSchool(user) && route === '/school-selection') {
     navigate('/' + initialView);
+    return;
+  }
+  if (user && (route === '/login' || route === '/preview')) {
+    navigate(hasActiveSchool(user) ? '/' + initialView : '/school-selection');
     return;
   }
 
@@ -854,6 +886,19 @@ function render(route) {
       initialEmail: pendingEmail,
       lockEmail: !!pendingLink,
       notice: noticeText,
+    });
+    return;
+  }
+
+  if (route === '/school-selection') {
+    appEl.innerHTML = '';
+    renderSchoolSelection(appEl, {
+      schoolId: schoolId,
+      onComplete: async function () {
+        var nextUser = await api.fetchCurrentUser();
+        completeLoginState(nextUser);
+        navigate('/' + initialView);
+      },
     });
     return;
   }
