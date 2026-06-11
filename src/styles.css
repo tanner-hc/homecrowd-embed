@@ -3331,7 +3331,7 @@ body {
 
 /* Partner stores "How it works" 3-step strip */
 .hc-stores-howitworks {
-  margin: -8px var(--hc-spacing-lg) 24px;
+  margin: -8px var(--hc-spacing-lg) 0px;
   padding: 14px 12px;
   border-radius: 14px;
   background-color: #f3f8fd;
@@ -3432,14 +3432,15 @@ body {
 
 .hc-stores-points-banner--attached + .hc-stores-howitworks {
   margin-top: 0;
-  border-radius: 0 0 14px 14px;
+  border-radius: 0;
   padding-top: 12px;
   background-color: #f3f8fd;
 }
 
 .hc-stores-points-banner--attached + .hc-inapp-info-card {
   margin-top: 0;
-  border-radius: 0 0 14px 14px;
+  margin-bottom: 0;
+  border-radius: 0;
 }
 
 .hc-browser-extension--inline .hc-stores-points-banner--attached {
@@ -3450,12 +3451,48 @@ body {
 
 .hc-stores-points-banner--attached + .hc-be-info-card-code {
   margin-top: 0;
-  border-radius: 0 0 14px 14px;
+  margin-bottom: 0;
+  border-radius: 0;
 }
 
 .hc-stores-points-banner--attached + .hc-be-steps-card {
   margin-top: 0;
+  border-radius: 0;
+}
+
+.hc-no-extra-cost-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 var(--hc-spacing-lg) 16px;
+  padding: 12px 14px;
+  background: #f3f8fd;
   border-radius: 0 0 14px 14px;
+}
+
+.hc-no-extra-cost-footer-line {
+  flex: 1 1 0;
+  height: 1px;
+  background: rgba(26, 43, 107, 0.16);
+}
+
+.hc-no-extra-cost-footer-text {
+  font-family: 'Baikal-Bold', var(--hc-font);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.33;
+  color: #1d6dff;
+  text-align: center;
+}
+
+.hc-be-steps-footer {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.hc-browser-extension--inline .hc-no-extra-cost-footer {
+  margin-left: 0;
+  margin-right: 0;
 }
 
 /* In-app tab: reused .hc-be-info-card-code with inset margins */

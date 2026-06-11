@@ -501,7 +501,7 @@ async function loadRewards(container, routeEpoch) {
     html += '<div class="hc-screen-title">';
     html += ScreenTitle({
       title: 'Rewards',
-      subtitle: 'Auctions and raffles for exclusive perks',
+      subtitle: 'Auction and raffles for exclusive gear, access, and experiences',
     });
     html += '</div>';
 
