@@ -14,6 +14,7 @@ import SearchBar from '../base-components/SearchBar.js';
 import EmptyState from '../base-components/EmptyState.js';
 import Button from '../base-components/Button.js';
 import LinkCardBanner from '../base-components/LinkCardBanner.js';
+import NoExtraCostFooter from '../base-components/NoExtraCostFooter.js';
 import PointsPerDollarBanner from '../base-components/PointsPerDollarBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 
@@ -270,6 +271,7 @@ function buildOffersShell(activeTab) {
   html += '<div id="hc-stores-featured-top"></div>';
   html += PointsPerDollarBanner({ attached: true });
   html += buildHowItWorksHtml();
+  html += NoExtraCostFooter();
   html += '<div id="hc-stores-featured-bottom"></div>';
   html += renderLocationMapSection();
   html +=
@@ -296,6 +298,7 @@ function buildOffersShell(activeTab) {
   html += '<div id="hc-online-featured-bottom"></div>';
   html += PointsPerDollarBanner({ attached: true });
   html += buildInAppBannerHtml();
+  html += NoExtraCostFooter();
   html +=
     '<div class="hc-search-wrap">' +
     SearchBar({ id: 'hc-search-online', placeholder: 'Search', value: '' }) +

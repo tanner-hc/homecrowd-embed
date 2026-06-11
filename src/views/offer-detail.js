@@ -282,11 +282,11 @@ function getExpiryText(offer) {
 
 function getSchoolCashbackText(offer) {
   if (offer && offer.cashback != null && String(offer.cashback).trim() !== '') {
-    return String(offer.cashback) + '% cashback goes to your school';
+    return String(offer.cashback) + '% of you’re purchase goes to your school';
   }
   if (offer && offer.reward && offer.reward.value != null && String(offer.reward.value).trim() !== '') {
-    return String(offer.reward.value) + '% cashback goes to your school';
+    return String(offer.reward.value) + '% of you’re purchase goes to your school';
   }
-  return '5% cashback goes to your school';
+  return '5% of you’re purchase goes to your school';
 }
 

@@ -5,6 +5,7 @@ import NavHeader from '../base-components/NavHeader.js';
 import ScreenTitle from '../base-components/ScreenTitle.js';
 import MainButton from '../base-components/MainButton.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
+import NoExtraCostFooter from '../base-components/NoExtraCostFooter.js';
 import PointsPerDollarBanner from '../base-components/PointsPerDollarBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { showError } from '../base-components/toastApi.js';
@@ -99,6 +100,7 @@ function buildExtensionHeaderHtml(opts) {
     }
   }
   html += '</div>';
+  html += NoExtraCostFooter({ className: 'hc-be-steps-footer' });
   return html;
 }
 
