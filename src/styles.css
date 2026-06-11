@@ -81,6 +81,9 @@
   --hc-primary: #00C8FF;
   --hc-primary-dark: #00A8D6;
   --hc-primary-light: #57C6FA;
+  --hc-app-primary: #00C8FF;
+  --hc-app-action-bg: #E8F5FF;
+  --hc-gray-900: #333333;
   --hc-bg: #FFFFFF;
   --hc-bg-secondary: #F8F8F8;
   --hc-card: #FFFFFF;
@@ -9183,6 +9186,33 @@ body {
   padding: 0 2px;
 }
 
+.hc-reward-desc--collapsed {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hc-reward-desc-toggle {
+  display: block;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hc-app-primary, #00C8FF);
+  cursor: pointer;
+  font-family: var(--hc-font);
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.hc-reward-desc-wrap:has(.hc-weekly-lb-reward-desc) .hc-reward-desc-toggle {
+  text-align: center;
+  width: 100%;
+}
+
 .hc-weekly-lb-empty {
   margin: 0;
   font-size: 15px;
@@ -9313,22 +9343,342 @@ body {
   display: block;
 }
 
-.hc-weekly-detail-section {
+.hc-weekly-screen {
+  min-height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin: 18px 20px 0;
+  background: #ffffff;
 }
 
-.hc-weekly-countdown-badge {
-  margin-top: 4px;
-  border-radius: 14px;
-  padding: 12px 14px;
-  background: #f3f7ff;
-  border: 1px solid #dce8ff;
+.hc-weekly-screen-header {
+  flex-shrink: 0;
+  background: #ffffff;
+}
+
+.hc-weekly-screen-header .hc-bc-nav-header {
+  padding-top: 0;
+}
+
+.hc-weekly-screen-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hc-weekly-screen-inner {
+  padding: 0 14px 32px;
+  box-sizing: border-box;
+}
+
+.hc-weekly-screen-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.hc-weekly-screen-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 34px;
+  padding: 20px 18px;
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #f0f0f0;
+}
+
+.hc-weekly-screen-terms-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: #666666;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.hc-weekly-screen-terms-btn-icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.hc-weekly-screen-image-frame {
+  width: 138px;
+  min-width: 138px;
+  height: 138px;
+  border-radius: 12px;
+  background: #fafafa;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.hc-weekly-screen-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hc-weekly-screen-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.hc-weekly-screen-copy--has-terms .hc-weekly-screen-title {
+  padding-right: 28px;
+}
+
+.hc-weekly-screen-title {
+  font-size: 17px;
+  line-height: 23px;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 12px;
+}
+
+.hc-weekly-screen-desc {
+  font-size: 13.5px;
+  line-height: 21px;
+  font-weight: 400;
+  color: #666666;
+}
+
+.hc-weekly-screen-how-btn,
+.hc-weekly-info-modal-close-btn {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 50px;
+  border-radius: 25px;
+  border: 1px solid var(--hc-app-primary, #00C8FF);
+  background: var(--hc-app-action-bg, #E8F5FF);
+  color: var(--hc-app-primary, #00C8FF);
+  padding: 12px 18px;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: var(--hc-font);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.hc-weekly-screen-how-btn {
+  margin-top: 18px;
+}
+
+.hc-weekly-info-modal-close-btn {
+  margin-top: 18px;
+  min-height: 52px;
+  border-radius: 26px;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.hc-weekly-screen-section {
+  flex: 1;
+  min-height: 0;
+}
+
+.hc-weekly-screen-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.hc-weekly-screen-section-title-group {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 7px;
+}
+
+.hc-weekly-screen-section-icon {
+  width: 23px;
+  height: 23px;
+  color: #000000;
+  flex-shrink: 0;
+}
+
+.hc-weekly-screen-section-title {
+  font-size: 15.5px;
+  line-height: 20px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.hc-weekly-screen-section-meta {
+  font-size: 13.5px;
+  line-height: 18px;
+  font-weight: 400;
+  color: #666666;
+  text-align: right;
+}
+
+.hc-weekly-screen-empty {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 400;
+  color: #666666;
+  text-align: center;
+  padding: 24px 0;
+}
+
+.hc-weekly-screen-table {
+  width: 100%;
+}
+
+.hc-weekly-screen-table-head,
+.hc-weekly-screen-table-row {
+  display: flex;
+  align-items: center;
+}
+
+.hc-weekly-screen-table-head {
+  padding: 0 18px 14px;
+}
+
+.hc-weekly-screen-table-body {
+  width: 100%;
+}
+
+.hc-weekly-screen-table-row {
+  min-height: 70px;
+  padding: 0 18px;
+  border-top: 1px solid #e6e6e6;
+  background: #ffffff;
+}
+
+.hc-weekly-screen-table-row--top {
+  background: #f5faff;
+}
+
+.hc-weekly-screen-table-row--last {
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.hc-weekly-screen-table-cell {
+  min-width: 0;
+  font-family: var(--hc-font);
+}
+
+.hc-weekly-screen-table-head .hc-weekly-screen-table-cell {
+  font-size: 11.5px;
+  line-height: 14px;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: #909090;
+}
+
+.hc-weekly-screen-table-cell--rank {
+  width: 54px;
+  flex-shrink: 0;
+  font-size: 15.5px;
+  line-height: 19px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.hc-weekly-screen-table-cell--name {
+  flex: 1;
+  padding-right: 12px;
+  font-size: 15.5px;
+  line-height: 19px;
+  font-weight: 400;
+  color: #000000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-weekly-screen-table-cell--points {
+  width: 68px;
+  flex-shrink: 0;
+  font-size: 15.5px;
+  line-height: 19px;
+  font-weight: 700;
+  color: #000000;
+  text-align: right;
+}
+
+.hc-weekly-info-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+  display: none;
+}
+
+.hc-weekly-info-modal.is-visible {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.hc-weekly-info-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.hc-weekly-info-modal-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-height: 78vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 22px 18px 18px;
+  box-sizing: border-box;
+}
+
+.hc-weekly-info-modal-heading {
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 700;
+  color: #000000;
+  text-align: center;
+  font-family: var(--hc-font);
+}
+
+.hc-weekly-info-modal-title {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: #666666;
+  text-align: center;
+  font-family: var(--hc-font);
+}
+
+.hc-weekly-info-modal-body {
+  margin-top: 18px;
+  max-height: 320px;
+  overflow-y: auto;
+  font-size: 15px;
+  line-height: 24px;
+  font-weight: 400;
+  color: var(--hc-gray-900, #333333);
+  text-align: left;
+  font-family: var(--hc-font);
+  padding-bottom: 8px;
 }
 
 .hc-weekly-countdown-text {
@@ -9337,55 +9687,6 @@ body {
   font-weight: 700;
   color: #111827;
   text-align: center;
-}
-
-.hc-weekly-winner-badge-inline {
-  margin-top: 4px;
-  border-radius: 14px;
-  padding: 12px 14px;
-  background: #f3f7ff;
-  border: 1px solid #dce8ff;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.hc-weekly-winner-inline-title {
-  font-size: 12px;
-  font-weight: 300;
-  color: #546e7a;
-  margin-bottom: 4px;
-}
-
-.hc-weekly-winner-inline-name {
-  font-size: 18px;
-  line-height: 22px;
-  font-weight: 700;
-  color: #111827;
-  text-align: center;
-}
-
-.hc-weekly-detail-card {
-  border-radius: 12px;
-  background: transparent;
-  padding: 0;
-  margin-bottom: 0;
-}
-
-.hc-weekly-detail-title {
-  font-size: 16px;
-  line-height: 20px;
-  font-weight: 700;
-  color: #111827;
-  margin-bottom: 10px;
-}
-
-.hc-weekly-detail-body {
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 300;
-  color: #546e7a;
 }
 
 .hc-weekly-detail-leaderboard {
@@ -9542,11 +9843,14 @@ body {
   min-height: 48px;
   border: 0;
   border-radius: 999px;
-  background: #00c8ff;
-  color: #000;
+  background: var(--hc-app-primary, #00C8FF);
+  color: #000000;
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
+  font-family: var(--hc-font);
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 @media (max-width: 360px) {

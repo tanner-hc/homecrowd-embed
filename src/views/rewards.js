@@ -12,8 +12,8 @@ import { getNavEpoch } from '../router.js';
 import {
   buildOverallRewardContext,
   buildWeeklyCountdownLabel,
+  buildWeeklyRewardHomeTileHtml,
   buildWeeklyRewardContext,
-  openWeeklyLeaderboardModalFromHome,
 } from '../weekly-reward.js';
 import { getRewardEndDate, getRewardStartDate, isRewardBeforeStart } from '../rewardStartLock.js';
 var weeklyCountdownCleanup = null;
@@ -405,6 +405,16 @@ function lookupRewardForClick(rewardIdStr, formattedRewards, weeklyRewardItem, o
   };
 }
 
+function buildRewardDetailHash(rewardItem, source) {
+  if (!rewardItem || rewardItem.id == null) return '#/rewards';
+  var hash = '#/rewards/' + encodeURIComponent(rewardItem.id);
+  var params = [];
+  if (source) params.push('from=' + encodeURIComponent(source));
+  if (rewardItem.redemption_type === 'weekly') params.push('weekly=1');
+  if (rewardItem.redemption_type === 'overall') params.push('overall=1');
+  return params.length ? hash + '?' + params.join('&') : hash;
+}
+
 function attachWeeklyCountdown(container) {
   if (weeklyCountdownCleanup) {
     weeklyCountdownCleanup();
@@ -511,37 +521,20 @@ async function loadRewards(container, routeEpoch) {
 
     var weeklyRewardItem = weeklyReward ? buildWeeklyRewardListItem(weeklyReward) : null;
     var overallRewardItem = overallReward ? buildOverallRewardListItem(overallReward) : null;
-    if (weeklyRewardItem) {
-      html += '<div class="hc-rewards-section hc-rewards-weekly-section">';
-      html += '<div class="hc-section-header hc-rewards-section-header">';
-      html += '<div class="hc-section-title">Weekly Leaderboard</div>';
-      html += '</div>';
-      html += '<div class="hc-rewards-list">';
-      html += buildRewardCardHtml(
-        weeklyRewardItem,
-        { title: 'Weekly Leaderboard', isPast: false },
-        cardLinkStatus,
-        isEarlyRelease,
-        getImageUrl,
-      );
-      html += '</div>';
-      html += '</div>';
-    }
-
-    if (overallRewardItem) {
-      html += '<div class="hc-rewards-section hc-rewards-overall-section">';
-      html += '<div class="hc-section-header hc-rewards-section-header">';
-      html += '<div class="hc-section-title">Overall Leaderboard</div>';
-      html += '</div>';
-      html += '<div class="hc-rewards-list">';
-      html += buildRewardCardHtml(
-        overallRewardItem,
-        { title: 'Overall Leaderboard', isPast: false },
-        cardLinkStatus,
-        isEarlyRelease,
-        getImageUrl,
-      );
-      html += '</div>';
+    if (weeklyRewardItem || overallRewardItem) {
+      html += '<div class="hc-home-reward-tiles-row">';
+      if (weeklyRewardItem) {
+        html += buildWeeklyRewardHomeTileHtml(weeklyReward.title, weeklyReward.rewardId, {
+          eyebrow: 'Weekly reward',
+          tileKind: 'weekly',
+        });
+      }
+      if (overallRewardItem) {
+        html += buildWeeklyRewardHomeTileHtml(overallReward.title, overallReward.rewardId, {
+          eyebrow: 'Overall reward',
+          tileKind: 'overall',
+        });
+      }
       html += '</div>';
     }
 
@@ -612,39 +605,61 @@ async function loadRewards(container, routeEpoch) {
     attachWeeklyCountdown(container);
 
     container._hcLeaderboardRes = leaderboardRes || null;
+    var weeklyLbBtn = container.querySelector('[data-home-lb-tile="weekly"]');
+    if (weeklyLbBtn) {
+      weeklyLbBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (weeklyReward) {
+          var clickedWeeklyReward = lookupRewardForClick(
+            weeklyReward.rewardId,
+            formattedRewards,
+            weeklyRewardItem,
+            overallRewardItem,
+          );
+          analytics.trackEmbedRewardClick(
+            clickedWeeklyReward,
+            currentUser,
+          );
+          window.location.hash = buildRewardDetailHash(clickedWeeklyReward, 'rewards');
+        }
+      });
+    }
+    var overallLbBtn = container.querySelector('[data-home-lb-tile="overall"]');
+    if (overallLbBtn) {
+      overallLbBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (overallReward) {
+          var clickedOverallReward = lookupRewardForClick(
+            overallReward.rewardId,
+            formattedRewards,
+            weeklyRewardItem,
+            overallRewardItem,
+          );
+          analytics.trackEmbedRewardClick(
+            clickedOverallReward,
+            currentUser,
+          );
+          window.location.hash = buildRewardDetailHash(clickedOverallReward, 'rewards');
+        }
+      });
+    }
     container.onclick = function (e) {
-      var weeklyRewardCard = e.target.closest('.hc-rewards-weekly-section [data-reward-id]');
-      if (weeklyRewardCard) {
-        var weeklyRewardId = weeklyRewardCard.getAttribute('data-reward-id');
-        if (weeklyRewardId) {
-          analytics.trackEmbedRewardClick(
-            lookupRewardForClick(weeklyRewardId, formattedRewards, weeklyRewardItem, overallRewardItem),
-            currentUser,
-          );
-          openWeeklyLeaderboardModalFromHome(weeklyReward, container._hcLeaderboardRes);
-        }
-        return;
-      }
-      var overallRewardCard = e.target.closest('.hc-rewards-overall-section [data-reward-id]');
-      if (overallRewardCard) {
-        var overallRewardId = overallRewardCard.getAttribute('data-reward-id');
-        if (overallRewardId) {
-          analytics.trackEmbedRewardClick(
-            lookupRewardForClick(overallRewardId, formattedRewards, weeklyRewardItem, overallRewardItem),
-            currentUser,
-          );
-          openWeeklyLeaderboardModalFromHome(overallReward, container._hcLeaderboardRes);
-        }
-        return;
-      }
       var card = e.target.closest('[data-reward-id]');
       if (!card) return;
       var rewardId = card.getAttribute('data-reward-id');
+      var clickedReward = lookupRewardForClick(
+        rewardId,
+        formattedRewards,
+        weeklyRewardItem,
+        overallRewardItem,
+      );
       analytics.trackEmbedRewardClick(
-        lookupRewardForClick(rewardId, formattedRewards, weeklyRewardItem, overallRewardItem),
+        clickedReward,
         currentUser,
       );
-      window.location.hash = '#/rewards/' + encodeURIComponent(rewardId);
+      window.location.hash = buildRewardDetailHash(clickedReward, 'rewards');
     };
 
     var linkBtn = container.querySelector('.hc-stores-link-card-btn');
