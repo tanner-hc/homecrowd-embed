@@ -18,8 +18,6 @@ import {
 } from './rewardPeriodCountdown.js';
 import { createPrizeFinalizeModalWatcher } from './prizeFinalizeModal.js';
 
-var REWARD_DESC_COLLAPSED_LINES = 3;
-
 export function buildExpandableRewardDescriptionHtml(description, className) {
   var d = String(description || '').trim();
   if (!d) return '';
@@ -28,31 +26,71 @@ export function buildExpandableRewardDescriptionHtml(description, className) {
     '<div class="hc-reward-desc-wrap">' +
     '<div class="' +
     descClass +
-    ' hc-reward-desc--collapsed" style="-webkit-line-clamp:' +
-    REWARD_DESC_COLLAPSED_LINES +
-    '">' +
+    ' hc-reward-desc--collapsed">' +
     escapeHtml(d) +
     '</div>' +
-    '<button type="button" class="hc-reward-desc-toggle" data-reward-desc-toggle="1">Read more</button>' +
+    '<button type="button" class="hc-reward-desc-toggle" data-reward-desc-toggle="1" hidden>Read more</button>' +
     '</div>'
   );
+}
+
+function rewardDescNeedsToggle(desc) {
+  if (!desc || !desc.parentNode) return false;
+  var width = desc.clientWidth;
+  if (!width) return false;
+  var clone = desc.cloneNode(true);
+  clone.removeAttribute('style');
+  clone.classList.remove('hc-reward-desc--collapsed');
+  clone.classList.add('hc-reward-desc--expanded');
+  clone.setAttribute('aria-hidden', 'true');
+  clone.style.cssText =
+    'position:absolute;left:-9999px;top:0;width:' +
+    width +
+    'px;visibility:hidden;pointer-events:none;height:auto;max-height:none;overflow:visible;display:block;';
+  desc.parentNode.appendChild(clone);
+  var fullHeight = clone.offsetHeight;
+  clone.remove();
+  return fullHeight > desc.clientHeight + 2;
+}
+
+function syncRewardDescriptionToggle(wrap) {
+  var desc = wrap.querySelector('.hc-reward-desc--collapsed, .hc-reward-desc--expanded');
+  var toggle = wrap.querySelector('[data-reward-desc-toggle]');
+  if (!desc || !toggle) return;
+  if (!desc.classList.contains('hc-reward-desc--collapsed')) return;
+  var needsToggle = rewardDescNeedsToggle(desc);
+  if (!needsToggle) {
+    desc.classList.remove('hc-reward-desc--collapsed');
+    toggle.hidden = true;
+    return;
+  }
+  toggle.hidden = false;
 }
 
 export function initRewardDescriptionToggles(root) {
   if (!root) return;
   var wraps = root.querySelectorAll('.hc-reward-desc-wrap');
   wraps.forEach(function (wrap) {
-    var desc = wrap.querySelector('.hc-reward-desc--collapsed, .hc-reward-desc--expanded');
-    var toggle = wrap.querySelector('[data-reward-desc-toggle]');
-    if (!desc || !toggle) return;
-    if (!desc.classList.contains('hc-reward-desc--collapsed')) return;
-    var needsToggle = desc.scrollHeight > desc.clientHeight + 1;
-    if (!needsToggle) {
-      desc.classList.remove('hc-reward-desc--collapsed');
-      toggle.style.display = 'none';
-      return;
+    var scheduleSync = function () {
+      var run = function () {
+        syncRewardDescriptionToggle(wrap);
+      };
+      if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(function () {
+          window.requestAnimationFrame(run);
+        });
+      } else {
+        run();
+      }
+    };
+    scheduleSync();
+    if (typeof ResizeObserver === 'function' && !wrap.__hcRewardDescResizeObs) {
+      var desc = wrap.querySelector('.hc-reward-desc--collapsed, .hc-reward-desc--expanded');
+      if (desc) {
+        wrap.__hcRewardDescResizeObs = new ResizeObserver(scheduleSync);
+        wrap.__hcRewardDescResizeObs.observe(desc);
+      }
     }
-    toggle.style.display = '';
   });
 }
 
@@ -891,6 +929,7 @@ export function openWeeklyLeaderboardModal(options) {
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
   }
 
+  document.body.appendChild(overlay);
   renderBody();
 
   if (periodEndTimestamp && Number.isFinite(periodEndTimestamp)) {
@@ -928,8 +967,6 @@ export function openWeeklyLeaderboardModal(options) {
   overlay.addEventListener('click', function (event) {
     handleRewardDescriptionToggleClick(event);
   });
-
-  document.body.appendChild(overlay);
 }
 
 export function buildWeeklyCountdownLabel(meta) {

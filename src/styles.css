@@ -9193,10 +9193,21 @@ body {
 .hc-reward-desc--collapsed {
   display: -webkit-box;
   -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   overflow: hidden;
 }
 
-.hc-reward-desc-toggle {
+.hc-reward-desc--expanded {
+  display: block;
+  overflow: visible;
+}
+
+.hc-reward-desc-toggle[hidden] {
+  display: none !important;
+}
+
+.hc-reward-desc-toggle:not([hidden]) {
   display: block;
   margin-top: 6px;
   padding: 0;
