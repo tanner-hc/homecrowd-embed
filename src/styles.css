@@ -3233,16 +3233,17 @@ body {
   overflow-x: hidden;
 }
 
-/* Offers Tabs (matches MarketplaceScreen tab bar) */
-.hc-offers-tabs {
+/* Offers / Rewards Tabs (matches MarketplaceScreen tab bar) */
+.hc-offers-tabs,
+.hc-rewards-tabs {
   display: flex;
   gap: 0;
   padding: 0 20px;
   margin-bottom: 20px;
-  border-bottom: 1px solid var(--hc-border);
 }
 
-.hc-offers-tab {
+.hc-offers-tab,
+.hc-rewards-tab {
   flex: 1;
   padding: 12px 0;
   background: none;
@@ -3257,7 +3258,8 @@ body {
   transition: all 0.2s ease;
 }
 
-.hc-offers-tab.active {
+.hc-offers-tab.active,
+.hc-rewards-tab.active {
   color: var(--hc-text-primary);
   border-bottom-color: #00C8FF;
   font-weight: 700;
@@ -4894,7 +4896,8 @@ body {
     font-size: clamp(17px, 4.5vw, 20px);
   }
 
-  .hc-offers-tab {
+  .hc-offers-tab,
+  .hc-rewards-tab {
     font-size: 14px;
     padding: 10px 4px;
   }
@@ -4990,7 +4993,8 @@ body {
     padding-right: var(--hc-spacing-base);
   }
 
-  .hc-offers-tab {
+  .hc-offers-tab,
+  .hc-rewards-tab {
     font-size: 13px;
     padding: 8px 2px;
   }
