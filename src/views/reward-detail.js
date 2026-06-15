@@ -13,7 +13,6 @@ import { parsePeriodEndTimestamp } from '../rewardPeriodCountdown.js';
 import { isRewardBeforeStart } from '../rewardStartLock.js';
 import { createPrizeFinalizeModalWatcher } from '../prizeFinalizeModal.js';
 import {
-  buildExpandableRewardDescriptionHtml,
   buildOverallRewardContext,
   buildWeeklyCountdownLabel,
   buildWeeklyRewardContext,
@@ -257,16 +256,23 @@ function buildWeeklyInfoModalHtml(kind, heading, title, text) {
     '<div class="hc-weekly-info-modal-card" role="dialog" aria-modal="true" aria-label="' +
     escapeAttr(heading) +
     '">' +
+    '<button type="button" class="hc-weekly-info-modal-close-icon" data-weekly-info-close="1" aria-label="Close">' +
+    '<svg class="hc-weekly-info-modal-close-icon-svg" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M18 6L6 18"/>' +
+    '<path d="M6 6l12 12"/>' +
+    '</svg>' +
+    '</button>' +
     '<div class="hc-weekly-info-modal-heading">' +
     escapeHtml(heading) +
     '</div>' +
     (title
       ? '<div class="hc-weekly-info-modal-title">' + escapeHtml(title) + '</div>'
       : '') +
+    '<div class="hc-weekly-info-modal-body-scroll">' +
     '<div class="hc-weekly-info-modal-body">' +
     nlToBr(escapeHtml(text || 'No instructions available yet.')) +
     '</div>' +
-    '<button type="button" class="hc-weekly-info-modal-close-btn" data-weekly-info-close="1">Close</button>' +
+    '</div>' +
     '</div>' +
     '</div>'
   );
@@ -281,16 +287,6 @@ function buildWeeklyDetailHtml(weeklyReward) {
   var html = '<div class="hc-weekly-screen-content">';
   if (showReward) {
     html += '<div class="hc-weekly-screen-hero">';
-    if (weeklyReward.terms) {
-      html +=
-        '<button type="button" class="hc-weekly-screen-terms-btn" data-weekly-info-open="terms" aria-label="Terms">' +
-        '<svg class="hc-weekly-screen-terms-btn-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
-        '<circle cx="12" cy="12" r="10"/>' +
-        '<path d="M12 8v4"/>' +
-        '<path d="M12 16h.01"/>' +
-        '</svg>' +
-        '</button>';
-    }
     if (rewardImageUrl) {
       html +=
         '<div class="hc-weekly-screen-image-frame"><img class="hc-weekly-screen-image" src="' +
@@ -299,15 +295,15 @@ function buildWeeklyDetailHtml(weeklyReward) {
         escapeAttr(rewardTitle || 'Reward') +
         '" /></div>';
     }
-    html +=
-      '<div class="hc-weekly-screen-copy' +
-      (weeklyReward.terms ? ' hc-weekly-screen-copy--has-terms' : '') +
-      '">';
+    html += '<div class="hc-weekly-screen-copy">';
     if (rewardTitle) {
       html += '<div class="hc-weekly-screen-title">' + escapeHtml(rewardTitle) + '</div>';
     }
     if (rewardDescription) {
-      html += buildExpandableRewardDescriptionHtml(rewardDescription, 'hc-weekly-screen-desc');
+      html +=
+        '<div class="hc-weekly-screen-desc-scroll"><div class="hc-weekly-screen-desc">' +
+        nlToBr(escapeHtml(rewardDescription)) +
+        '</div></div>';
     }
     if (weeklyReward.howToWin) {
       html +=
@@ -322,10 +318,6 @@ function buildWeeklyDetailHtml(weeklyReward) {
   html += buildWeeklyTrophyIconHtml();
   html += '<div class="hc-weekly-screen-section-title">LEADERBOARD</div>';
   html += '</div>';
-  html +=
-    '<div class="hc-weekly-screen-section-meta">Total Participants: ' +
-    escapeHtml(String((weeklyReward.rows && weeklyReward.rows.length) || 0)) +
-    '</div>';
   html += '</div>';
   html += buildWeeklyLeaderboardTableHtml(weeklyReward.rows);
   html += '</div>';
