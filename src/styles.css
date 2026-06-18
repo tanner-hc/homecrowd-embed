@@ -710,6 +710,26 @@ body {
   filter: brightness(0) invert(1);
 }
 
+.hc-login-logo--brand {
+  margin-bottom: 24px;
+}
+
+.hc-login-logo--brand .hc-header {
+  padding: 16px 0 0;
+}
+
+.hc-login-logo--brand .hc-header-powered {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.hc-login-logo--brand .hc-header-powered-label {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.hc-login-logo--brand .hc-header-powered-name {
+  color: rgba(255, 255, 255, 0.92);
+}
+
 .hc-login-card {
   background: rgba(255, 255, 255, 0.08);
   border-radius: 20px;

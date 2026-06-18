@@ -63,6 +63,10 @@ function getSchoolIdFromConfig(config) {
   if (!config || typeof config !== 'object') return '';
   return String(config.schoolId || config.school_id || '').trim();
 }
+function getSchoolIdFromUrl() {
+  var urlParams = new URLSearchParams(window.location.search);
+  return String(urlParams.get('schoolId') || urlParams.get('school_id') || '').trim();
+}
 var schoolId =
   getSchoolIdFromConfig(hostConfig) || params.get('schoolId') || params.get('school_id') || '';
 var partnerToken = (hostConfig && hostConfig.token) || params.get('token') || '';
@@ -650,9 +654,21 @@ async function init() {
     clearPendingLoginEmail();
     pendingSchoolAuthContext = null;
     api.clearTokens();
-    postToNative('homecrowd:logout');
-    navigate('/login');
-    api.logout().catch(function () { });
+    var logoutSchoolId =
+      getSchoolIdFromUrl() || getSchoolIdFromConfig(hostConfig) || schoolId;
+    if (logoutSchoolId) {
+      schoolId = logoutSchoolId;
+    }
+    function finishLogout() {
+      postToNative('homecrowd:logout');
+      navigate('/login');
+      api.logout().catch(function () { });
+    }
+    if (schoolId) {
+      applySchoolConfig(schoolId).then(finishLogout).catch(finishLogout);
+      return;
+    }
+    finishLogout();
   });
   startRouter();
   setupDailyVisitForegroundCheck();

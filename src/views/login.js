@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import defaultHeaderLogoUrl from '../assets/header.png';
+import { getHeaderLogoUrl, hasCustomHeaderLogo, renderBrandLockup } from '../brand.js';
 import Input from '../base-components/Input.js';
 import { escapeAttr, escapeHtml } from '../base-components/html.js';
 import { PRIVACY_URL, TERMS_URL } from '../legal-urls.js';
@@ -50,16 +50,17 @@ export function renderLogin(container, onLoginSuccess, options) {
   var lockEmail = !!(options && options.lockEmail);
   var initialNotice = options && options.notice ? String(options.notice) : '';
   var isSchoolSelectionLocked = !!schoolId;
+  var logoBlock = hasCustomHeaderLogo()
+    ? '<div class="hc-login-logo hc-login-logo--brand">' + renderBrandLockup() + '</div>'
+    : '<div class="hc-login-logo"><img src="' +
+      escapeAttr(getHeaderLogoUrl()) +
+      '" alt="Homecrowd" class="hc-login-logo-img" /></div>';
   container.innerHTML =
     '<div class="hc-login-shell">' +
     '<div class="hc-login-bg"></div>' +
     '<div class="hc-login-overlay">' +
     '<div class="hc-login-container">' +
-    '<div class="hc-login-logo">' +
-    '<img src="' +
-    defaultHeaderLogoUrl +
-    '" alt="Homecrowd" class="hc-login-logo-img" />' +
-    '</div>' +
+    logoBlock +
     '<div class="hc-login-card">' +
     '<div class="hc-login-heading">' +
     '<button type="button" id="hc-signup-back-btn" class="hc-signup-back-btn" style="display:none" aria-label="Back to login">' +
