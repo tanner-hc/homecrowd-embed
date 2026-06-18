@@ -18,6 +18,103 @@ import {
 } from './rewardPeriodCountdown.js';
 import { createPrizeFinalizeModalWatcher } from './prizeFinalizeModal.js';
 
+export function buildExpandableRewardDescriptionHtml(description, className) {
+  var d = String(description || '').trim();
+  if (!d) return '';
+  var descClass = className || 'hc-weekly-lb-reward-desc';
+  return (
+    '<div class="hc-reward-desc-wrap">' +
+    '<div class="' +
+    descClass +
+    ' hc-reward-desc--collapsed">' +
+    escapeHtml(d) +
+    '</div>' +
+    '<button type="button" class="hc-reward-desc-toggle" data-reward-desc-toggle="1" hidden>Read more</button>' +
+    '</div>'
+  );
+}
+
+function rewardDescNeedsToggle(desc) {
+  if (!desc || !desc.parentNode) return false;
+  var width = desc.clientWidth;
+  if (!width) return false;
+  var clone = desc.cloneNode(true);
+  clone.removeAttribute('style');
+  clone.classList.remove('hc-reward-desc--collapsed');
+  clone.classList.add('hc-reward-desc--expanded');
+  clone.setAttribute('aria-hidden', 'true');
+  clone.style.cssText =
+    'position:absolute;left:-9999px;top:0;width:' +
+    width +
+    'px;visibility:hidden;pointer-events:none;height:auto;max-height:none;overflow:visible;display:block;';
+  desc.parentNode.appendChild(clone);
+  var fullHeight = clone.offsetHeight;
+  clone.remove();
+  return fullHeight > desc.clientHeight + 2;
+}
+
+function syncRewardDescriptionToggle(wrap) {
+  var desc = wrap.querySelector('.hc-reward-desc--collapsed, .hc-reward-desc--expanded');
+  var toggle = wrap.querySelector('[data-reward-desc-toggle]');
+  if (!desc || !toggle) return;
+  if (!desc.classList.contains('hc-reward-desc--collapsed')) return;
+  var needsToggle = rewardDescNeedsToggle(desc);
+  if (!needsToggle) {
+    desc.classList.remove('hc-reward-desc--collapsed');
+    toggle.hidden = true;
+    return;
+  }
+  toggle.hidden = false;
+}
+
+export function initRewardDescriptionToggles(root) {
+  if (!root) return;
+  var wraps = root.querySelectorAll('.hc-reward-desc-wrap');
+  wraps.forEach(function (wrap) {
+    var scheduleSync = function () {
+      var run = function () {
+        syncRewardDescriptionToggle(wrap);
+      };
+      if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(function () {
+          window.requestAnimationFrame(run);
+        });
+      } else {
+        run();
+      }
+    };
+    scheduleSync();
+    if (typeof ResizeObserver === 'function' && !wrap.__hcRewardDescResizeObs) {
+      var desc = wrap.querySelector('.hc-reward-desc--collapsed, .hc-reward-desc--expanded');
+      if (desc) {
+        wrap.__hcRewardDescResizeObs = new ResizeObserver(scheduleSync);
+        wrap.__hcRewardDescResizeObs.observe(desc);
+      }
+    }
+  });
+}
+
+export function handleRewardDescriptionToggleClick(event) {
+  var btn = event.target && event.target.closest('[data-reward-desc-toggle]');
+  if (!btn) return false;
+  var wrap = btn.closest('.hc-reward-desc-wrap');
+  if (!wrap) return false;
+  var desc = wrap.querySelector('.hc-reward-desc--collapsed, .hc-reward-desc--expanded');
+  if (!desc) return false;
+  event.preventDefault();
+  var collapsed = desc.classList.contains('hc-reward-desc--collapsed');
+  if (collapsed) {
+    desc.classList.remove('hc-reward-desc--collapsed');
+    desc.classList.add('hc-reward-desc--expanded');
+    btn.textContent = 'Show less';
+  } else {
+    desc.classList.add('hc-reward-desc--collapsed');
+    desc.classList.remove('hc-reward-desc--expanded');
+    btn.textContent = 'Read more';
+  }
+  return true;
+}
+
 function normalizeMediaUrl(url) {
   if (url == null || url === '') return null;
   if (typeof url === 'string') {
@@ -311,6 +408,12 @@ export async function buildWeeklyRewardContext(leaderboardRes) {
       if (rewardDoc.description && String(rewardDoc.description).trim()) {
         mergeExtra.resolved_description = String(rewardDoc.description).trim();
       }
+      if (rewardDoc.how_to_win && String(rewardDoc.how_to_win).trim()) {
+        mergeExtra.resolved_how_to_win = String(rewardDoc.how_to_win).trim();
+      }
+      if (rewardDoc.terms && String(rewardDoc.terms).trim()) {
+        mergeExtra.resolved_terms = String(rewardDoc.terms).trim();
+      }
       if (rewardDoc.title && String(rewardDoc.title).trim()) {
         mergeExtra.resolved_reward_title = String(rewardDoc.title).trim();
       }
@@ -365,9 +468,15 @@ export async function buildWeeklyRewardContext(leaderboardRes) {
         prizeForMeta.body ||
         '',
     ).trim(),
+    howToWin: String(
+      prizeForMeta.resolved_how_to_win ||
+        prizeForMeta.how_to_win ||
+        prizeForMeta.howToWin ||
+        '',
+    ).trim(),
     rewardId: rewardId,
     imageUrl: imageUrl,
-    terms: prizeForMeta.terms || '',
+    terms: String(prizeForMeta.resolved_terms || prizeForMeta.terms || '').trim(),
     rows: rows,
     weekEndsAt: weekEndsAt,
     winnerName: getWinnerName(prizeForMeta.winner_name || prizeForMeta.winnerName || ''),
@@ -416,6 +525,12 @@ export async function buildOverallRewardContext(leaderboardRes) {
       if (oResolvedFromApi) oMergeExtra.resolved_image_url = oResolvedFromApi;
       if (oRewardDoc.description && String(oRewardDoc.description).trim()) {
         oMergeExtra.resolved_description = String(oRewardDoc.description).trim();
+      }
+      if (oRewardDoc.how_to_win && String(oRewardDoc.how_to_win).trim()) {
+        oMergeExtra.resolved_how_to_win = String(oRewardDoc.how_to_win).trim();
+      }
+      if (oRewardDoc.terms && String(oRewardDoc.terms).trim()) {
+        oMergeExtra.resolved_terms = String(oRewardDoc.terms).trim();
       }
       if (oRewardDoc.title && String(oRewardDoc.title).trim()) {
         oMergeExtra.resolved_reward_title = String(oRewardDoc.title).trim();
@@ -470,9 +585,15 @@ export async function buildOverallRewardContext(leaderboardRes) {
         oPrizeForMeta.body ||
         '',
     ).trim(),
+    howToWin: String(
+      oPrizeForMeta.resolved_how_to_win ||
+        oPrizeForMeta.how_to_win ||
+        oPrizeForMeta.howToWin ||
+        '',
+    ).trim(),
     rewardId: oRewardId,
     imageUrl: oImageUrl,
-    terms: oPrizeForMeta.terms || '',
+    terms: String(oPrizeForMeta.resolved_terms || oPrizeForMeta.terms || '').trim(),
     rows: oRows,
     weekEndsAt: null,
     winnerName: getWinnerName(oPrizeForMeta.winner_name || oPrizeForMeta.winnerName || ''),
@@ -645,7 +766,7 @@ export function openWeeklyLeaderboardModal(options) {
       html += '<div class="hc-weekly-lb-reward-title">' + escapeHtml(t) + '</div>';
     }
     if (d) {
-      html += '<div class="hc-weekly-lb-reward-desc">' + escapeHtml(d) + '</div>';
+      html += buildExpandableRewardDescriptionHtml(d);
     }
     html += '</div>';
     return html;
@@ -705,6 +826,7 @@ export function openWeeklyLeaderboardModal(options) {
       '<div class="hc-weekly-lb-leaderboard-wrap">' +
       leaderboardSectionHtml(rows) +
       '</div>';
+    initRewardDescriptionToggles(inner);
   }
 
   function applyPrizeFromLeaderboard(res) {
@@ -807,6 +929,7 @@ export function openWeeklyLeaderboardModal(options) {
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
   }
 
+  document.body.appendChild(overlay);
   renderBody();
 
   if (periodEndTimestamp && Number.isFinite(periodEndTimestamp)) {
@@ -841,7 +964,9 @@ export function openWeeklyLeaderboardModal(options) {
     backBtn.addEventListener('click', close);
   }
 
-  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function (event) {
+    handleRewardDescriptionToggleClick(event);
+  });
 }
 
 export function buildWeeklyCountdownLabel(meta) {

@@ -59,7 +59,7 @@ async function loadCards(container) {
     html += '<div class="hc-cards-info-icon hc-cards-info-icon--circle">' + heartSvg + '</div>';
     html += '<div class="hc-cards-info-text">';
     html += '<div class="hc-cards-info-title hc-cards-info-title--green">You earn points. Your school earns dollars.</div>';
-    html += '<div class="hc-cards-info-body">Every purchase you make helps you earn points while dollars are sent to your school.</div>';
+    html += '<div class="hc-cards-info-body">Every purchase you make helps you earn points (gear, access, and experiences) while dollars are sent to your school.</div>';
     html += '</div>';
     html += '</div>';
     html += '</div>';

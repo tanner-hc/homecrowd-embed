@@ -63,6 +63,10 @@ function getSchoolIdFromConfig(config) {
   if (!config || typeof config !== 'object') return '';
   return String(config.schoolId || config.school_id || '').trim();
 }
+function getSchoolIdFromUrl() {
+  var urlParams = new URLSearchParams(window.location.search);
+  return String(urlParams.get('schoolId') || urlParams.get('school_id') || '').trim();
+}
 var schoolId =
   getSchoolIdFromConfig(hostConfig) || params.get('schoolId') || params.get('school_id') || '';
 var partnerToken = (hostConfig && hostConfig.token) || params.get('token') || '';
@@ -650,9 +654,21 @@ async function init() {
     clearPendingLoginEmail();
     pendingSchoolAuthContext = null;
     api.clearTokens();
-    postToNative('homecrowd:logout');
-    navigate('/login');
-    api.logout().catch(function () { });
+    var logoutSchoolId =
+      getSchoolIdFromUrl() || getSchoolIdFromConfig(hostConfig) || schoolId;
+    if (logoutSchoolId) {
+      schoolId = logoutSchoolId;
+    }
+    function finishLogout() {
+      postToNative('homecrowd:logout');
+      navigate('/login');
+      api.logout().catch(function () { });
+    }
+    if (schoolId) {
+      applySchoolConfig(schoolId).then(finishLogout).catch(finishLogout);
+      return;
+    }
+    finishLogout();
   });
   startRouter();
   setupDailyVisitForegroundCheck();
@@ -952,6 +968,7 @@ function render(route) {
         var ticketsResponse = parts[3];
         var qIdx = route.indexOf('?');
         var params = new URLSearchParams(qIdx >= 0 ? route.slice(qIdx + 1) : '');
+        var navSource = params.get('from') === 'home' ? 'home' : 'rewards';
         var wantWeekly = params.get('weekly') === '1';
         var wantOverall = params.get('overall') === '1';
 
@@ -963,6 +980,7 @@ function render(route) {
             paymentCards: paymentCards,
             ticketsResponse: ticketsResponse,
             weeklyReward: weeklyReward || null,
+            navSource: navSource,
           };
         }
 
@@ -990,28 +1008,50 @@ function render(route) {
             });
         }
 
-        if (wantWeekly || wantOverall) {
+        function loadLeaderboardProduct(periodKind) {
           return api
             .getLeaderboard()
             .catch(function () {
               return null;
             })
             .then(function (lb) {
-              if (!lb) return loadStandardProduct();
-              var pCtx = wantWeekly ? buildWeeklyRewardContext(lb) : buildOverallRewardContext(lb);
-              return pCtx.then(function (w) {
-                if (w && String(w.rewardId) === String(rewardId)) {
-                  var prod = leaderboardContextToEmbedProduct(w);
-                  if (prod && prod.id) {
-                    return emptyCtx(prod, w);
-                  }
-                }
-                return loadStandardProduct();
+              if (!lb) return null;
+              var loaders =
+                periodKind === 'weekly'
+                  ? [buildWeeklyRewardContext(lb)]
+                  : periodKind === 'overall'
+                    ? [buildOverallRewardContext(lb)]
+                    : [buildWeeklyRewardContext(lb), buildOverallRewardContext(lb)];
+              return Promise.all(loaders).then(function (contexts) {
+                var match =
+                  contexts.find(function (ctxItem) {
+                    return ctxItem && String(ctxItem.rewardId) === String(rewardId);
+                  }) || null;
+                if (!match) return null;
+                var prod = leaderboardContextToEmbedProduct(match);
+                if (!prod || !prod.id) return null;
+                return emptyCtx(prod, match);
               });
             });
         }
 
-        return loadStandardProduct();
+        if (wantWeekly || wantOverall) {
+          return loadLeaderboardProduct(wantWeekly ? 'weekly' : 'overall').then(function (ctx) {
+            if (ctx && ctx.product && ctx.product.id) {
+              return ctx;
+            }
+            return loadStandardProduct();
+          });
+        }
+
+        return loadStandardProduct().then(function (ctx) {
+          if (ctx && ctx.product && ctx.product.id) {
+            return ctx;
+          }
+          return loadLeaderboardProduct(null).then(function (leaderboardCtx) {
+            return leaderboardCtx || ctx;
+          });
+        });
       })
       .then(function (ctx) {
         if (!ctx || !ctx.product || !ctx.product.id) {
@@ -1026,6 +1066,7 @@ function render(route) {
           cardLinkStatus: resolveCardLinkStatus(ctx.currentUser, ctx.paymentCards) || 'unknown',
           ticketsResponse: ctx.ticketsResponse,
           weeklyReward: ctx.weeklyReward || null,
+          navSource: ctx.navSource || 'rewards',
         });
       })
       .catch(function (err) {
@@ -1151,8 +1192,11 @@ function renderLayout(route) {
       : '';
 
   var tabBarHtml = hideTabBar ? '' : buildBottomTabBarHtml(pathOnly, contentTabEnabled);
+  var embedClassName = 'hc-embed' + (isPreviewPage ? ' hc-embed--email-selection' : '');
   appEl.innerHTML =
-    '<div class="hc-embed">\
+    '<div class="' +
+    embedClassName +
+    '">\
       <main class="hc-content' +
     (isRewardDetailPage ? ' hc-content--reward-detail' : '') +
     (hideTabBar ? '' : ' hc-content--with-tab-bar') +

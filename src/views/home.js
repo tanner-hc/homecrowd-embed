@@ -9,7 +9,6 @@ import {
   buildOverallRewardContext,
   buildWeeklyRewardContext,
   buildWeeklyRewardHomeTileHtml,
-  openWeeklyLeaderboardModalFromHome,
 } from '../weekly-reward.js';
 import chartUpIconSvg from '../assets/icons/chart-up.svg?raw';
 import activityIconSvg from '../assets/icons/activity.svg?raw';
@@ -734,6 +733,16 @@ function scrollInstructionTargetIntoView(container) {
   });
 }
 
+function buildRewardDetailHash(rewardMeta, source) {
+  if (!rewardMeta || rewardMeta.rewardId == null) return '#/rewards';
+  var hash = '#/rewards/' + encodeURIComponent(rewardMeta.rewardId);
+  var params = [];
+  if (source) params.push('from=' + encodeURIComponent(source));
+  if (rewardMeta.periodKind === 'weekly') params.push('weekly=1');
+  if (rewardMeta.periodKind === 'overall') params.push('overall=1');
+  return params.length ? hash + '?' + params.join('&') : hash;
+}
+
 function mountInstructionOverlay(container) {
   clearInstructionOverlay();
   var embedRoot = container.closest('.hc-embed');
@@ -1077,20 +1086,23 @@ function loadHome(container) {
           detail: { showInstructionOverlay: !!ctx.showInstructionOverlay },
         }),
       );
-      container._hcLeaderboardRes = ctx.leaderboardRes || null;
       var weeklyLbBtn = container.querySelector('[data-home-lb-tile="weekly"]');
       if (weeklyLbBtn) {
-        weeklyLbBtn.addEventListener('click', function () {
+        weeklyLbBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
           if (ctx.weeklyReward) {
-            openWeeklyLeaderboardModalFromHome(ctx.weeklyReward, container._hcLeaderboardRes);
+            window.location.hash = buildRewardDetailHash(ctx.weeklyReward, 'home');
           }
         });
       }
       var overallLbBtn = container.querySelector('[data-home-lb-tile="overall"]');
       if (overallLbBtn) {
-        overallLbBtn.addEventListener('click', function () {
+        overallLbBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
           if (ctx.overallReward) {
-            openWeeklyLeaderboardModalFromHome(ctx.overallReward, container._hcLeaderboardRes);
+            window.location.hash = buildRewardDetailHash(ctx.overallReward, 'home');
           }
         });
       }

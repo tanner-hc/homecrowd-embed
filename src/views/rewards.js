@@ -12,8 +12,8 @@ import { getNavEpoch } from '../router.js';
 import {
   buildOverallRewardContext,
   buildWeeklyCountdownLabel,
+  buildWeeklyRewardHomeTileHtml,
   buildWeeklyRewardContext,
-  openWeeklyLeaderboardModalFromHome,
 } from '../weekly-reward.js';
 import { getRewardEndDate, getRewardStartDate, isRewardBeforeStart } from '../rewardStartLock.js';
 var weeklyCountdownCleanup = null;
@@ -156,66 +156,146 @@ function formatDate(dateStr) {
   return date.toLocaleDateString('en-US', options);
 }
 
-function organizeRewardsByDate(rewards) {
+function isRewardCompleted(reward, now) {
+  now = now || new Date();
+  var redemptionType = reward.redemption_type;
+  var isEventType = redemptionType === 'raffle' || redemptionType === 'auction';
+  if (isEventType) {
+    var endDate = getRewardEndDate(reward);
+    if (endDate) {
+      return new Date(endDate) < now;
+    }
+    return !reward.is_active;
+  }
+  return !reward.is_active;
+}
+
+function organizeRewardsSections(rewards) {
   var now = new Date();
-  var sections = [];
-  var past = [];
-  var upcoming = {};
-  var noDate = [];
+  var activeUpcoming = {};
+  var activeNoDate = [];
+  var completed = [];
 
   rewards.forEach(function (reward) {
-    var sortDate = getRewardStartDate(reward);
-    var endDate = getRewardEndDate(reward);
-
-    if (!sortDate) {
-      noDate.push(reward);
-    } else {
-      var closedAt = endDate ? new Date(endDate) : null;
-      if (closedAt && closedAt < now) {
-        past.push(Object.assign({}, reward, { eventDate: endDate }));
-      } else {
-        var dateKey = formatDate(sortDate);
-        if (!upcoming[dateKey]) {
-          upcoming[dateKey] = {
-            title: dateKey,
-            data: [],
-            rawDate: sortDate,
-          };
-        }
-        upcoming[dateKey].data.push(Object.assign({}, reward, { eventDate: sortDate }));
-      }
+    if (isRewardCompleted(reward, now)) {
+      var endDate = getRewardEndDate(reward);
+      completed.push(Object.assign({}, reward, { eventDate: endDate || null }));
+      return;
     }
+
+    var sortDate = getRewardStartDate(reward);
+    if (!sortDate) {
+      activeNoDate.push(reward);
+      return;
+    }
+
+    var dateKey = formatDate(sortDate);
+    if (!activeUpcoming[dateKey]) {
+      activeUpcoming[dateKey] = {
+        title: dateKey,
+        data: [],
+        rawDate: sortDate,
+      };
+    }
+    activeUpcoming[dateKey].data.push(Object.assign({}, reward, { eventDate: sortDate }));
   });
 
-  if (past.length > 0) {
-    var sortedPast = past
-      .sort(function (a, b) {
-        return new Date(b.eventDate) - new Date(a.eventDate);
-      })
-      .slice(0, 2);
-    sections.push({
-      title: 'Recently Closed',
-      data: sortedPast,
-      isPast: true,
-    });
-  }
-
-  var upcomingSections = Object.values(upcoming).sort(function (a, b) {
+  var activeSections = [];
+  var upcomingSections = Object.values(activeUpcoming).sort(function (a, b) {
     return new Date(a.rawDate) - new Date(b.rawDate);
   });
   upcomingSections.forEach(function (s) {
-    sections.push(s);
+    activeSections.push(s);
   });
 
-  if (noDate.length > 0) {
-    sections.push({
+  if (activeNoDate.length > 0) {
+    activeSections.push({
       title: 'More Rewards',
-      data: noDate,
+      data: activeNoDate,
       isAlwaysAvailable: true,
     });
   }
 
-  return sections;
+  var completedSections = [];
+  if (completed.length > 0) {
+    var sortedCompleted = completed.sort(function (a, b) {
+      var aDate = a.eventDate ? new Date(a.eventDate) : new Date(0);
+      var bDate = b.eventDate ? new Date(b.eventDate) : new Date(0);
+      return bDate - aDate;
+    });
+    completedSections.push({
+      title: 'Completed',
+      data: sortedCompleted,
+      isPast: true,
+    });
+  }
+
+  return {
+    activeSections: activeSections,
+    completedSections: completedSections,
+  };
+}
+
+function buildRewardsSectionsHtml(
+  sections,
+  cardLinkStatus,
+  isEarlyRelease,
+  getImageUrl,
+  emptyState,
+) {
+  if (!sections.length) {
+    return EmptyState(emptyState);
+  }
+
+  var html = '';
+  sections.forEach(function (section) {
+    html += '<div class="hc-rewards-section">';
+    html += '<div class="hc-section-header hc-rewards-section-header">';
+    html +=
+      '<div class="hc-section-title' +
+      (section.isPast ? ' hc-section-title--past' : '') +
+      '">' +
+      escapeHtml(section.title) +
+      '</div>';
+    html += '</div>';
+    html += '<div class="hc-rewards-list">';
+    section.data.forEach(function (item) {
+      html += buildRewardCardHtml(item, section, cardLinkStatus, isEarlyRelease, getImageUrl);
+    });
+    html += '</div></div>';
+  });
+  return html;
+}
+
+function buildRewardsTabsHtml(activeTab) {
+  var html = '<div class="hc-rewards-tabs">';
+  html +=
+    '<button type="button" class="hc-rewards-tab' +
+    (activeTab === 'active' ? ' active' : '') +
+    '" data-tab="active">Active</button>';
+  html +=
+    '<button type="button" class="hc-rewards-tab' +
+    (activeTab === 'completed' ? ' active' : '') +
+    '" data-tab="completed">Completed</button>';
+  html += '</div>';
+  return html;
+}
+
+function wireUpRewardsTabs(container) {
+  var tabs = container.querySelectorAll('.hc-rewards-tab');
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      var targetTab = this.getAttribute('data-tab');
+      tabs.forEach(function (t) {
+        t.classList.remove('active');
+      });
+      this.classList.add('active');
+      var activeEl = container.querySelector('#hc-tab-rewards-active');
+      var completedEl = container.querySelector('#hc-tab-rewards-completed');
+      if (activeEl) activeEl.style.display = targetTab === 'active' ? '' : 'none';
+      if (completedEl) completedEl.style.display = targetTab === 'completed' ? '' : 'none';
+    });
+  });
 }
 
 function buildRewardCardHtml(item, section, cardLinkStatus, isEarlyRelease, getImageUrl) {
@@ -405,6 +485,16 @@ function lookupRewardForClick(rewardIdStr, formattedRewards, weeklyRewardItem, o
   };
 }
 
+function buildRewardDetailHash(rewardItem, source) {
+  if (!rewardItem || rewardItem.id == null) return '#/rewards';
+  var hash = '#/rewards/' + encodeURIComponent(rewardItem.id);
+  var params = [];
+  if (source) params.push('from=' + encodeURIComponent(source));
+  if (rewardItem.redemption_type === 'weekly') params.push('weekly=1');
+  if (rewardItem.redemption_type === 'overall') params.push('overall=1');
+  return params.length ? hash + '?' + params.join('&') : hash;
+}
+
 function attachWeeklyCountdown(container) {
   if (weeklyCountdownCleanup) {
     weeklyCountdownCleanup();
@@ -491,7 +581,9 @@ async function loadRewards(container, routeEpoch) {
     var leaderboardActive = !leaderboardRes || leaderboardRes.leaderboard_active !== false;
     var weeklyReward = leaderboardActive ? await buildWeeklyRewardContext(leaderboardRes) : null;
     var overallReward = leaderboardActive ? await buildOverallRewardContext(leaderboardRes) : null;
-    var sections = organizeRewardsByDate(formattedRewards);
+    var rewardSections = organizeRewardsSections(formattedRewards);
+    var activeSections = rewardSections.activeSections;
+    var completedSections = rewardSections.completedSections;
 
     var html = '';
 
@@ -501,7 +593,7 @@ async function loadRewards(container, routeEpoch) {
     html += '<div class="hc-screen-title">';
     html += ScreenTitle({
       title: 'Rewards',
-      subtitle: 'Auctions and raffles for exclusive perks',
+      subtitle: 'Auction and raffles for exclusive gear, access, and experiences',
     });
     html += '</div>';
 
@@ -509,76 +601,69 @@ async function loadRewards(container, routeEpoch) {
       html += buildRewardsLinkCardBanner(currentUser);
     }
 
+    html += buildRewardsTabsHtml('active');
+
     var weeklyRewardItem = weeklyReward ? buildWeeklyRewardListItem(weeklyReward) : null;
     var overallRewardItem = overallReward ? buildOverallRewardListItem(overallReward) : null;
-    if (weeklyRewardItem) {
-      html += '<div class="hc-rewards-section hc-rewards-weekly-section">';
-      html += '<div class="hc-section-header hc-rewards-section-header">';
-      html += '<div class="hc-section-title">Weekly Leaderboard</div>';
-      html += '</div>';
-      html += '<div class="hc-rewards-list">';
-      html += buildRewardCardHtml(
-        weeklyRewardItem,
-        { title: 'Weekly Leaderboard', isPast: false },
-        cardLinkStatus,
-        isEarlyRelease,
-        getImageUrl,
-      );
-      html += '</div>';
-      html += '</div>';
-    }
-
-    if (overallRewardItem) {
-      html += '<div class="hc-rewards-section hc-rewards-overall-section">';
-      html += '<div class="hc-section-header hc-rewards-section-header">';
-      html += '<div class="hc-section-title">Overall Leaderboard</div>';
-      html += '</div>';
-      html += '<div class="hc-rewards-list">';
-      html += buildRewardCardHtml(
-        overallRewardItem,
-        { title: 'Overall Leaderboard', isPast: false },
-        cardLinkStatus,
-        isEarlyRelease,
-        getImageUrl,
-      );
-      html += '</div>';
-      html += '</div>';
-    }
 
     function getImageUrl(path) {
       return normalizeMediaUrl(path);
     }
 
-    if (sections.length === 0) {
-      html += EmptyState({
+    var activeEmptySubtitle =
+      currentUser && currentUser.active_school && currentUser.active_school.name
+        ? 'No auctions or raffles are currently available for ' +
+          currentUser.active_school.name +
+          '. Check back later!'
+        : 'Please select a school to view available rewards.';
+
+    html +=
+      '<div id="hc-tab-rewards-active" class="hc-tab-content">';
+    if (weeklyRewardItem || overallRewardItem) {
+      html += '<div class="hc-home-reward-tiles-row">';
+      if (weeklyRewardItem) {
+        html += buildWeeklyRewardHomeTileHtml(weeklyReward.title, weeklyReward.rewardId, {
+          eyebrow: 'Weekly reward',
+          tileKind: 'weekly',
+        });
+      }
+      if (overallRewardItem) {
+        html += buildWeeklyRewardHomeTileHtml(overallReward.title, overallReward.rewardId, {
+          eyebrow: 'Overall reward',
+          tileKind: 'overall',
+        });
+      }
+      html += '</div>';
+    }
+    html += buildRewardsSectionsHtml(
+      activeSections,
+      cardLinkStatus,
+      isEarlyRelease,
+      getImageUrl,
+      {
         title: 'No Rewards Available',
-        subtitle:
-          currentUser && currentUser.active_school && currentUser.active_school.name
-            ? 'No auctions or raffles are currently available for ' +
-              currentUser.active_school.name +
-              '. Check back later!'
-            : 'Please select a school to view available rewards.',
+        subtitle: activeEmptySubtitle,
         className: 'hc-empty--rewards',
         iconChar: '🎁',
-      });
-    } else {
-      sections.forEach(function (section) {
-        html += '<div class="hc-rewards-section">';
-        html += '<div class="hc-section-header hc-rewards-section-header">';
-        html +=
-          '<div class="hc-section-title' +
-          (section.isPast ? ' hc-section-title--past' : '') +
-          '">' +
-          escapeHtml(section.title) +
-          '</div>';
-        html += '</div>';
-        html += '<div class="hc-rewards-list">';
-        section.data.forEach(function (item) {
-          html += buildRewardCardHtml(item, section, cardLinkStatus, isEarlyRelease, getImageUrl);
-        });
-        html += '</div></div>';
-      });
-    }
+      },
+    );
+    html += '</div>';
+
+    html +=
+      '<div id="hc-tab-rewards-completed" class="hc-tab-content" style="display:none">';
+    html += buildRewardsSectionsHtml(
+      completedSections,
+      cardLinkStatus,
+      isEarlyRelease,
+      getImageUrl,
+      {
+        title: 'No Completed Rewards',
+        subtitle: 'Completed auctions and raffles will appear here.',
+        className: 'hc-empty--rewards',
+        iconChar: '🎁',
+      },
+    );
+    html += '</div>';
 
     html += '</div>';
     html += '</div>';
@@ -610,41 +695,64 @@ async function loadRewards(container, routeEpoch) {
     }
 
     attachWeeklyCountdown(container);
+    wireUpRewardsTabs(container);
 
     container._hcLeaderboardRes = leaderboardRes || null;
+    var weeklyLbBtn = container.querySelector('[data-home-lb-tile="weekly"]');
+    if (weeklyLbBtn) {
+      weeklyLbBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (weeklyReward) {
+          var clickedWeeklyReward = lookupRewardForClick(
+            weeklyReward.rewardId,
+            formattedRewards,
+            weeklyRewardItem,
+            overallRewardItem,
+          );
+          analytics.trackEmbedRewardClick(
+            clickedWeeklyReward,
+            currentUser,
+          );
+          window.location.hash = buildRewardDetailHash(clickedWeeklyReward, 'rewards');
+        }
+      });
+    }
+    var overallLbBtn = container.querySelector('[data-home-lb-tile="overall"]');
+    if (overallLbBtn) {
+      overallLbBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (overallReward) {
+          var clickedOverallReward = lookupRewardForClick(
+            overallReward.rewardId,
+            formattedRewards,
+            weeklyRewardItem,
+            overallRewardItem,
+          );
+          analytics.trackEmbedRewardClick(
+            clickedOverallReward,
+            currentUser,
+          );
+          window.location.hash = buildRewardDetailHash(clickedOverallReward, 'rewards');
+        }
+      });
+    }
     container.onclick = function (e) {
-      var weeklyRewardCard = e.target.closest('.hc-rewards-weekly-section [data-reward-id]');
-      if (weeklyRewardCard) {
-        var weeklyRewardId = weeklyRewardCard.getAttribute('data-reward-id');
-        if (weeklyRewardId) {
-          analytics.trackEmbedRewardClick(
-            lookupRewardForClick(weeklyRewardId, formattedRewards, weeklyRewardItem, overallRewardItem),
-            currentUser,
-          );
-          openWeeklyLeaderboardModalFromHome(weeklyReward, container._hcLeaderboardRes);
-        }
-        return;
-      }
-      var overallRewardCard = e.target.closest('.hc-rewards-overall-section [data-reward-id]');
-      if (overallRewardCard) {
-        var overallRewardId = overallRewardCard.getAttribute('data-reward-id');
-        if (overallRewardId) {
-          analytics.trackEmbedRewardClick(
-            lookupRewardForClick(overallRewardId, formattedRewards, weeklyRewardItem, overallRewardItem),
-            currentUser,
-          );
-          openWeeklyLeaderboardModalFromHome(overallReward, container._hcLeaderboardRes);
-        }
-        return;
-      }
       var card = e.target.closest('[data-reward-id]');
       if (!card) return;
       var rewardId = card.getAttribute('data-reward-id');
+      var clickedReward = lookupRewardForClick(
+        rewardId,
+        formattedRewards,
+        weeklyRewardItem,
+        overallRewardItem,
+      );
       analytics.trackEmbedRewardClick(
-        lookupRewardForClick(rewardId, formattedRewards, weeklyRewardItem, overallRewardItem),
+        clickedReward,
         currentUser,
       );
-      window.location.hash = '#/rewards/' + encodeURIComponent(rewardId);
+      window.location.hash = buildRewardDetailHash(clickedReward, 'rewards');
     };
 
     var linkBtn = container.querySelector('.hc-stores-link-card-btn');
