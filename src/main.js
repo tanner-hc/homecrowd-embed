@@ -1192,8 +1192,11 @@ function renderLayout(route) {
       : '';
 
   var tabBarHtml = hideTabBar ? '' : buildBottomTabBarHtml(pathOnly, contentTabEnabled);
+  var embedClassName = 'hc-embed' + (isPreviewPage ? ' hc-embed--email-selection' : '');
   appEl.innerHTML =
-    '<div class="hc-embed">\
+    '<div class="' +
+    embedClassName +
+    '">\
       <main class="hc-content' +
     (isRewardDetailPage ? ' hc-content--reward-detail' : '') +
     (hideTabBar ? '' : ' hc-content--with-tab-bar') +

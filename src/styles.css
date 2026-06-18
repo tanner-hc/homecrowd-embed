@@ -207,6 +207,19 @@ body {
   touch-action: pan-x pan-y;
 }
 
+.hc-embed--email-selection {
+  background-color: var(--hc-preview-bg, var(--hc-bg));
+  background-image: var(--hc-email-selection-bg-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.hc-has-email-selection-bg .hc-embed--email-selection .hc-content-brand {
+  background-color: transparent;
+  background: transparent;
+}
+
 .hc-sticky-top {
   flex-shrink: 0;
   background-color: #ffffff;
@@ -669,7 +682,7 @@ body {
 .hc-login-bg {
   position: absolute;
   inset: 0;
-  background-image: url('https://app.gethomecrowd.com/assets/app-images/load-in.jpg');
+  background-image: var(--hc-login-bg-image, url('https://app.gethomecrowd.com/assets/app-images/load-in.jpg'));
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
@@ -731,11 +744,11 @@ body {
 }
 
 .hc-login-card {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--hc-login-card-bg, rgba(255, 255, 255, 0.08));
   border-radius: 20px;
   border: 1px solid rgba(248, 248, 248, 0.14);
-  backdrop-filter: blur(50px);
-  -webkit-backdrop-filter: blur(50px);
+  backdrop-filter: blur(var(--hc-login-card-blur, 50px));
+  -webkit-backdrop-filter: blur(var(--hc-login-card-blur, 50px));
   padding: 24px;
   width: 100%;
   max-width: 400px;
@@ -808,7 +821,7 @@ body {
 .hc-auth-link {
   border: 0;
   background: transparent;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--hc-login-text, rgba(255, 255, 255, 0.9));
   font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 13px;
   text-align: center;
@@ -822,7 +835,7 @@ body {
 
 .hc-login-signup-prompt {
   margin: -4px 0 18px;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--hc-login-text, rgba(255, 255, 255, 0.82));
   font-family: 'Baikal-Book', var(--hc-font);
   font-size: 13px;
   line-height: 1.4;
@@ -832,7 +845,7 @@ body {
 .hc-login-signup-link {
   border: 0;
   background: transparent;
-  color: #ffffff;
+  color: var(--hc-login-signup, #ffffff);
   cursor: pointer;
   font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 13px;
@@ -905,7 +918,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--hc-login-text, rgba(255, 255, 255, 0.8));
   font-size: 13px;
 }
 
@@ -914,7 +927,7 @@ body {
 }
 
 .hc-login-checkbox-label a {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--hc-login-text, rgba(255, 255, 255, 0.9));
   text-decoration: underline;
 }
 
@@ -923,7 +936,7 @@ body {
   font-size: 50px;
   font-weight: normal;
   text-align: center;
-  color: white;
+  color: var(--hc-login-title, #ffffff);
   margin-bottom: 0;
   line-height: 65px;
 }
@@ -948,7 +961,7 @@ body {
   margin-top: var(--hc-spacing-base);
   font-size: 13px;
   font-weight: 300;
-  color: rgba(255, 255, 255, 0.5);
+  color: color-mix(in srgb, var(--hc-login-text, #ffffff) 50%, transparent);
 }
 
 .hc-login-submit-btn {
@@ -959,22 +972,22 @@ body {
 
 /* Login-specific form overrides */
 .hc-login-container .hc-label {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--hc-login-text, rgba(255, 255, 255, 0.7));
   opacity: 1;
 }
 
 .hc-login-container .hc-input {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--hc-login-text, rgba(255, 255, 255, 0.7));
   border-color: rgba(255, 255, 255, 0.3);
   background: transparent;
 }
 
 .hc-login-container .hc-input:focus {
-  border-color: var(--hc-primary);
+  border-color: var(--hc-login-button, var(--hc-primary));
 }
 
 .hc-login-container .hc-input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: color-mix(in srgb, var(--hc-login-text, #ffffff) 50%, transparent);
 }
 
 .hc-login-container .hc-login-school-select {
@@ -1018,16 +1031,17 @@ body {
 }
 
 .hc-login-container .hc-toggle-pw {
-  color: rgba(255, 255, 255, 0.6);
+  color: color-mix(in srgb, var(--hc-login-text, #ffffff) 60%, transparent);
 }
 
 .hc-login-container .hc-btn-primary {
-  background: #7A4035;
+  background: var(--hc-login-button, #7A4035);
+  color: var(--hc-login-button-text, #ffffff);
   border-radius: 25px;
 }
 
 .hc-login-container .hc-btn-primary:hover {
-  background: #5E3028;
+  background: color-mix(in srgb, var(--hc-login-button, #7A4035) 85%, #000000);
 }
 
 /* Error / Alert */
@@ -9943,10 +9957,12 @@ body {
 .hc-preview-card {
   width: 100%;
   max-width: 560px;
-  border: 1.5px solid var(--hc-chrome);
+  border: 1.5px solid var(--hc-preview-chrome, var(--hc-chrome));
   border-radius: 22px;
   padding: 36px 20px 24px;
-  background: var(--hc-card);
+  background: var(--hc-preview-card, var(--hc-card));
+  backdrop-filter: blur(var(--hc-email-card-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--hc-email-card-blur, 0px));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -9954,7 +9970,7 @@ body {
 
 .hc-preview-title {
   margin: 0;
-  color: var(--hc-text-primary);
+  color: var(--hc-preview-text-primary, var(--hc-text-primary));
   font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
   font-size: clamp(46px, 10.2vw, 70px);
   line-height: 0.96;
@@ -9965,7 +9981,7 @@ body {
 
 .hc-preview-subtitle {
   margin-top: 18px;
-  color: var(--hc-text-secondary);
+  color: var(--hc-preview-text-secondary, var(--hc-text-secondary));
   font-size: 18px;
   line-height: 1.35;
   text-align: center;
@@ -9973,14 +9989,14 @@ body {
 
 .hc-preview-links {
   margin: 18px 0 0;
-  color: var(--hc-text-secondary);
+  color: var(--hc-preview-text-secondary, var(--hc-text-secondary));
   font-size: 14px;
   line-height: 1.45;
   text-align: center;
 }
 
 .hc-preview-links a {
-  color: var(--hc-link);
+  color: var(--hc-preview-link, var(--hc-link));
   text-decoration: underline;
 }
 
@@ -10003,7 +10019,7 @@ body {
 .hc-preview-terms-check {
   width: 31px;
   height: 31px;
-  border: 2px solid var(--hc-chrome);
+  border: 2px solid var(--hc-preview-chrome, var(--hc-chrome));
   border-radius: 8px;
   display: inline-flex;
   align-items: center;
@@ -10015,19 +10031,19 @@ body {
   content: '';
   width: 11px;
   height: 19px;
-  border: solid var(--hc-primary);
+  border: solid var(--hc-preview-primary, var(--hc-primary));
   border-width: 0 3px 3px 0;
   transform: rotate(45deg) translate(-1px, -2px);
 }
 
 .hc-preview-terms-text {
-  color: var(--hc-text-secondary);
+  color: var(--hc-preview-text-secondary, var(--hc-text-secondary));
   font-size: 16px;
   text-align: center;
 }
 
 .hc-preview-terms-text a {
-  color: var(--hc-link);
+  color: var(--hc-preview-link, var(--hc-link));
   text-decoration: underline;
 }
 
@@ -10036,7 +10052,7 @@ body {
   width: 100%;
   min-height: 64px;
   border-radius: 999px;
-  border: 2px solid var(--hc-button-border);
+  border: 2px solid var(--hc-preview-button-border, var(--hc-button-border));
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -10050,23 +10066,24 @@ body {
 }
 
 .hc-preview-btn-primary {
-  background: var(--hc-primary);
-  color: var(--hc-button-primary-text);
+  background: var(--hc-preview-primary, var(--hc-primary));
+  color: var(--hc-preview-button-primary-text, var(--hc-button-primary-text));
 }
 
 .hc-preview-btn-secondary {
-  background: var(--hc-bg);
-  color: var(--hc-button-secondary-text);
+  background: var(--hc-preview-button-secondary, var(--hc-preview-bg, var(--hc-bg)));
+  color: var(--hc-preview-button-secondary-text, var(--hc-button-secondary-text));
 }
 
 .hc-preview-btn-primary:not(:disabled):hover {
-  background: var(--hc-primary);
-  border-color: var(--hc-button-border);
+  background: var(--hc-preview-primary, var(--hc-primary));
+  border-color: var(--hc-preview-button-border, var(--hc-button-border));
 }
 
 .hc-preview-btn-secondary:not(:disabled):hover {
-  color: var(--hc-button-secondary-text);
-  border-color: var(--hc-button-border);
+  background: var(--hc-preview-button-secondary, var(--hc-preview-bg, var(--hc-bg)));
+  color: var(--hc-preview-button-secondary-text, var(--hc-button-secondary-text));
+  border-color: var(--hc-preview-button-border, var(--hc-button-border));
 }
 
 .hc-preview-btn-disabled {
@@ -10084,7 +10101,7 @@ body {
   min-width: 24px;
   flex-shrink: 0;
   justify-content: center;
-  color: var(--hc-chrome);
+  color: var(--hc-preview-chrome, var(--hc-chrome));
 }
 
 .hc-preview-btn-label {
@@ -10104,7 +10121,7 @@ body {
 .hc-preview-alt-label {
   display: block;
   margin: 0 0 8px;
-  color: var(--hc-text-secondary);
+  color: var(--hc-preview-text-secondary, var(--hc-text-secondary));
   font-size: 14px;
 }
 
@@ -10123,7 +10140,7 @@ body {
   margin-top: 8px;
   border: 0;
   background: transparent;
-  color: var(--hc-link);
+  color: var(--hc-preview-link, var(--hc-link));
   text-decoration: underline;
   font-size: 14px;
   padding: 0;
