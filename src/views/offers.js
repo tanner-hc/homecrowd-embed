@@ -1944,6 +1944,9 @@ async function handleOffersMarketplaceCardClick(card) {
         window.location.href = wildfireRedirectUrl;
         return;
       }
+      // No redirect URL - user may be logged out
+      showError('Please log in to access this offer');
+      return;
     }
     try {
       var trackResult = await api.trackOfferClick(offerId).catch(function () {
@@ -1990,18 +1993,13 @@ async function handleOffersMarketplaceCardClick(card) {
       window.location.href = redirectUrl;
       return;
     }
+    // No redirect URL available - user may be logged out or session expired
+    hideFullscreenSpinner();
+    showError('Please log in to access this offer');
+    return;
   }
-  try {
-    var merchantAttr = card.getAttribute('data-merchant');
-    if (merchantAttr) {
-      var merchantData = JSON.parse(merchantAttr);
-      var url = merchantData.website;
-      if (url) {
-        if (url.indexOf('http') !== 0) url = 'https://' + url;
-        window.location.href = url;
-      }
-    }
-  } catch (err) {}
+  // No merchant ID - this shouldn't happen but show error
+  showError('Unable to open this offer. Please try again.');
 }
 
 function openExternalUrl(url, title) {
