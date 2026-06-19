@@ -11,6 +11,7 @@ import { showWebviewOverlay } from '../webview-overlay.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import ScreenTitle from '../base-components/ScreenTitle.js';
 import SearchBar from '../base-components/SearchBar.js';
+import MapLocationSearchBar from '../base-components/MapLocationSearchBar.js';
 import EmptyState from '../base-components/EmptyState.js';
 import Button from '../base-components/Button.js';
 import LinkCardBanner from '../base-components/LinkCardBanner.js';
@@ -746,6 +747,11 @@ var OFFERS_MAP_LOCATE_ICON_SVG =
   '<path d="M12 8a4 4 0 100 8 4 4 0 000-8z" stroke="currentColor" stroke-width="2"/>' +
   '<path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
   '</svg>';
+var OFFERS_MAP_SEARCH_ICON_SVG =
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+  '<circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="2"/>' +
+  '<path d="M16 16l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+  '</svg>';
 
 function renderLocationMapSection() {
   return (
@@ -760,23 +766,16 @@ function renderLocationMapSection() {
     '</p>' +
     '<button type="button" class="hc-offers-location-btn" id="hc-offers-enable-loc">Enable Location</button>' +
     '</div>' +
-    '<div id="hc-offers-map-shell" class="hc-offers-map-shell" style="display:none">' +
+    '<div id="hc-offers-map-location-wrap" class="hc-offers-map-location-wrap" style="display:none">' +
+    MapLocationSearchBar() +
+    '<div id="hc-offers-map-shell" class="hc-offers-map-shell">' +
     '<div id="hc-offers-map-mount" class="hc-offers-map-mount" aria-label="Map"></div>' +
-    '<div class="hc-offers-map-search-overlay">' +
-    '<div class="hc-offers-map-search-row">' +
-    '<span class="hc-offers-map-search-icon" aria-hidden="true">' +
-    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-    '<path d="M12 21s7-4.35 7-10a7 7 0 10-14 0c0 5.65 7 10 7 10z" stroke="currentColor" stroke-width="1.8"/>' +
-    '<circle cx="12" cy="11" r="2.5" stroke="currentColor" stroke-width="1.8"/>' +
-    '</svg></span>' +
-    '<input type="search" id="hc-offers-map-search-input" class="hc-offers-map-search-input" placeholder="City or zip code" autocomplete="off" enterkeyhint="search" />' +
-    '<button type="button" class="hc-offers-map-search-btn" id="hc-offers-map-search-btn">Search</button>' +
-    '</div></div>' +
     '<button type="button" class="hc-offers-map-my-location" id="hc-offers-map-my-location" aria-label="My location">' +
     OFFERS_MAP_LOCATE_ICON_SVG +
     '</button>' +
     '<div id="hc-offers-map-busy-overlay" class="hc-offers-map-busy-overlay" style="display:none" aria-hidden="true">' +
     '<div class="hc-offers-location-spinner" role="status" aria-label="Updating map"></div>' +
+    '</div>' +
     '</div>' +
     '</div>' +
     '<div id="hc-offers-no-stores" class="hc-offers-no-stores-card" style="display:none">' +
@@ -1512,6 +1511,7 @@ function initOffersMap(container, cardlinked) {
   var loadingEl = container.querySelector('#hc-offers-location-loading');
   var noStoresEl = container.querySelector('#hc-offers-no-stores');
   var mapShell = container.querySelector('#hc-offers-map-shell');
+  var mapLocationWrap = container.querySelector('#hc-offers-map-location-wrap');
   var mapMount = container.querySelector('#hc-offers-map-mount');
   var mapSearchInput = container.querySelector('#hc-offers-map-search-input');
   var mapSearchBtn = container.querySelector('#hc-offers-map-search-btn');
@@ -1555,6 +1555,7 @@ function initOffersMap(container, cardlinked) {
     locationKnown = true;
     if (loadingEl) loadingEl.style.display = 'none';
     promptEl.style.display = 'none';
+    if (mapLocationWrap) mapLocationWrap.style.display = '';
     if (mapShell) mapShell.style.display = '';
     else mapMount.style.display = '';
   }
@@ -1570,6 +1571,7 @@ function initOffersMap(container, cardlinked) {
     if (loadingEl) loadingEl.style.display = 'none';
     if (message) setLocationPromptMessage(message);
     promptEl.style.display = '';
+    if (mapLocationWrap) mapLocationWrap.style.display = 'none';
     if (mapShell) mapShell.style.display = 'none';
     else mapMount.style.display = 'none';
     mapMount.classList.remove('hc-offers-map-loading');
@@ -1581,6 +1583,7 @@ function initOffersMap(container, cardlinked) {
   function showLoadingUI() {
     if (loadingEl) loadingEl.style.display = '';
     promptEl.style.display = 'none';
+    if (mapLocationWrap) mapLocationWrap.style.display = 'none';
     if (mapShell) mapShell.style.display = 'none';
     else mapMount.style.display = 'none';
   }
@@ -1619,7 +1622,12 @@ function initOffersMap(container, cardlinked) {
   function setMapSearchLoading(active) {
     if (!mapSearchBtn) return;
     mapSearchBtn.disabled = !!active;
-    mapSearchBtn.textContent = active ? 'Searching…' : 'Search';
+    if (active) {
+      mapSearchBtn.innerHTML =
+        '<span class="hc-offers-map-search-spinner" aria-hidden="true"></span>';
+      return;
+    }
+    mapSearchBtn.innerHTML = OFFERS_MAP_SEARCH_ICON_SVG;
   }
 
   function setMyLocationLoading(active) {
