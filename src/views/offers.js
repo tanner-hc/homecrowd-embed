@@ -17,6 +17,7 @@ import LinkCardBanner from '../base-components/LinkCardBanner.js';
 import NoExtraCostFooter from '../base-components/NoExtraCostFooter.js';
 import PointsPerDollarBanner from '../base-components/PointsPerDollarBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
+import { geocodePlaceQuery } from '../locationUtils.js';
 
 var trophyIconSvg =
   '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
@@ -127,6 +128,19 @@ function getStoredOfferLocation() {
 }
 
 var _userLocation = null;
+var _activeOfferLocation = null;
+
+function setActiveOfferLocation(lat, lng) {
+  if (lat == null || lng == null) return;
+  var latitude = Number(lat);
+  var longitude = Number(lng);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+  _activeOfferLocation = { latitude: latitude, longitude: longitude };
+}
+
+function getActiveOfferLocation() {
+  return _activeOfferLocation;
+}
 
 export function renderOffers(container) {
   container.innerHTML = buildOffersShell('stores');
@@ -139,8 +153,6 @@ export function renderOffers(container) {
   wireUpOffersTabs(container);
   wireUpOffersCardClicks(container, carouselTapDedupe);
   initStoresBannerAndSchoolName(container);
-
-  var userLoc = getStoredOfferLocation();
 
   api
     .getFeaturedOffers('card_linked')
@@ -164,7 +176,7 @@ export function renderOffers(container) {
       populateFeaturedOnline(container, []);
     });
 
-  getOffersWithLocationRetry(1, 50, userLoc)
+  getOffersWithLocationRetry(1, 50, null)
     .then(function (raw) {
       if (!container.isConnected) return;
       populateStoresGrid(container, pickOliveList(raw));
@@ -726,6 +738,15 @@ var OFFERS_LOCATION_PROMPT_DEFAULT =
 var OFFERS_LOCATION_PROMPT_DENIED =
   'Location access is blocked. Allow location in your browser settings, then reopen the HomeCrowd embed and tap Enable Location again.';
 
+var OFFERS_DEFAULT_MAP_LAT = 39.8283;
+var OFFERS_DEFAULT_MAP_LNG = -98.5795;
+
+var OFFERS_MAP_LOCATE_ICON_SVG =
+  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+  '<path d="M12 8a4 4 0 100 8 4 4 0 000-8z" stroke="currentColor" stroke-width="2"/>' +
+  '<path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+  '</svg>';
+
 function renderLocationMapSection() {
   return (
     '<div class="hc-offers-map-section">' +
@@ -739,9 +760,27 @@ function renderLocationMapSection() {
     '</p>' +
     '<button type="button" class="hc-offers-location-btn" id="hc-offers-enable-loc">Enable Location</button>' +
     '</div>' +
-    '<div id="hc-offers-map-mount" class="hc-offers-map-mount" style="display:none" aria-label="Map"></div>' +
+    '<div id="hc-offers-map-shell" class="hc-offers-map-shell" style="display:none">' +
+    '<div id="hc-offers-map-mount" class="hc-offers-map-mount" aria-label="Map"></div>' +
+    '<div class="hc-offers-map-search-overlay">' +
+    '<div class="hc-offers-map-search-row">' +
+    '<span class="hc-offers-map-search-icon" aria-hidden="true">' +
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="M12 21s7-4.35 7-10a7 7 0 10-14 0c0 5.65 7 10 7 10z" stroke="currentColor" stroke-width="1.8"/>' +
+    '<circle cx="12" cy="11" r="2.5" stroke="currentColor" stroke-width="1.8"/>' +
+    '</svg></span>' +
+    '<input type="search" id="hc-offers-map-search-input" class="hc-offers-map-search-input" placeholder="City or zip code" autocomplete="off" enterkeyhint="search" />' +
+    '<button type="button" class="hc-offers-map-search-btn" id="hc-offers-map-search-btn">Search</button>' +
+    '</div></div>' +
+    '<button type="button" class="hc-offers-map-my-location" id="hc-offers-map-my-location" aria-label="My location">' +
+    OFFERS_MAP_LOCATE_ICON_SVG +
+    '</button>' +
+    '<div id="hc-offers-map-busy-overlay" class="hc-offers-map-busy-overlay" style="display:none" aria-hidden="true">' +
+    '<div class="hc-offers-location-spinner" role="status" aria-label="Updating map"></div>' +
+    '</div>' +
+    '</div>' +
     '<div id="hc-offers-no-stores" class="hc-offers-no-stores-card" style="display:none">' +
-    '<p class="hc-offers-no-stores-text">No stores near you</p>' +
+    '<p class="hc-offers-no-stores-text" id="hc-offers-no-stores-text">No stores near you</p>' +
     '</div>' +
     '</div>'
   );
@@ -948,6 +987,35 @@ function destroyOffersMapInstance(container) {
   container._hcLeafletMap = null;
 }
 
+function focusOffersMap(container, lat, lng) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+  var lf = container._hcLeafletMap;
+  if (lf && typeof lf.setView === 'function') {
+    lf.setView([lat, lng], 13, { animate: true });
+    return;
+  }
+
+  var mk = container._hcMkMap;
+  if (mk && window.mapkit) {
+    try {
+      var Coord = window.mapkit.Coordinate;
+      var Region = window.mapkit.CoordinateRegion;
+      var Span = window.mapkit.CoordinateSpan;
+      var center = new Coord(lat, lng);
+      var span = new Span(0.05, 0.05);
+      var region = new Region(center, span);
+      if (typeof mk.setRegionAnimated === 'function') {
+        mk.setRegionAnimated(region, true);
+      } else {
+        mk.region = region;
+      }
+    } catch (e) {
+      console.warn('[HC offers map] focusOffersMap failed', e);
+    }
+  }
+}
+
 function leafletMapPinIcon(L, fillHex) {
   var html =
     '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42" aria-hidden="true">' +
@@ -1152,7 +1220,20 @@ function restoreMapKitConsoleErrorHook(container) {
   }
 }
 
-function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData) {
+function notifyMapRenderDone(container) {
+  var cb = container._hcMapRenderDone;
+  container._hcMapRenderDone = null;
+  if (typeof cb === 'function') {
+    try {
+      cb();
+    } catch (e) {
+      console.warn('[HC offers map] render done callback failed', e);
+    }
+  }
+}
+
+function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker) {
+  if (showUserMarker === undefined) showUserMarker = true;
   ensureLeafletMapLibreGl()
     .then(function (L) {
       destroyOffersMapInstance(container);
@@ -1168,11 +1249,14 @@ function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMar
 
       var userIcon = leafletMapPinIcon(L, MAP_PIN_USER_COLOR);
       var merchantIcon = leafletMapPinIcon(L, MAP_PIN_MERCHANT_COLOR);
-      var userMarker = L.marker([userLat, userLng], {
-        icon: userIcon,
-        zIndexOffset: 1000,
-      }).addTo(map);
-      userMarker.bindPopup('<strong>' + escapeHtml('Your Location') + '</strong>');
+      var userMarker = null;
+      if (showUserMarker) {
+        userMarker = L.marker([userLat, userLng], {
+          icon: userIcon,
+          zIndexOffset: 1000,
+        }).addTo(map);
+        userMarker.bindPopup('<strong>' + escapeHtml('Your Location') + '</strong>');
+      }
 
       var merchantLayers = [];
       merchantMarkerData.forEach(function (mk) {
@@ -1188,14 +1272,15 @@ function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMar
         merchantLayers.push(marker);
       });
 
-      var boundsGroup = [userMarker].concat(merchantLayers);
-      if (merchantLayers.length > 0) {
+      var boundsGroup = (userMarker ? [userMarker] : []).concat(merchantLayers);
+      if (merchantLayers.length > 0 && boundsGroup.length > 0) {
         map.fitBounds(L.featureGroup(boundsGroup).getBounds().pad(0.2));
       } else {
         map.setView([userLat, userLng], 13);
       }
       window.setTimeout(function () {
         map.invalidateSize();
+        notifyMapRenderDone(container);
       }, 100);
     })
     .catch(function () {
@@ -1206,6 +1291,7 @@ function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMar
         '<div class="hc-offers-map-unavailable">' +
         escapeHtml('Map could not be loaded. Please try again later.') +
         '</div>';
+      notifyMapRenderDone(container);
     });
 }
 
@@ -1277,10 +1363,11 @@ function offersMapAnnotationCalloutDelegate() {
   };
 }
 
-function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merchantMarkerData) {
+function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merchantMarkerData, showUserMarker) {
+  if (showUserMarker === undefined) showUserMarker = true;
   if (mapKitAuthFailureWasReported()) {
     console.warn('[HC offers map] MapKit auth failure before render, using OpenStreetMap fallback');
-    renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData);
+    renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
     return;
   }
   console.log('[HC offers map] renderMapWithMapKit center', userLat, userLng, 'pins', merchantMarkerData.length);
@@ -1297,15 +1384,18 @@ function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merc
   var calloutDel = offersMapAnnotationCalloutDelegate();
 
   var userCoord = new Coord(userLat, userLng);
-  var annotations = [
-    new Mai(userCoord, {
-      title: 'Your Location',
-      color: MAP_PIN_USER_COLOR,
-      calloutEnabled: true,
-      titleVisibility: 'hidden',
-      callout: calloutDel,
-    }),
-  ];
+  var annotations = [];
+  if (showUserMarker) {
+    annotations.push(
+      new Mai(userCoord, {
+        title: 'Your Location',
+        color: MAP_PIN_USER_COLOR,
+        calloutEnabled: true,
+        titleVisibility: 'hidden',
+        callout: calloutDel,
+      }),
+    );
+  }
 
   merchantMarkerData.forEach(function (mk) {
     var label = (mk.name || '').trim() || 'Partner store';
@@ -1323,7 +1413,11 @@ function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merc
     );
   });
 
-  var regionBox = computeMapKitRegionLikeStoreMap(userLat, userLng, merchantMarkerData);
+  var regionBox = computeMapKitRegionLikeStoreMap(
+    showUserMarker ? userLat : NaN,
+    showUserMarker ? userLng : NaN,
+    merchantMarkerData,
+  );
   var mapCenterCoord = new Coord(regionBox.centerLat, regionBox.centerLng);
   var startSpan = new Span(regionBox.spanLat, regionBox.spanLon);
   var M = mapkit.Map;
@@ -1331,7 +1425,7 @@ function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merc
   function createMapAndAnnotations() {
     if (mapKitAuthFailureWasReported()) {
       console.warn('[HC offers map] MapKit auth failure detected, using OpenStreetMap fallback');
-      renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData);
+      renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
       return;
     }
     var mapOpts = {
@@ -1375,7 +1469,7 @@ function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merc
         }
       } catch (e3) {}
       container._hcMkMap = null;
-      renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData);
+      renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
     }
 
     container._hcMkFallbackHandler = onMapKitFallbackTrigger;
@@ -1395,7 +1489,7 @@ function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merc
     } catch (e) {
       console.error('[HC offers map] new Map failed', e);
       cleanupMapKitFallbackListeners();
-      renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData);
+      renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
       return;
     }
     container._hcMkMap = map;
@@ -1405,6 +1499,9 @@ function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merc
     map.addAnnotations(annotations);
     console.log('[HC offers map] annotations:', annotations.length);
     scheduleMapKitTileReflow(map);
+    window.setTimeout(function () {
+      notifyMapRenderDone(container);
+    }, 150);
   }
 
   whenOffersMapMountLaidOut(mapMount, createMapAndAnnotations);
@@ -1414,17 +1511,34 @@ function initOffersMap(container, cardlinked) {
   var promptEl = container.querySelector('#hc-offers-location-prompt');
   var loadingEl = container.querySelector('#hc-offers-location-loading');
   var noStoresEl = container.querySelector('#hc-offers-no-stores');
+  var mapShell = container.querySelector('#hc-offers-map-shell');
   var mapMount = container.querySelector('#hc-offers-map-mount');
+  var mapSearchInput = container.querySelector('#hc-offers-map-search-input');
+  var mapSearchBtn = container.querySelector('#hc-offers-map-search-btn');
+  var mapMyLocationBtn = container.querySelector('#hc-offers-map-my-location');
+  var mapBusyOverlay = container.querySelector('#hc-offers-map-busy-overlay');
   var btn = container.querySelector('#hc-offers-enable-loc');
   if (!mapMount || !promptEl) return;
 
   var locationKnown = false;
+  var hasUserMapLocation = false;
 
   container._hcCardlinkedStores = Array.isArray(cardlinked) ? cardlinked : [];
+
+  function setNoStoresMessage(hasLocation) {
+    var textEl = container.querySelector('#hc-offers-no-stores-text');
+    if (!textEl) return;
+    textEl.textContent = hasLocation
+      ? 'There are no supported stores in your area.'
+      : 'Search for a city or zip code to discover nearby stores.';
+  }
 
   function showNoStoresIfEmpty(list) {
     if (!noStoresEl) return;
     noStoresEl.style.display = Array.isArray(list) && list.length === 0 ? '' : 'none';
+    if (Array.isArray(list) && list.length === 0) {
+      setNoStoresMessage(hasUserMapLocation);
+    }
   }
 
   function showMapMountUnavailable(message) {
@@ -1441,7 +1555,8 @@ function initOffersMap(container, cardlinked) {
     locationKnown = true;
     if (loadingEl) loadingEl.style.display = 'none';
     promptEl.style.display = 'none';
-    mapMount.style.display = '';
+    if (mapShell) mapShell.style.display = '';
+    else mapMount.style.display = '';
   }
 
   function setLocationPromptMessage(message) {
@@ -1455,7 +1570,8 @@ function initOffersMap(container, cardlinked) {
     if (loadingEl) loadingEl.style.display = 'none';
     if (message) setLocationPromptMessage(message);
     promptEl.style.display = '';
-    mapMount.style.display = 'none';
+    if (mapShell) mapShell.style.display = 'none';
+    else mapMount.style.display = 'none';
     mapMount.classList.remove('hc-offers-map-loading');
     mapMount.classList.remove('hc-offers-map-osm-fallback');
     mapMount.removeAttribute('aria-busy');
@@ -1465,10 +1581,56 @@ function initOffersMap(container, cardlinked) {
   function showLoadingUI() {
     if (loadingEl) loadingEl.style.display = '';
     promptEl.style.display = 'none';
-    mapMount.style.display = 'none';
+    if (mapShell) mapShell.style.display = 'none';
+    else mapMount.style.display = 'none';
   }
 
-  function renderMap(userLat, userLng) {
+  function setMapShellLoading(active) {
+    if (mapBusyOverlay) {
+      mapBusyOverlay.style.display = active ? '' : 'none';
+      mapBusyOverlay.setAttribute('aria-hidden', active ? 'false' : 'true');
+    }
+    if (mapShell) {
+      mapShell.classList.toggle('hc-offers-map-shell--busy', !!active);
+    }
+    if (mapSearchInput) mapSearchInput.disabled = !!active;
+    if (mapMyLocationBtn) mapMyLocationBtn.disabled = !!active;
+  }
+
+  function setStoresGridLoading(active) {
+    var grid = document.getElementById('hc-stores-grid');
+    if (!grid) return;
+    if (active) {
+      grid.innerHTML = gridSkeletonHtml();
+    }
+  }
+
+  function restoreStoresGridFromCache() {
+    var grid = document.getElementById('hc-stores-grid');
+    if (!grid) return;
+    var list = Array.isArray(container._hcCardlinkedStores) ? container._hcCardlinkedStores : [];
+    var gridHtml = '';
+    list.forEach(function (m) {
+      gridHtml += renderMerchantCard(m);
+    });
+    grid.innerHTML = gridHtml;
+  }
+
+  function setMapSearchLoading(active) {
+    if (!mapSearchBtn) return;
+    mapSearchBtn.disabled = !!active;
+    mapSearchBtn.textContent = active ? 'Searching…' : 'Search';
+  }
+
+  function setMyLocationLoading(active) {
+    if (!mapMyLocationBtn) return;
+    mapMyLocationBtn.disabled = !!active;
+    mapMyLocationBtn.classList.toggle('hc-offers-map-my-location--loading', !!active);
+  }
+
+  function renderMap(userLat, userLng, showUserMarker, onReady) {
+    if (showUserMarker === undefined) showUserMarker = true;
+    container._hcMapRenderDone = typeof onReady === 'function' ? onReady : null;
     var merchants = Array.isArray(container._hcCardlinkedStores) ? container._hcCardlinkedStores : [];
     var merchantMarkerData = [];
     merchants.forEach(function (m) {
@@ -1483,63 +1645,98 @@ function initOffersMap(container, cardlinked) {
       }
     });
 
-    mapMount.classList.add('hc-offers-map-loading');
-    mapMount.setAttribute('aria-busy', 'true');
-    mapMount.innerHTML = '<div class="hc-offers-map-skeleton"></div>';
+    var refreshingMap = !!(container._hcLeafletMap || container._hcMkMap);
+    if (!refreshingMap) {
+      mapMount.classList.add('hc-offers-map-loading');
+      mapMount.setAttribute('aria-busy', 'true');
+      mapMount.innerHTML = '<div class="hc-offers-map-skeleton"></div>';
+    } else {
+      mapMount.classList.remove('hc-offers-map-loading');
+      mapMount.removeAttribute('aria-busy');
+    }
 
     console.log('[HC offers map] renderMap start', userLat, userLng, 'merchant pins', merchantMarkerData.length);
     container._hcOsmFallbackDone = false;
     resolveMapKitTokenAsync().then(function (mkToken) {
       if (!mkToken) {
         console.warn('[HC offers map] no MapKit token, using OpenStreetMap fallback');
-        renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData);
+        renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
         return;
       }
       if (!tokenLooksLikeMapKitJwt(mkToken)) {
         console.warn('[HC offers map] token is not a JWT, using OpenStreetMap fallback');
-        renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData);
+        renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
         return;
       }
       ensureMapKitLoaded(mkToken)
         .then(function (mapkit) {
           if (mapKitAuthFailureWasReported()) {
             console.warn('[HC offers map] MapKit reported invalid token, using OpenStreetMap fallback');
-            renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData);
+            renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
             return;
           }
           try {
-            renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merchantMarkerData);
+            renderMapWithMapKit(
+              container,
+              mapMount,
+              mapkit,
+              userLat,
+              userLng,
+              merchantMarkerData,
+              showUserMarker,
+            );
           } catch (e) {
             console.error('[HC offers map] renderMapWithMapKit threw', e);
-            renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData);
+            renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
           }
         })
         .catch(function (err) {
           console.error('[HC offers map] ensureMapKitLoaded failed', err);
-          renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData);
+          renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
         });
     });
   }
 
-  function applyStoredLocation() {
+  function showMapWithDefaultCenter() {
+    hasUserMapLocation = false;
+    showMapUI();
+    renderMap(OFFERS_DEFAULT_MAP_LAT, OFFERS_DEFAULT_MAP_LNG, false);
+    showNoStoresIfEmpty(container._hcCardlinkedStores);
+  }
+
+  function applyStoredLocationFallback() {
     try {
       var raw = readStoredOfferLocationRaw();
       if (!raw) return false;
       var o = JSON.parse(raw);
       if (o && o.lat != null && o.lng != null) {
-        showMapUI();
-        renderMap(Number(o.lat), Number(o.lng));
-        showNoStoresIfEmpty(container._hcCardlinkedStores);
-        return true;
+        return applyFreshLocation(Number(o.lat), Number(o.lng), {
+          previewMap: false,
+          persist: false,
+        }).then(function () {
+          return true;
+        });
       }
     } catch (e) {}
-    return false;
+    return Promise.resolve(false);
   }
 
-  function applyFreshLocation(lat, lng) {
-    if (lat == null || lng == null) return;
-    persistOfferLocation(lat, lng);
-    api
+  function applyFreshLocation(lat, lng, options) {
+    if (lat == null || lng == null) return Promise.resolve();
+    options = options || {};
+    hasUserMapLocation = true;
+    setActiveOfferLocation(lat, lng);
+    if (options.persist !== false) {
+      persistOfferLocation(lat, lng);
+    }
+    setStoresGridLoading(true);
+
+    if (options.previewMap !== false) {
+      focusOffersMap(container, lat, lng);
+      setMapShellLoading(true);
+    }
+
+    return api
       .getOffers(1, 50, { latitude: lat, longitude: lng })
       .then(function (raw) {
         var list = raw.cardlinked || raw.results || (Array.isArray(raw) ? raw : []);
@@ -1560,8 +1757,85 @@ function initOffersMap(container, cardlinked) {
       })
       .then(function () {
         showMapUI();
-        renderMap(lat, lng);
+        return new Promise(function (resolve) {
+          renderMap(lat, lng, true, function () {
+            setMapShellLoading(false);
+            resolve();
+          });
+        });
       });
+  }
+
+  function handleMapLocationSearch() {
+    if (!mapSearchInput || !mapSearchBtn) return;
+    var query = (mapSearchInput.value || '').trim();
+    if (!query) return;
+    if (mapSearchBtn.disabled) return;
+
+    setMapSearchLoading(true);
+    setMapShellLoading(true);
+    setStoresGridLoading(true);
+
+    geocodePlaceQuery(query)
+      .then(function (result) {
+        if (!result) {
+          setMapShellLoading(false);
+          restoreStoresGridFromCache();
+          window.alert('Could not find that city or zip code. Please try another search.');
+          return null;
+        }
+        focusOffersMap(container, result.latitude, result.longitude);
+        return applyFreshLocation(result.latitude, result.longitude, {
+          previewMap: false,
+          persist: false,
+        });
+      })
+      .catch(function (err) {
+        setMapShellLoading(false);
+        restoreStoresGridFromCache();
+        console.error('Map location search failed:', err);
+        window.alert('Unable to search for that location. Please try again.');
+      })
+      .then(function () {
+        setMapSearchLoading(false);
+      });
+  }
+
+  function handleRecenterToMyLocation() {
+    if (!navigator.geolocation) {
+      window.alert('Location services are not supported in this browser.');
+      return;
+    }
+    if (mapMyLocationBtn && mapMyLocationBtn.disabled) return;
+
+    setMyLocationLoading(true);
+    setMapShellLoading(true);
+    setStoresGridLoading(true);
+    requestOfferGeolocation(
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+      function (pos) {
+        if (mapSearchInput) mapSearchInput.value = '';
+        setLocationPromptMessage(OFFERS_LOCATION_PROMPT_DEFAULT);
+        applyFreshLocation(pos.coords.latitude, pos.coords.longitude)
+          .then(function () {
+            setMyLocationLoading(false);
+          })
+          .catch(function () {
+            setMyLocationLoading(false);
+            setMapShellLoading(false);
+          });
+      },
+      function (err) {
+        setMyLocationLoading(false);
+        setMapShellLoading(false);
+        restoreStoresGridFromCache();
+        if (err && err.code === 1) {
+          window.alert(OFFERS_LOCATION_PROMPT_DENIED);
+          return;
+        }
+        window.alert('Unable to get your location. Please try again.');
+      },
+    );
   }
 
   function rebindStoresSearchClean(list) {
@@ -1588,18 +1862,24 @@ function initOffersMap(container, cardlinked) {
   function kickOffParallelGpsRequest() {
     if (locationKnown) return;
     if (!navigator.geolocation) {
-      showPromptUI();
+      applyStoredLocationFallback().then(function (usedStored) {
+        if (!usedStored) showMapWithDefaultCenter();
+      });
       return;
     }
     function requestGrantedLocation() {
       showLoadingUI();
       requestOfferGeolocation(
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
         function (pos) {
-          applyFreshLocation(pos.coords.latitude, pos.coords.longitude);
+          if (mapSearchInput) mapSearchInput.value = '';
+          applyFreshLocation(pos.coords.latitude, pos.coords.longitude, { previewMap: false });
         },
         function () {
-          if (!locationKnown) showPromptUI();
+          if (locationKnown) return;
+          applyStoredLocationFallback().then(function (usedStored) {
+            if (!usedStored) showMapWithDefaultCenter();
+          });
         },
       );
     }
@@ -1612,26 +1892,28 @@ function initOffersMap(container, cardlinked) {
               requestGrantedLocation();
               return;
             }
-            if (status && status.state === 'denied') {
-              showPromptUI(OFFERS_LOCATION_PROMPT_DENIED);
-              return;
-            }
-            showPromptUI();
+            applyStoredLocationFallback().then(function (usedStored) {
+              if (!usedStored) showMapWithDefaultCenter();
+            });
           })
           .catch(function () {
-            showPromptUI();
+            applyStoredLocationFallback().then(function (usedStored) {
+              if (!usedStored) showMapWithDefaultCenter();
+            });
           });
       } catch (e) {
-        showPromptUI();
+        applyStoredLocationFallback().then(function (usedStored) {
+          if (!usedStored) showMapWithDefaultCenter();
+        });
       }
     } else {
-      showPromptUI();
+      applyStoredLocationFallback().then(function (usedStored) {
+        if (!usedStored) showMapWithDefaultCenter();
+      });
     }
   }
 
-  if (!applyStoredLocation()) {
-    kickOffParallelGpsRequest();
-  }
+  kickOffParallelGpsRequest();
 
   if (btn && !btn._hcLocClickBound) {
     btn._hcLocClickBound = true;
@@ -1645,19 +1927,41 @@ function initOffersMap(container, cardlinked) {
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
         function (pos) {
           btn.disabled = false;
+          if (mapSearchInput) mapSearchInput.value = '';
           setLocationPromptMessage(OFFERS_LOCATION_PROMPT_DEFAULT);
           applyFreshLocation(pos.coords.latitude, pos.coords.longitude);
         },
         function (err) {
           btn.disabled = false;
           if (err && err.code === 1) {
-            showPromptUI(OFFERS_LOCATION_PROMPT_DENIED);
+            showMapWithDefaultCenter();
+            window.alert(OFFERS_LOCATION_PROMPT_DENIED);
             return;
           }
-          showPromptUI();
+          showMapWithDefaultCenter();
         },
       );
     });
+  }
+
+  if (mapSearchBtn && !mapSearchBtn._hcMapSearchBound) {
+    mapSearchBtn._hcMapSearchBound = true;
+    mapSearchBtn.addEventListener('click', handleMapLocationSearch);
+  }
+
+  if (mapSearchInput && !mapSearchInput._hcMapSearchBound) {
+    mapSearchInput._hcMapSearchBound = true;
+    mapSearchInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleMapLocationSearch();
+      }
+    });
+  }
+
+  if (mapMyLocationBtn && !mapMyLocationBtn._hcMapMyLocationBound) {
+    mapMyLocationBtn._hcMapMyLocationBound = true;
+    mapMyLocationBtn.addEventListener('click', handleRecenterToMyLocation);
   }
 }
 
@@ -1852,7 +2156,7 @@ function renderMerchantCard(merchant) {
   }
   var distance = '';
   if (!isOnline) {
-    var userLoc = getStoredOfferLocation();
+    var userLoc = getActiveOfferLocation();
     var userLat = userLoc ? Number(userLoc.latitude) : NaN;
     var userLng = userLoc ? Number(userLoc.longitude) : NaN;
     var d = merchantDistanceMiles(merchant, userLat, userLng);
