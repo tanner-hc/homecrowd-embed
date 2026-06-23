@@ -15,6 +15,7 @@ export default function MapLocationSearchBar(props) {
   props = props || {};
   var inputId = props.inputId || 'hc-offers-map-search-input';
   var buttonId = props.buttonId || 'hc-offers-map-search-btn';
+  var suggestionsId = props.suggestionsId || 'hc-offers-map-search-suggestions';
   var disabled = !!props.disabled;
 
   return (
@@ -39,6 +40,10 @@ export default function MapLocationSearchBar(props) {
     ' aria-label="Search">' +
     SEARCH_ICON_SVG +
     '</button>' +
-    '</div></div>'
+    '</div>' +
+    '<div class="hc-offers-map-search-suggestions" id="' +
+    escapeHtml(suggestionsId) +
+    '" style="display:none"></div>' +
+    '</div>'
   );
 }
