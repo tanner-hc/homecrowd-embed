@@ -9627,6 +9627,7 @@ body {
   width: 138px;
   min-width: 138px;
   min-height: 138px;
+  max-height: 300px;
   border-radius: 12px;
   background: #fafafa;
   overflow: hidden;
