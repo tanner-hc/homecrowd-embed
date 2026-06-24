@@ -3774,6 +3774,7 @@ body {
 
 .hc-offers-map-location-search {
   width: 100%;
+  position: relative;
 }
 
 .hc-offers-map-location-search-row {
@@ -3883,6 +3884,62 @@ body {
 .hc-offers-map-search-submit:disabled {
   opacity: 0.7;
   cursor: default;
+}
+
+.hc-offers-map-search-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 1200;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #fff;
+  border: 0.5px solid #e0e0e0;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(17, 17, 17, 0.08);
+}
+
+.hc-offers-map-search-suggestion {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  border: none;
+  border-bottom: 0.5px solid #e0e0e0;
+  background: #fff;
+  color: #000;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hc-offers-map-search-suggestion:last-child {
+  border-bottom: none;
+}
+
+.hc-offers-map-search-suggestion:hover,
+.hc-offers-map-search-suggestion:focus-visible {
+  background: #f7fbfd;
+  outline: none;
+}
+
+.hc-offers-map-search-suggestion-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #90a4ae;
+  flex-shrink: 0;
+}
+
+.hc-offers-map-search-suggestion-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .hc-offers-map-shell--busy .hc-offers-map-location-search-row {
@@ -9627,6 +9684,7 @@ body {
   width: 138px;
   min-width: 138px;
   min-height: 138px;
+  max-height: 300px;
   border-radius: 12px;
   background: #fafafa;
   overflow: hidden;

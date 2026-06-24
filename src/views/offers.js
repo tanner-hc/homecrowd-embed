@@ -18,7 +18,7 @@ import LinkCardBanner from '../base-components/LinkCardBanner.js';
 import NoExtraCostFooter from '../base-components/NoExtraCostFooter.js';
 import PointsPerDollarBanner from '../base-components/PointsPerDollarBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
-import { geocodePlaceQuery } from '../locationUtils.js';
+import { searchUSCities, lookupUSCity } from '../usCitySearch.js';
 
 var trophyIconSvg =
   '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
@@ -1515,6 +1515,7 @@ function initOffersMap(container, cardlinked) {
   var mapMount = container.querySelector('#hc-offers-map-mount');
   var mapSearchInput = container.querySelector('#hc-offers-map-search-input');
   var mapSearchBtn = container.querySelector('#hc-offers-map-search-btn');
+  var mapSearchSuggestions = container.querySelector('#hc-offers-map-search-suggestions');
   var mapMyLocationBtn = container.querySelector('#hc-offers-map-my-location');
   var mapBusyOverlay = container.querySelector('#hc-offers-map-busy-overlay');
   var btn = container.querySelector('#hc-offers-enable-loc');
@@ -1522,6 +1523,8 @@ function initOffersMap(container, cardlinked) {
 
   var locationKnown = false;
   var hasUserMapLocation = false;
+  var currentMapSuggestions = [];
+  var mapSearchBlurTimer = null;
 
   container._hcCardlinkedStores = Array.isArray(cardlinked) ? cardlinked : [];
 
@@ -1596,7 +1599,9 @@ function initOffersMap(container, cardlinked) {
     if (mapShell) {
       mapShell.classList.toggle('hc-offers-map-shell--busy', !!active);
     }
+    if (active) hideMapSuggestions();
     if (mapSearchInput) mapSearchInput.disabled = !!active;
+    if (mapSearchBtn) mapSearchBtn.disabled = !!active;
     if (mapMyLocationBtn) mapMyLocationBtn.disabled = !!active;
   }
 
@@ -1622,12 +1627,94 @@ function initOffersMap(container, cardlinked) {
   function setMapSearchLoading(active) {
     if (!mapSearchBtn) return;
     mapSearchBtn.disabled = !!active;
-    if (active) {
-      mapSearchBtn.innerHTML =
-        '<span class="hc-offers-map-search-spinner" aria-hidden="true"></span>';
+    mapSearchBtn.innerHTML = OFFERS_MAP_SEARCH_ICON_SVG;
+  }
+
+  function clearMapSearchBlurTimer() {
+    if (mapSearchBlurTimer) {
+      window.clearTimeout(mapSearchBlurTimer);
+      mapSearchBlurTimer = null;
+    }
+  }
+
+  function hideMapSuggestions() {
+    clearMapSearchBlurTimer();
+    currentMapSuggestions = [];
+    if (!mapSearchSuggestions) return;
+    mapSearchSuggestions.innerHTML = '';
+    mapSearchSuggestions.style.display = 'none';
+  }
+
+  function renderMapSuggestions(query) {
+    if (!mapSearchSuggestions) return;
+    currentMapSuggestions = searchUSCities(query);
+    if (!currentMapSuggestions.length) {
+      hideMapSuggestions();
       return;
     }
-    mapSearchBtn.innerHTML = OFFERS_MAP_SEARCH_ICON_SVG;
+    var html = '';
+    currentMapSuggestions.forEach(function (suggestion, index) {
+      html +=
+        '<button type="button" class="hc-offers-map-search-suggestion" data-suggestion-index="' +
+        String(index) +
+        '">' +
+        '<span class="hc-offers-map-search-suggestion-icon" aria-hidden="true">' +
+        OFFERS_MAP_LOCATE_ICON_SVG +
+        '</span>' +
+        '<span class="hc-offers-map-search-suggestion-text">' +
+        escapeHtml(suggestion.label) +
+        '</span>' +
+        '</button>';
+    });
+    mapSearchSuggestions.innerHTML = html;
+    mapSearchSuggestions.style.display = '';
+  }
+
+  function updateMapSuggestionsFromInput() {
+    if (!mapSearchInput || mapSearchInput.disabled) {
+      hideMapSuggestions();
+      return;
+    }
+    var query = (mapSearchInput.value || '').trim();
+    if (query.length < 2) {
+      hideMapSuggestions();
+      return;
+    }
+    renderMapSuggestions(query);
+  }
+
+  function runMapLocationSearchAt(lat, lng) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return Promise.resolve();
+    if (mapSearchBtn && mapSearchBtn.disabled) return Promise.resolve();
+
+    setMapSearchLoading(true);
+    setMapShellLoading(true);
+    setStoresGridLoading(true);
+    hideMapSuggestions();
+    focusOffersMap(container, lat, lng);
+
+    return applyFreshLocation(lat, lng, {
+      previewMap: false,
+      persist: false,
+    })
+      .catch(function (err) {
+        setMapShellLoading(false);
+        restoreStoresGridFromCache();
+        console.error('Map location search failed:', err);
+        window.alert('Unable to search for that location. Please try again.');
+      })
+      .then(function () {
+        setMapSearchLoading(false);
+      });
+  }
+
+  function handleMapSuggestionSelection(index) {
+    var suggestion = currentMapSuggestions[index];
+    if (!suggestion || !suggestion.entry) return;
+    if (mapSearchInput) {
+      mapSearchInput.value = suggestion.label;
+    }
+    runMapLocationSearchAt(suggestion.entry.latitude, suggestion.entry.longitude);
   }
 
   function setMyLocationLoading(active) {
@@ -1779,34 +1866,13 @@ function initOffersMap(container, cardlinked) {
     var query = (mapSearchInput.value || '').trim();
     if (!query) return;
     if (mapSearchBtn.disabled) return;
-
-    setMapSearchLoading(true);
-    setMapShellLoading(true);
-    setStoresGridLoading(true);
-
-    geocodePlaceQuery(query)
-      .then(function (result) {
-        if (!result) {
-          setMapShellLoading(false);
-          restoreStoresGridFromCache();
-          window.alert('Could not find that city or zip code. Please try another search.');
-          return null;
-        }
-        focusOffersMap(container, result.latitude, result.longitude);
-        return applyFreshLocation(result.latitude, result.longitude, {
-          previewMap: false,
-          persist: false,
-        });
-      })
-      .catch(function (err) {
-        setMapShellLoading(false);
-        restoreStoresGridFromCache();
-        console.error('Map location search failed:', err);
-        window.alert('Unable to search for that location. Please try again.');
-      })
-      .then(function () {
-        setMapSearchLoading(false);
-      });
+    var result = lookupUSCity(query);
+    if (!result) {
+      hideMapSuggestions();
+      window.alert('Could not find that city or zip code. Please try another search.');
+      return;
+    }
+    runMapLocationSearchAt(result.latitude, result.longitude);
   }
 
   function handleRecenterToMyLocation() {
@@ -1823,6 +1889,7 @@ function initOffersMap(container, cardlinked) {
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
       function (pos) {
         if (mapSearchInput) mapSearchInput.value = '';
+        hideMapSuggestions();
         setLocationPromptMessage(OFFERS_LOCATION_PROMPT_DEFAULT);
         applyFreshLocation(pos.coords.latitude, pos.coords.longitude)
           .then(function () {
@@ -1881,6 +1948,7 @@ function initOffersMap(container, cardlinked) {
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
         function (pos) {
           if (mapSearchInput) mapSearchInput.value = '';
+          hideMapSuggestions();
           applyFreshLocation(pos.coords.latitude, pos.coords.longitude, { previewMap: false });
         },
         function () {
@@ -1936,6 +2004,7 @@ function initOffersMap(container, cardlinked) {
         function (pos) {
           btn.disabled = false;
           if (mapSearchInput) mapSearchInput.value = '';
+          hideMapSuggestions();
           setLocationPromptMessage(OFFERS_LOCATION_PROMPT_DEFAULT);
           applyFreshLocation(pos.coords.latitude, pos.coords.longitude);
         },
@@ -1957,9 +2026,38 @@ function initOffersMap(container, cardlinked) {
     mapSearchBtn.addEventListener('click', handleMapLocationSearch);
   }
 
+  if (mapSearchSuggestions && !mapSearchSuggestions._hcMapSuggestionsBound) {
+    mapSearchSuggestions._hcMapSuggestionsBound = true;
+    mapSearchSuggestions.addEventListener('mousedown', function (e) {
+      var item = e.target && e.target.closest && e.target.closest('.hc-offers-map-search-suggestion');
+      if (!item) return;
+      e.preventDefault();
+      clearMapSearchBlurTimer();
+    });
+    mapSearchSuggestions.addEventListener('click', function (e) {
+      var item = e.target && e.target.closest && e.target.closest('.hc-offers-map-search-suggestion');
+      if (!item) return;
+      var index = Number(item.getAttribute('data-suggestion-index'));
+      if (!Number.isFinite(index)) return;
+      handleMapSuggestionSelection(index);
+    });
+  }
+
   if (mapSearchInput && !mapSearchInput._hcMapSearchBound) {
     mapSearchInput._hcMapSearchBound = true;
+    mapSearchInput.addEventListener('input', updateMapSuggestionsFromInput);
+    mapSearchInput.addEventListener('focus', updateMapSuggestionsFromInput);
+    mapSearchInput.addEventListener('blur', function () {
+      clearMapSearchBlurTimer();
+      mapSearchBlurTimer = window.setTimeout(function () {
+        hideMapSuggestions();
+      }, 150);
+    });
     mapSearchInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        hideMapSuggestions();
+        return;
+      }
       if (e.key === 'Enter') {
         e.preventDefault();
         handleMapLocationSearch();
