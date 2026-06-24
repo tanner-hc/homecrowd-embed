@@ -1627,11 +1627,6 @@ function initOffersMap(container, cardlinked) {
   function setMapSearchLoading(active) {
     if (!mapSearchBtn) return;
     mapSearchBtn.disabled = !!active;
-    if (active) {
-      mapSearchBtn.innerHTML =
-        '<span class="hc-offers-map-search-spinner" aria-hidden="true"></span>';
-      return;
-    }
     mapSearchBtn.innerHTML = OFFERS_MAP_SEARCH_ICON_SVG;
   }
 
