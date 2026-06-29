@@ -5408,6 +5408,7 @@ body {
   flex-direction: column;
   flex: 1;
   min-width: 0;
+  padding-right: 4px;
 }
 
 .hc-bc-secondary-btn-title {
@@ -5421,11 +5422,13 @@ body {
   font-weight: 400;
   color: var(--hc-text-secondary);
   margin-top: 2px;
+  line-height: 1.35;
+  white-space: pre-line;
 }
 
 .hc-bc-secondary-btn-right {
   flex-shrink: 0;
-  margin-left: 8px;
+  margin-left: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -8436,6 +8439,325 @@ body {
 .hc-support-page .hc-bc-main-btn--filled .hc-bc-main-btn-loader {
   border-color: rgba(0, 0, 0, 0.22);
   border-top-color: #000;
+}
+
+.hc-upload-receipt-page {
+  background: #ffffff;
+  min-height: 100%;
+  padding-bottom: 24px;
+}
+
+.hc-upload-receipt-page .hc-account-settings-nav {
+  padding-bottom: 12px;
+  margin-bottom: 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.hc-upload-receipt-scroll {
+  padding: 8px 0 32px;
+}
+
+.hc-upload-receipt-info-card {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  background: #f3f8fd;
+  border-radius: 14px;
+  padding: 16px;
+  margin: 0 20px 24px;
+}
+
+.hc-upload-receipt-info-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hc-upload-receipt-info-text-wrap {
+  flex: 1;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.hc-upload-receipt-info-title {
+  font-size: 14px;
+  font-family: 'Baikal-Bold', var(--hc-font);
+  font-weight: 700;
+  color: #1a2b6b;
+  margin-bottom: 4px;
+  line-height: 18px;
+}
+
+.hc-upload-receipt-info-body {
+  margin: 0;
+  font-size: 13px;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  color: #5b6473;
+  line-height: 18px;
+}
+
+.hc-upload-receipt-info-emphasis {
+  font-family: 'Baikal-Bold', var(--hc-font);
+  font-weight: 700;
+  color: #1a2b6b;
+}
+
+.hc-upload-receipt-section {
+  margin-bottom: 24px;
+  padding: 0 20px;
+}
+
+.hc-upload-receipt-section-label {
+  font-size: 16px;
+  font-family: 'Baikal-Book', var(--hc-font);
+  color: #000000;
+  margin-bottom: 12px;
+}
+
+.hc-upload-receipt-photo-area {
+  position: relative;
+}
+
+.hc-upload-receipt-upload-zone.is-hidden,
+.hc-upload-receipt-preview-card.is-hidden,
+.hc-upload-receipt-upload-zone[hidden],
+.hc-upload-receipt-preview-card[hidden] {
+  display: none !important;
+}
+
+.hc-upload-receipt-optional {
+  font-size: 14px;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  color: #999999;
+}
+
+.hc-upload-receipt-upload-zone {
+  border: 1.5px dashed #e2e8f0;
+  border-radius: 16px;
+  background: #f8f9fa;
+  padding: 28px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hc-upload-receipt-upload-icon-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 32px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 6px rgba(26, 43, 107, 0.08);
+}
+
+.hc-upload-receipt-upload-title {
+  font-size: 15px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  color: #1a202c;
+  text-align: center;
+  margin-bottom: 6px;
+  line-height: 20px;
+}
+
+.hc-upload-receipt-upload-hint {
+  font-size: 13px;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  color: #999999;
+  text-align: center;
+  margin-bottom: 20px;
+  line-height: 18px;
+  padding: 0 8px;
+}
+
+.hc-upload-receipt-picker-buttons {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hc-upload-receipt-picker-primary,
+.hc-upload-receipt-picker-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 25px;
+  padding: 14px 20px;
+  font-family: 'Baikal-Bold', var(--hc-font);
+  font-size: 16px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.hc-upload-receipt-picker-primary {
+  border: none;
+  background: #00c8ff;
+  color: #ffffff;
+}
+
+.hc-upload-receipt-picker-primary:hover {
+  background: #00a8d6;
+}
+
+.hc-upload-receipt-picker-secondary {
+  border: 1px solid #00c8ff;
+  background: transparent;
+  color: #00c8ff;
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-size: 15px;
+  font-weight: 340;
+}
+
+.hc-upload-receipt-picker-secondary:hover {
+  background: rgba(0, 200, 255, 0.08);
+}
+
+.hc-upload-receipt-preview-card {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: #f8f9fa;
+}
+
+.hc-upload-receipt-preview-media-wrap {
+  position: relative;
+  background: #f8f8f8;
+}
+
+.hc-upload-receipt-preview-image.is-hidden,
+.hc-upload-receipt-preview-file.is-hidden,
+.hc-upload-receipt-preview-image[hidden],
+.hc-upload-receipt-preview-file[hidden] {
+  display: none !important;
+}
+
+.hc-upload-receipt-preview-image {
+  display: block;
+  width: 100%;
+  height: 260px;
+  object-fit: cover;
+  background: #f8f8f8;
+}
+
+.hc-upload-receipt-preview-file {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  font-size: 14px;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  color: #374151;
+  text-align: center;
+  word-break: break-word;
+  background: #f8f8f8;
+}
+
+.hc-upload-receipt-preview-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: #22c55e;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-family: 'Baikal-Bold', var(--hc-font);
+  color: #ffffff;
+}
+
+.hc-upload-receipt-preview-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #ffffff;
+  border-top: 1px solid #f0f2f5;
+}
+
+.hc-upload-receipt-preview-action,
+.hc-upload-receipt-preview-action-muted {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 4px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+}
+
+.hc-upload-receipt-preview-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #1d6dff;
+}
+
+.hc-upload-receipt-preview-action-muted {
+  font-size: 14px;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  color: #999999;
+  text-decoration: underline;
+}
+
+.hc-upload-receipt-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 100px;
+  padding: 16px;
+  resize: vertical;
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-size: 16px;
+  color: #000000;
+}
+
+.hc-upload-receipt-textarea::placeholder {
+  color: #999999;
+}
+
+.hc-upload-receipt-actions {
+  margin-top: 4px;
+  padding: 0 20px;
+}
+
+.hc-upload-receipt-page .hc-bc-main-btn--filled {
+  background: #00c8ff;
+  border-color: #00c8ff;
+  color: #ffffff;
+}
+
+.hc-upload-receipt-page .hc-bc-main-btn--filled:hover:not(:disabled) {
+  background: #00a8d6;
+  border-color: #00a8d6;
+  color: #ffffff;
+}
+
+.hc-upload-receipt-page .hc-bc-main-btn--filled .hc-bc-main-btn-loader {
+  border-color: rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+}
+
+.hc-upload-receipt-loader {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.hc-upload-receipt-file-input {
+  display: none;
 }
 
 .hc-content-page {

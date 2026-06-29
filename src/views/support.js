@@ -18,9 +18,9 @@ function getTimezoneString() {
   }
 }
 
-function getSupportContext() {
+function getSupportContext(overrides) {
   var host = typeof window !== 'undefined' && window.location ? window.location.host : null;
-  return {
+  var base = {
     platform: 'Web',
     device_model: navigator && navigator.userAgent ? navigator.userAgent : null,
     os_version: navigator && navigator.platform ? navigator.platform : null,
@@ -37,7 +37,10 @@ function getSupportContext() {
         : 'release',
     host: host,
   };
+  return Object.assign(base, overrides || {});
 }
+
+export { getSupportContext };
 
 export function renderSupport(container) {
   var html = '';

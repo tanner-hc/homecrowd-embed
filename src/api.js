@@ -144,6 +144,62 @@ async function request(path, options) {
   return res.json();
 }
 
+async function requestMultipart(path, options) {
+  options = options || {};
+  var token = getAccessToken();
+  var headers = Object.assign({}, options.headers || {});
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  if (typeof window !== 'undefined' && window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+    headers['X-Homecrowd-Client'] = 'mobile';
+  }
+
+  var res = await fetch(baseUrl + path, Object.assign({}, options, { headers: headers }));
+
+  if (res.status === 401 && token) {
+    var refreshed = await refreshAccessToken();
+    if (refreshed) {
+      headers['Authorization'] = 'Bearer ' + getAccessToken();
+      res = await fetch(baseUrl + path, Object.assign({}, options, { headers: headers }));
+    } else {
+      clearTokens();
+      window.location.hash = '#/login';
+      throw new Error('Session expired');
+    }
+  }
+
+  if (!res.ok) {
+    var body = await res.text();
+    var message = 'Request failed (' + res.status + ')';
+    var parsed = null;
+    try {
+      parsed = JSON.parse(body);
+      if (typeof parsed.error === 'string' && parsed.error) {
+        message = parsed.error;
+      } else if (typeof parsed.message === 'string' && parsed.message) {
+        message = parsed.message;
+      } else if (typeof parsed.detail === 'string') {
+        message = parsed.detail;
+      } else if (parsed.detail != null) {
+        message = String(parsed.detail);
+      } else if (parsed && typeof parsed === 'object') {
+        var parts = [];
+        Object.keys(parsed).forEach(function (k) {
+          var v = parsed[k];
+          if (Array.isArray(v)) parts.push(v.join(' '));
+          else if (typeof v === 'string') parts.push(v);
+        });
+        if (parts.length) message = parts.join(' ');
+      }
+    } catch (e) { }
+    var reqErr = new Error(message);
+    reqErr.status = res.status;
+    reqErr.body = parsed;
+    throw reqErr;
+  }
+
+  return res.json();
+}
+
 // --- Auth ---
 
 export async function login(email, password) {
@@ -536,6 +592,25 @@ export async function submitSupportMessage(message, context) {
   return request('/api/users/contact-support/', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export async function uploadReceipt(file, notes, context) {
+  var formData = new FormData();
+  formData.append('receipt', file);
+  var trimmedNotes = String(notes || '').trim();
+  if (trimmedNotes) {
+    formData.append('notes', trimmedNotes);
+  }
+  Object.keys(context || {}).forEach(function (key) {
+    var value = context[key];
+    if (value != null) {
+      formData.append(key, String(value));
+    }
+  });
+  return requestMultipart('/api/users/upload-receipt/', {
+    method: 'POST',
+    body: formData,
   });
 }
 

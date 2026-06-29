@@ -35,6 +35,7 @@ import { renderInviteFriend } from './views/invite-friend.js';
 import { renderActivityLog } from './views/activity-log.js';
 import { renderBrowserExtension } from './views/browser-extension.js';
 import { renderSupport } from './views/support.js';
+import { renderUploadReceipt } from './views/upload-receipt.js';
 import { renderPreviewScreen } from './views/preview-screen.js';
 import { renderSchoolSelection } from './views/school-selection.js';
 import LoadingSpinner from './base-components/LoadingSpinner.js';
@@ -768,7 +769,8 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
     pathOnly === '/invite-friend' ||
     pathOnly === '/activity-log' ||
     pathOnly === '/browser-extension' ||
-    pathOnly === '/support'
+    pathOnly === '/support' ||
+    pathOnly === '/upload-receipt'
       ? ' active'
       : '';
 
@@ -1125,6 +1127,8 @@ function render(route) {
     renderBrowserExtension(contentEl);
   } else if (pathOnly === '/support') {
     renderSupport(contentEl);
+  } else if (pathOnly === '/upload-receipt') {
+    renderUploadReceipt(contentEl);
   } else if (pathOnly === '/preview') {
     var previewCtx = pendingSchoolAuthContext || {
       token: partnerToken || '',
@@ -1187,7 +1191,10 @@ function renderLayout(route) {
   var isPreviewPage = pathOnly === '/preview';
   var hideTabBar = isRewardDetailPage || isOfferDetailPage || isContentDetailPage || isPreviewPage;
   var flushTopContentClass =
-    pathOnly === '/invite-friend' || pathOnly === '/support' || pathOnly === '/cards/link'
+    pathOnly === '/invite-friend' ||
+    pathOnly === '/support' ||
+    pathOnly === '/upload-receipt' ||
+    pathOnly === '/cards/link'
       ? ' hc-content--flush-top'
       : '';
 
