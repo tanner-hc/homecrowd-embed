@@ -73,6 +73,31 @@ var schoolId =
 var partnerToken = (hostConfig && hostConfig.token) || params.get('token') || '';
 var initialView = (hostConfig && hostConfig.view) || params.get('view') || 'home';
 
+function consumeImpersonationParams() {
+  var access = params.get('access') || '';
+  var refresh = params.get('refresh') || '';
+  var impersonateUserId = params.get('impersonate_user_id') || params.get('impersonateUserId') || '';
+  if (!access || !impersonateUserId) return false;
+
+  api.setTokens(access, refresh);
+  api.setImpersonation(impersonateUserId);
+
+  var cleanParams = new URLSearchParams(window.location.search);
+  ['access', 'refresh', 'impersonate_user_id', 'impersonateUserId'].forEach(function (key) {
+    cleanParams.delete(key);
+  });
+  var cleanSearch = cleanParams.toString();
+  var cleanHash = '#/' + (initialView || 'home');
+  var cleanUrl =
+    window.location.pathname +
+    (cleanSearch ? '?' + cleanSearch : '') +
+    cleanHash;
+  window.history.replaceState({}, '', cleanUrl);
+  return true;
+}
+
+consumeImpersonationParams();
+
 var postLoginStripeThanksId = null;
 var pendingSchoolAuthContext = null;
 var pendingSchoolEmailConfirmationId = '';
