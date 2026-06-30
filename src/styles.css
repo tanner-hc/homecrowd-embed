@@ -248,7 +248,7 @@ body {
 }
 
 .hc-header-logo {
-  height: 19px;
+  height: var(--hc-header-logo-height, 19px);
   width: auto;
 }
 
@@ -259,10 +259,11 @@ body {
 }
 
 .hc-header-logo--brand {
+  display: block;
+  width: var(--hc-brand-logo-width, 200px);
+  max-width: 100%;
   height: auto;
-  width: min(88vw, 320px);
-  max-width: 320px;
-  max-height: 96px;
+  max-height: var(--hc-brand-logo-max-height, 72px);
   object-fit: contain;
 }
 
@@ -696,7 +697,6 @@ body {
   min-height: 100dvh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.4) 42%, rgba(0, 0, 0, 0.6) 100%);
 }
 
 .hc-login-container {
@@ -718,7 +718,7 @@ body {
 }
 
 .hc-login-logo-img {
-  height: 40px;
+  height: var(--hc-login-logo-height, 40px);
   width: auto;
   filter: brightness(0) invert(1);
 }

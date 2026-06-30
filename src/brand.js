@@ -28,7 +28,32 @@ var LOGIN_VARS = [
   '--hc-login-signup',
   '--hc-login-card-bg',
   '--hc-login-card-blur',
+  '--hc-brand-logo-width',
+  '--hc-brand-logo-max-height',
+  '--hc-login-logo-height',
+  '--hc-header-logo-height',
 ];
+
+var LOGO_SIZE_PRESETS = {
+  small: { width: '120px', maxHeight: '44px', loginHeight: '28px', headerHeight: '14px' },
+  medium: { width: '200px', maxHeight: '72px', loginHeight: '40px', headerHeight: '19px' },
+  large: { width: '280px', maxHeight: '100px', loginHeight: '52px', headerHeight: '24px' },
+  xlarge: { width: '360px', maxHeight: '128px', loginHeight: '64px', headerHeight: '28px' },
+};
+
+function readHeaderLogoSize(config) {
+  var raw = config && config.headerLogoSize ? String(config.headerLogoSize).trim().toLowerCase() : '';
+  if (LOGO_SIZE_PRESETS[raw]) return raw;
+  return 'medium';
+}
+
+function applyHeaderLogoSize(config) {
+  var preset = LOGO_SIZE_PRESETS[readHeaderLogoSize(config)];
+  setVar('--hc-brand-logo-width', preset.width);
+  setVar('--hc-brand-logo-max-height', preset.maxHeight);
+  setVar('--hc-login-logo-height', preset.loginHeight);
+  setVar('--hc-header-logo-height', preset.headerHeight);
+}
 
 function setVar(name, value) {
   if (!document || !document.documentElement) return;
@@ -121,6 +146,7 @@ export function applyBrandConfig(config) {
   setVar('--hc-login-signup', readCssColor(brandConfig, 'loginSignup', 'loginSignupOpacity', loginSignup, 100));
   setVar('--hc-login-card-bg', readCssColor(brandConfig, 'loginCardBackground', 'loginCardBackgroundOpacity', loginCardBackground || '#FFFFFF', 8));
   setVar('--hc-login-card-blur', readBlurPx(brandConfig, 'loginCardBlur', 50));
+  applyHeaderLogoSize(brandConfig);
 
   if (document && document.documentElement) {
     document.documentElement.classList.toggle('hc-has-email-selection-bg', !!emailSelectionBackground);
