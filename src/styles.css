@@ -8724,6 +8724,45 @@ body {
   color: #000000;
 }
 
+.hc-upload-receipt-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px;
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-size: 16px;
+  color: #000000;
+}
+
+.hc-upload-receipt-input::placeholder {
+  color: #999999;
+}
+
+.hc-upload-receipt-date-input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 52px;
+  padding: 16px;
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-size: 16px;
+  color: #000000;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.hc-upload-receipt-date-input::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+.hc-upload-receipt-date-input:invalid {
+  color: #999999;
+}
+
 .hc-upload-receipt-textarea::placeholder {
   color: #999999;
 }

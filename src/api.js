@@ -641,12 +641,18 @@ export async function submitSupportMessage(message, context) {
   });
 }
 
-export async function uploadReceipt(file, notes, context) {
+export async function uploadReceipt(file, notes, context, transactionAmount, transactionDate) {
   var formData = new FormData();
   formData.append('receipt', file);
   var trimmedNotes = String(notes || '').trim();
   if (trimmedNotes) {
     formData.append('notes', trimmedNotes);
+  }
+  if (transactionAmount != null && String(transactionAmount).trim() !== '') {
+    formData.append('transaction_amount', String(transactionAmount).trim());
+  }
+  if (transactionDate != null && String(transactionDate).trim() !== '') {
+    formData.append('transaction_date', String(transactionDate).trim());
   }
   Object.keys(context || {}).forEach(function (key) {
     var value = context[key];

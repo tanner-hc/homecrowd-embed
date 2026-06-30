@@ -185,6 +185,20 @@ export function renderUploadReceipt(container) {
   html += '</div>';
 
   html += '<div class="hc-upload-receipt-section">';
+  html += '<div class="hc-upload-receipt-section-label">Transaction amount</div>';
+  html +=
+    '<input type="text" id="hc-upload-receipt-amount" class="hc-upload-receipt-input" inputmode="decimal" placeholder="0.00" autocomplete="off" />';
+  html += '</div>';
+
+  html += '<div class="hc-upload-receipt-section">';
+  html += '<div class="hc-upload-receipt-section-label">Transaction date</div>';
+  html +=
+    '<input type="date" id="hc-upload-receipt-date" class="hc-upload-receipt-date-input" max="' +
+    new Date().toISOString().split('T')[0] +
+    '" />';
+  html += '</div>';
+
+  html += '<div class="hc-upload-receipt-section">';
   html += '<div class="hc-upload-receipt-section-label">';
   html += 'Additional details <span class="hc-upload-receipt-optional">(optional)</span>';
   html += '</div>';
@@ -231,12 +245,27 @@ export function renderUploadReceipt(container) {
   var retakeBtn = document.getElementById('hc-upload-receipt-retake');
   var removeBtn = document.getElementById('hc-upload-receipt-remove');
   var notesEl = document.getElementById('hc-upload-receipt-notes');
+  var amountEl = document.getElementById('hc-upload-receipt-amount');
+  var dateEl = document.getElementById('hc-upload-receipt-date');
   var submitBtn = document.getElementById('hc-upload-receipt-submit');
   var loaderEl = document.getElementById('hc-upload-receipt-loader');
 
+  function isTransactionAmountValid() {
+    if (!amountEl) return false;
+    var value = String(amountEl.value || '').trim();
+    if (!value) return false;
+    var parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0;
+  }
+
+  function isTransactionDateValid() {
+    if (!dateEl) return false;
+    return /^\d{4}-\d{2}-\d{2}$/.test(String(dateEl.value || '').trim());
+  }
+
   function syncSubmitState() {
     if (!submitBtn) return;
-    submitBtn.disabled = !selectedFile;
+    submitBtn.disabled = !selectedFile || !isTransactionAmountValid() || !isTransactionDateValid();
   }
 
   function clearPreview() {
@@ -329,11 +358,28 @@ export function renderUploadReceipt(container) {
     removeBtn.addEventListener('click', clearPreview);
   }
 
+  if (amountEl) {
+    amountEl.addEventListener('input', syncSubmitState);
+  }
+
+  if (dateEl) {
+    dateEl.addEventListener('change', syncSubmitState);
+    dateEl.addEventListener('input', syncSubmitState);
+  }
+
   syncSubmitState();
 
   if (submitBtn) {
     submitBtn.addEventListener('click', async function () {
       if (!selectedFile) return;
+      if (!isTransactionAmountValid()) {
+        showError('Enter the transaction amount');
+        return;
+      }
+      if (!isTransactionDateValid()) {
+        showError('Select the transaction date');
+        return;
+      }
       submitBtn.disabled = true;
       var prevHtml = submitBtn.innerHTML;
       submitBtn.innerHTML =
@@ -343,10 +389,14 @@ export function renderUploadReceipt(container) {
         await api.uploadReceipt(
           selectedFile,
           notesEl ? notesEl.value : '',
-          getSupportContext({ screen: 'Upload Receipt' })
+          getSupportContext({ screen: 'Upload Receipt' }),
+          amountEl ? amountEl.value : '',
+          dateEl ? dateEl.value : ''
         );
         showSuccess('Receipt uploaded');
         if (notesEl) notesEl.value = '';
+        if (amountEl) amountEl.value = '';
+        if (dateEl) dateEl.value = '';
         clearPreview();
       } catch (err) {
         showError((err && err.message) || 'Failed to upload receipt');
