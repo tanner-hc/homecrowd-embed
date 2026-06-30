@@ -18,6 +18,7 @@ import LinkCardBanner from '../base-components/LinkCardBanner.js';
 import NoExtraCostFooter from '../base-components/NoExtraCostFooter.js';
 import PointsPerDollarBanner from '../base-components/PointsPerDollarBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
+import { renderPointMultiplierBadgeHtml } from '../pointMultiplier.js';
 import { searchUSCities, lookupUSCity } from '../usCitySearch.js';
 
 var trophyIconSvg =
@@ -630,6 +631,7 @@ function buildFeaturedCardInner(f) {
     featuredPayload +
     '"' +
     '>';
+  html += renderPointMultiplierBadgeHtml(f, 'block');
   html += '<div class="hc-featured-img-wrap">';
   if (f.large_logo_url) {
     html +=
@@ -718,6 +720,7 @@ function renderOnlineFeaturedCarousel(items, position) {
       ' data-featured-offer="' +
       featuredPayload +
       '">';
+    html += renderPointMultiplierBadgeHtml(f, 'block');
     if (f.large_logo_url) {
       html +=
         '<img class="hc-online-card-img" draggable="false" src="' +
@@ -2219,6 +2222,7 @@ function renderFeaturedGrid(items) {
       featuredPayload +
       '"' +
       '>';
+    html += renderPointMultiplierBadgeHtml(f, 'block', true);
     html += '<div class="hc-featured-grid-row">';
     if (f.small_logo_url) {
       html +=
@@ -2290,6 +2294,7 @@ function renderMerchantCard(merchant) {
       }),
     ) +
     '">';
+  html += renderPointMultiplierBadgeHtml(merchant, 'block');
   if (logoUrl) {
     html +=
       '<div class="hc-merchant-img-wrap"><img class="hc-merchant-img" loading="lazy" decoding="async" src="' +

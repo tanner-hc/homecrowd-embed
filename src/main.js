@@ -1225,6 +1225,7 @@ function renderLayout(route) {
 
   var tabBarHtml = hideTabBar ? '' : buildBottomTabBarHtml(pathOnly, contentTabEnabled);
   var embedClassName = 'hc-embed' + (isPreviewPage ? ' hc-embed--email-selection' : '');
+  var brandLockupHtml = renderBrandLockup();
   appEl.innerHTML =
     '<div class="' +
     embedClassName +
@@ -1236,7 +1237,7 @@ function renderLayout(route) {
     '">\
         <div class="hc-content-brand">\
           ' +
-    renderBrandLockup() +
+    brandLockupHtml +
     '\
         </div>\
         <div id="hc-content"></div>\
