@@ -9683,15 +9683,17 @@ body {
 .hc-weekly-screen-image-frame {
   width: 138px;
   min-width: 138px;
+  max-width: 138px;
+  height: 138px;
   min-height: 138px;
-  max-height: 300px;
+  max-height: 138px;
   border-radius: 12px;
   background: #fafafa;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  align-self: stretch;
+  align-self: center;
   flex-shrink: 0;
 }
 
