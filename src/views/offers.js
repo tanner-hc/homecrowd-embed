@@ -883,12 +883,14 @@ function storeMapMerchantAddressDescription(m) {
 }
 
 function merchantDistanceMiles(m, userLat, userLng) {
+  var p = pickMerchantLatLng(m);
+  if (p && Number.isFinite(userLat) && Number.isFinite(userLng)) {
+    return milesBetween(userLat, userLng, p.lat, p.lng);
+  }
   if (m != null && typeof m.distance === 'number' && Number.isFinite(m.distance)) {
     return m.distance;
   }
-  var p = pickMerchantLatLng(m);
-  if (!p || !Number.isFinite(userLat) || !Number.isFinite(userLng)) return NaN;
-  return milesBetween(userLat, userLng, p.lat, p.lng);
+  return NaN;
 }
 
 function storeMapMerchantMapKitSubtitle(m, userLat, userLng) {
@@ -960,10 +962,117 @@ function computeMapKitRegionLikeStoreMap(userLat, userLng, merchantPoints) {
 var MAP_PIN_USER_COLOR = '#007AFF';
 var MAP_PIN_MERCHANT_COLOR = '#AF52DE';
 
+var OFFERS_MAP_PAN_DEBOUNCE_MS = 600;
+
+function offersMapStoreKey(m) {
+  var p = pickMerchantLatLng(m);
+  var coord = p ? p.lat + ',' + p.lng : '';
+  return String(m.id || m.storeId || (m.offerId ? m.offerId + '@' + coord : coord));
+}
+
+function mergeOffersMapStores(container, list) {
+  if (!container._hcMapStores) {
+    container._hcMapStores = [];
+    container._hcMapStoreKeys = {};
+  }
+  var added = [];
+  (list || []).forEach(function (m) {
+    if (!pickMerchantLatLng(m)) return;
+    var key = offersMapStoreKey(m);
+    if (!key || container._hcMapStoreKeys[key]) return;
+    container._hcMapStoreKeys[key] = true;
+    container._hcMapStores.push(m);
+    added.push(m);
+  });
+  return added;
+}
+
+function addMerchantPinsToLiveMap(container, merchants) {
+  var loc = container._hcMapUserLoc || {};
+  var data = [];
+  (merchants || []).forEach(function (m) {
+    var p = pickMerchantLatLng(m);
+    if (!p) return;
+    data.push({
+      lat: p.lat,
+      lng: p.lng,
+      name: m.name || m.merchantName || '',
+      subtitle: storeMapMerchantMapKitSubtitle(m, loc.lat, loc.lng),
+    });
+  });
+  if (!data.length) return;
+
+  var mk = container._hcMkMap;
+  if (mk && window.mapkit) {
+    try {
+      var calloutDel = offersMapAnnotationCalloutDelegate();
+      var anns = data.map(function (d) {
+        return new window.mapkit.MarkerAnnotation(new window.mapkit.Coordinate(d.lat, d.lng), {
+          title: (d.name || '').trim() || 'Partner store',
+          subtitle: (d.subtitle || '').trim(),
+          color: MAP_PIN_MERCHANT_COLOR,
+          calloutEnabled: true,
+          titleVisibility: 'hidden',
+          subtitleVisibility: 'hidden',
+          callout: calloutDel,
+        });
+      });
+      mk.addAnnotations(anns);
+    } catch (e) {
+      console.warn('[HC offers map] addAnnotations failed', e);
+    }
+    return;
+  }
+
+  var lf = container._hcLeafletMap;
+  if (lf && window.L) {
+    try {
+      var icon = leafletMapPinIcon(window.L, MAP_PIN_MERCHANT_COLOR);
+      data.forEach(function (d) {
+        var title = (d.name || '').trim() || 'Partner store';
+        var sub = (d.subtitle || '').trim();
+        var body =
+          '<strong>' +
+          escapeHtml(title) +
+          '</strong>' +
+          (sub ? '<br/>' + escapeHtml(sub).replace(/\n/g, '<br/>') : '');
+        window.L.marker([d.lat, d.lng], { icon: icon }).addTo(lf).bindPopup(body);
+      });
+    } catch (e2) {
+      console.warn('[HC offers map] leaflet marker add failed', e2);
+    }
+  }
+}
+
+function handleLiveMapRegionChange(container, center, spanLatDeg) {
+  if (typeof container._hcOnMapRegionPanned !== 'function') return;
+  if (!center || !Number.isFinite(center.lat) || !Number.isFinite(center.lng)) return;
+
+  var last = container._hcLastRegionFetchCenter;
+  if (last) {
+    var movedLat = Math.abs(center.lat - last.lat);
+    var movedLng = Math.abs(center.lng - last.lng);
+    var threshold = Math.max(Number.isFinite(spanLatDeg) ? spanLatDeg : 0.05, 0.01) * 0.25;
+    if (movedLat < threshold && movedLng < threshold) return;
+  }
+
+  if (container._hcRegionDebounce) {
+    window.clearTimeout(container._hcRegionDebounce);
+  }
+  container._hcRegionDebounce = window.setTimeout(function () {
+    container._hcLastRegionFetchCenter = { lat: center.lat, lng: center.lng };
+    container._hcOnMapRegionPanned(center.lat, center.lng);
+  }, OFFERS_MAP_PAN_DEBOUNCE_MS);
+}
+
 var OFFERS_LEAFLET_MAPLIBRE_STYLE = 'https://tiles.openfreemap.org/styles/positron';
 var offersLeafletMapLibreLoadPromise = null;
 
 function destroyOffersMapInstance(container) {
+  if (container._hcRegionDebounce) {
+    window.clearTimeout(container._hcRegionDebounce);
+    container._hcRegionDebounce = null;
+  }
   restoreMapKitConsoleErrorHook(container);
   var h = container._hcMkFallbackHandler;
   if (h && window.mapkit && window.mapkit.removeEventListener) {
@@ -1282,6 +1391,17 @@ function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMar
       }
       window.setTimeout(function () {
         map.invalidateSize();
+        var fittedCenter = map.getCenter();
+        container._hcLastRegionFetchCenter = { lat: fittedCenter.lat, lng: fittedCenter.lng };
+        map.on('moveend', function () {
+          var c = map.getCenter();
+          var b = map.getBounds();
+          handleLiveMapRegionChange(
+            container,
+            { lat: c.lat, lng: c.lng },
+            Math.abs(b.getNorth() - b.getSouth()),
+          );
+        });
         notifyMapRenderDone(container);
       }, 100);
     })
@@ -1502,6 +1622,23 @@ function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merc
     console.log('[HC offers map] annotations:', annotations.length);
     scheduleMapKitTileReflow(map);
     window.setTimeout(function () {
+      try {
+        var c = map.center;
+        if (c) {
+          container._hcLastRegionFetchCenter = { lat: c.latitude, lng: c.longitude };
+        }
+        map.addEventListener('region-change-end', function () {
+          try {
+            var cc = map.center;
+            var span = map.region && map.region.span;
+            handleLiveMapRegionChange(
+              container,
+              { lat: cc.latitude, lng: cc.longitude },
+              span ? span.latitudeDelta : 0.05,
+            );
+          } catch (e5) {}
+        });
+      } catch (e6) {}
       notifyMapRenderDone(container);
     }, 150);
   }
@@ -1616,6 +1753,84 @@ function initOffersMap(container, cardlinked) {
     }
   }
 
+  function setMapRegionLoading(active) {
+    var host = mapShell || mapMount;
+    if (!host) return;
+    var pill = host.querySelector('.hc-offers-map-region-loading');
+    if (active) {
+      if (!pill) {
+        pill = document.createElement('div');
+        pill.className = 'hc-offers-map-region-loading';
+        pill.innerHTML =
+          '<span class="hc-offers-map-region-loading-spinner" aria-hidden="true"></span>' +
+          '<span>Finding offers…</span>';
+        host.appendChild(pill);
+      }
+      pill.style.display = '';
+    } else if (pill) {
+      pill.style.display = 'none';
+    }
+  }
+
+  function renderStoresGridFromList(list) {
+    var grid = document.getElementById('hc-stores-grid');
+    if (!grid) return;
+    var gridHtml = '';
+    list.forEach(function (m) {
+      gridHtml += renderMerchantCard(m);
+    });
+    grid.innerHTML = gridHtml;
+  }
+
+  function withUserDistances(list) {
+    var loc = container._hcMapUserLoc;
+    if (!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lng)) return list;
+    return list.map(function (m) {
+      var p = pickMerchantLatLng(m);
+      if (!p) return m;
+      var copy = {};
+      for (var k in m) copy[k] = m[k];
+      copy.distance = milesBetween(loc.lat, loc.lng, p.lat, p.lng);
+      return copy;
+    });
+  }
+
+  function fetchOffersForMapRegion(lat, lng) {
+    container._hcPendingMapRegion = { lat: lat, lng: lng };
+    if (container._hcMapRegionFetchInFlight) return;
+    container._hcMapRegionFetchInFlight = true;
+    setMapRegionLoading(true);
+
+    function step() {
+      var region = container._hcPendingMapRegion;
+      container._hcPendingMapRegion = null;
+      if (!region) {
+        container._hcMapRegionFetchInFlight = false;
+        setMapRegionLoading(false);
+        return;
+      }
+      api
+        .getOffers(1, 50, { latitude: region.lat, longitude: region.lng }, { includeOnline: false })
+        .then(function (raw) {
+          var list = raw.cardlinked || raw.results || (Array.isArray(raw) ? raw : []);
+          var listWithDistances = withUserDistances(list);
+          container._hcCardlinkedStores = listWithDistances;
+          renderStoresGridFromList(listWithDistances);
+          rebindStoresSearchClean(listWithDistances);
+          showNoStoresIfEmpty(listWithDistances);
+          var added = mergeOffersMapStores(container, listWithDistances);
+          addMerchantPinsToLiveMap(container, added);
+        })
+        .catch(function (err) {
+          console.warn('[HC offers map] region fetch failed', err);
+        })
+        .then(step);
+    }
+    step();
+  }
+
+  container._hcOnMapRegionPanned = fetchOffersForMapRegion;
+
   function restoreStoresGridFromCache() {
     var grid = document.getElementById('hc-stores-grid');
     if (!grid) return;
@@ -1729,7 +1944,14 @@ function initOffersMap(container, cardlinked) {
   function renderMap(userLat, userLng, showUserMarker, onReady) {
     if (showUserMarker === undefined) showUserMarker = true;
     container._hcMapRenderDone = typeof onReady === 'function' ? onReady : null;
-    var merchants = Array.isArray(container._hcCardlinkedStores) ? container._hcCardlinkedStores : [];
+    if (showUserMarker && Number.isFinite(userLat) && Number.isFinite(userLng)) {
+      container._hcMapUserLoc = { lat: userLat, lng: userLng };
+    }
+    mergeOffersMapStores(
+      container,
+      Array.isArray(container._hcCardlinkedStores) ? container._hcCardlinkedStores : [],
+    );
+    var merchants = Array.isArray(container._hcMapStores) ? container._hcMapStores : [];
     var merchantMarkerData = [];
     merchants.forEach(function (m) {
       var p = pickMerchantLatLng(m);
@@ -1824,6 +2046,8 @@ function initOffersMap(container, cardlinked) {
     options = options || {};
     hasUserMapLocation = true;
     setActiveOfferLocation(lat, lng);
+    container._hcMapUserLoc = { lat: Number(lat), lng: Number(lng) };
+    container._hcLastRegionFetchCenter = { lat: Number(lat), lng: Number(lng) };
     if (options.persist !== false) {
       persistOfferLocation(lat, lng);
     }
@@ -1835,7 +2059,7 @@ function initOffersMap(container, cardlinked) {
     }
 
     return api
-      .getOffers(1, 50, { latitude: lat, longitude: lng })
+      .getOffers(1, 50, { latitude: lat, longitude: lng }, { includeOnline: false })
       .then(function (raw) {
         var list = raw.cardlinked || raw.results || (Array.isArray(raw) ? raw : []);
         container._hcCardlinkedStores = list;

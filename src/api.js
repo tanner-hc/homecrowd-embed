@@ -539,7 +539,7 @@ export async function addCardDirect(cardData) {
 
 // --- Offers ---
 
-export async function getOffers(page, pageSize, userLocation) {
+export async function getOffers(page, pageSize, userLocation, options) {
   var params = 'page=' + (page || 1) + '&pageSize=' + (pageSize || 50);
   if (
     userLocation &&
@@ -551,6 +551,9 @@ export async function getOffers(page, pageSize, userLocation) {
       encodeURIComponent(String(userLocation.latitude)) +
       '&longitude=' +
       encodeURIComponent(String(userLocation.longitude));
+  }
+  if (options && options.includeOnline === false) {
+    params += '&includeOnline=false';
   }
   return request('/api/olive/offers/?' + params);
 }
