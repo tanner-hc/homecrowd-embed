@@ -9,6 +9,7 @@ import iconTransparentUrl from '../assets/icon-transparent.png';
 import settingsIconSvg from '../assets/icons/settings.svg?raw';
 import cardIconSvg from '../assets/icons/card.svg?raw';
 import phoneIconSvg from '../assets/icons/phone.svg?raw';
+import dollarSignIconSvg from '../assets/icons/dollar-sign.svg?raw';
 import activityIconSvg from '../assets/icons/activity.svg?raw';
 import extensionIconSvg from '../assets/icons/extension.svg?raw';
 import referralIconSvg from '../assets/icons/referral.svg?raw';
@@ -239,6 +240,14 @@ async function loadProfile(container) {
     id: 'hc-profile-support',
   });
 
+  html += SecondaryButton({
+    leftHtml: secondaryIconHtml(dollarSignIconSvg),
+    title: 'Upload Receipt',
+    subtitle: 'Missing points after 24 hours?\nUpload your receipt here',
+    rightHtml: chevronRightHtml(),
+    id: 'hc-profile-upload-receipt',
+  });
+
   html += '</div>';
   html += '<div class="hc-profile-logout-section">';
   html += MainButton({
@@ -290,6 +299,12 @@ async function loadProfile(container) {
   if (supportBtn) {
     supportBtn.addEventListener('click', function () {
       navigate('/support');
+    });
+  }
+  var uploadReceiptBtn = container.querySelector('#hc-profile-upload-receipt');
+  if (uploadReceiptBtn) {
+    uploadReceiptBtn.addEventListener('click', function () {
+      navigate('/upload-receipt');
     });
   }
 

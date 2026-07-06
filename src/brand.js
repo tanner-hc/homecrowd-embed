@@ -28,7 +28,43 @@ var LOGIN_VARS = [
   '--hc-login-signup',
   '--hc-login-card-bg',
   '--hc-login-card-blur',
+  '--hc-brand-logo-width',
+  '--hc-brand-logo-max-height',
+  '--hc-login-logo-height',
+  '--hc-header-logo-height',
 ];
+
+var LOGO_SIZE_LEGACY_MAP = {
+  small: 60,
+  medium: 100,
+  large: 140,
+  xlarge: 180,
+};
+
+var LOGO_SIZE_BASE = {
+  width: 200,
+  maxHeight: 72,
+  loginHeight: 40,
+  headerHeight: 19,
+};
+
+function resolveLogoSizePct(config) {
+  var raw = config && config.headerLogoSize != null ? String(config.headerLogoSize).trim() : '';
+  if (!raw) return 100;
+  var legacy = LOGO_SIZE_LEGACY_MAP[raw.toLowerCase()];
+  if (legacy != null) return legacy;
+  var parsed = parseFloat(raw);
+  if (!isFinite(parsed)) return 100;
+  return Math.max(10, Math.min(200, Math.round(parsed)));
+}
+
+function applyHeaderLogoSize(config) {
+  var pct = resolveLogoSizePct(config) / 100;
+  setVar('--hc-brand-logo-width', Math.round(LOGO_SIZE_BASE.width * pct) + 'px');
+  setVar('--hc-brand-logo-max-height', Math.round(LOGO_SIZE_BASE.maxHeight * pct) + 'px');
+  setVar('--hc-login-logo-height', Math.round(LOGO_SIZE_BASE.loginHeight * pct) + 'px');
+  setVar('--hc-header-logo-height', Math.round(LOGO_SIZE_BASE.headerHeight * pct) + 'px');
+}
 
 function setVar(name, value) {
   if (!document || !document.documentElement) return;
@@ -92,6 +128,8 @@ export function applyBrandConfig(config) {
   var buttonSecondaryText = brandConfig && (brandConfig.buttonSecondaryText || brandConfig.buttonSecondaryTextColor);
   var loginBackground = brandConfig && brandConfig.loginBackgroundUrl;
   var emailSelectionBackground = brandConfig && brandConfig.emailSelectionBackgroundUrl;
+  var defaultBackground = 'https://app.gethomecrowd.com/assets/app-images/load-in.jpg';
+  var sharedBackground = emailSelectionBackground || loginBackground || defaultBackground;
   var loginButton = brandConfig && (brandConfig.loginButton || brandConfig.loginButtonColor);
   var loginButtonText = brandConfig && (brandConfig.loginButtonText || brandConfig.loginButtonTextColor);
   var loginTitle = brandConfig && (brandConfig.loginTitle || brandConfig.loginTitleColor);
@@ -99,7 +137,7 @@ export function applyBrandConfig(config) {
   var loginSignup = brandConfig && (brandConfig.loginSignup || brandConfig.loginSignupColor);
   var loginCardBackground = brandConfig && brandConfig.loginCardBackground;
 
-  setVar('--hc-preview-bg', readCssColor(brandConfig, 'pageBackground', 'pageBackgroundOpacity', pageBackground, 100));
+  setVar('--hc-preview-bg', readCssColor(brandConfig, 'pageBackground', 'pageBackgroundOpacity', pageBackground || '#FFFFFF', 0));
   setVar('--hc-preview-card', readCssColor(brandConfig, 'cardBackground', 'cardBackgroundOpacity', cardBackground, 100));
   setVar('--hc-preview-text-primary', readCssColor(brandConfig, 'headingText', 'headingTextOpacity', headingText, 100));
   setVar('--hc-preview-text-secondary', readCssColor(brandConfig, 'bodyText', 'bodyTextOpacity', bodyText, 100));
@@ -110,7 +148,7 @@ export function applyBrandConfig(config) {
   setVar('--hc-preview-button-primary-text', readCssColor(brandConfig, 'buttonPrimaryText', 'buttonPrimaryTextOpacity', buttonPrimaryText, 100));
   setVar('--hc-preview-button-secondary', readCssColor(brandConfig, 'buttonSecondary', 'buttonSecondaryOpacity', buttonSecondary || pageBackground, 100));
   setVar('--hc-preview-button-secondary-text', readCssColor(brandConfig, 'buttonSecondaryText', 'buttonSecondaryTextOpacity', buttonSecondaryText || button, 100));
-  setVar('--hc-email-selection-bg-image', emailSelectionBackground ? 'url("' + emailSelectionBackground + '")' : '');
+  setVar('--hc-email-selection-bg-image', 'url("' + sharedBackground + '")');
   setVar('--hc-email-card-blur', readBlurPx(brandConfig, 'emailSelectionCardBlur', 0));
 
   setVar('--hc-login-bg-image', loginBackground ? 'url("' + loginBackground + '")' : '');
@@ -121,9 +159,10 @@ export function applyBrandConfig(config) {
   setVar('--hc-login-signup', readCssColor(brandConfig, 'loginSignup', 'loginSignupOpacity', loginSignup, 100));
   setVar('--hc-login-card-bg', readCssColor(brandConfig, 'loginCardBackground', 'loginCardBackgroundOpacity', loginCardBackground || '#FFFFFF', 8));
   setVar('--hc-login-card-blur', readBlurPx(brandConfig, 'loginCardBlur', 50));
+  applyHeaderLogoSize(brandConfig);
 
   if (document && document.documentElement) {
-    document.documentElement.classList.toggle('hc-has-email-selection-bg', !!emailSelectionBackground);
+    document.documentElement.classList.add('hc-has-email-selection-bg');
   }
 }
 

@@ -8,6 +8,7 @@ import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import NoExtraCostFooter from '../base-components/NoExtraCostFooter.js';
 import PointsPerDollarBanner from '../base-components/PointsPerDollarBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
+import { renderPointMultiplierBadgeHtml } from '../pointMultiplier.js';
 import { showError } from '../base-components/toastApi.js';
 import extensionBodyImg from '../assets/images/extension-body.png';
 import safariThinUrl from '../assets/icons/safari-thin.png';
@@ -179,6 +180,7 @@ function renderPopularOffersHtml(merchants) {
       html += ' data-merchant-id="' + escapeAttr(String(merchantId)) + '"';
     }
     html += '>';
+    html += '<span class="hc-be-popular-logo-wrap">';
     if (logo) {
       html +=
         '<img class="hc-be-popular-logo" src="' +
@@ -189,6 +191,8 @@ function renderPopularOffersHtml(merchants) {
     } else {
       html += '<div class="hc-be-popular-logo hc-be-popular-logo--placeholder"></div>';
     }
+    html += renderPointMultiplierBadgeHtml(m, 'overlay', true);
+    html += '</span>';
     html += '<div class="hc-be-popular-meta">';
     html += '<div class="hc-be-popular-name">' + escapeHtml(name) + '</div>';
     if (cashback) {

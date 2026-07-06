@@ -35,6 +35,7 @@ import { renderInviteFriend } from './views/invite-friend.js';
 import { renderActivityLog } from './views/activity-log.js';
 import { renderBrowserExtension } from './views/browser-extension.js';
 import { renderSupport } from './views/support.js';
+import { renderUploadReceipt } from './views/upload-receipt.js';
 import { renderPreviewScreen } from './views/preview-screen.js';
 import { renderSchoolSelection } from './views/school-selection.js';
 import LoadingSpinner from './base-components/LoadingSpinner.js';
@@ -71,6 +72,31 @@ var schoolId =
   getSchoolIdFromConfig(hostConfig) || params.get('schoolId') || params.get('school_id') || '';
 var partnerToken = (hostConfig && hostConfig.token) || params.get('token') || '';
 var initialView = (hostConfig && hostConfig.view) || params.get('view') || 'home';
+
+function consumeImpersonationParams() {
+  var access = params.get('access') || '';
+  var refresh = params.get('refresh') || '';
+  var impersonateUserId = params.get('impersonate_user_id') || params.get('impersonateUserId') || '';
+  if (!access || !impersonateUserId) return false;
+
+  api.setTokens(access, refresh);
+  api.setImpersonation(impersonateUserId);
+
+  var cleanParams = new URLSearchParams(window.location.search);
+  ['access', 'refresh', 'impersonate_user_id', 'impersonateUserId'].forEach(function (key) {
+    cleanParams.delete(key);
+  });
+  var cleanSearch = cleanParams.toString();
+  var cleanHash = '#/' + (initialView || 'home');
+  var cleanUrl =
+    window.location.pathname +
+    (cleanSearch ? '?' + cleanSearch : '') +
+    cleanHash;
+  window.history.replaceState({}, '', cleanUrl);
+  return true;
+}
+
+consumeImpersonationParams();
 
 var postLoginStripeThanksId = null;
 var pendingSchoolAuthContext = null;
@@ -768,7 +794,8 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
     pathOnly === '/invite-friend' ||
     pathOnly === '/activity-log' ||
     pathOnly === '/browser-extension' ||
-    pathOnly === '/support'
+    pathOnly === '/support' ||
+    pathOnly === '/upload-receipt'
       ? ' active'
       : '';
 
@@ -1125,6 +1152,8 @@ function render(route) {
     renderBrowserExtension(contentEl);
   } else if (pathOnly === '/support') {
     renderSupport(contentEl);
+  } else if (pathOnly === '/upload-receipt') {
+    renderUploadReceipt(contentEl);
   } else if (pathOnly === '/preview') {
     var previewCtx = pendingSchoolAuthContext || {
       token: partnerToken || '',
@@ -1187,12 +1216,16 @@ function renderLayout(route) {
   var isPreviewPage = pathOnly === '/preview';
   var hideTabBar = isRewardDetailPage || isOfferDetailPage || isContentDetailPage || isPreviewPage;
   var flushTopContentClass =
-    pathOnly === '/invite-friend' || pathOnly === '/support' || pathOnly === '/cards/link'
+    pathOnly === '/invite-friend' ||
+    pathOnly === '/support' ||
+    pathOnly === '/upload-receipt' ||
+    pathOnly === '/cards/link'
       ? ' hc-content--flush-top'
       : '';
 
   var tabBarHtml = hideTabBar ? '' : buildBottomTabBarHtml(pathOnly, contentTabEnabled);
   var embedClassName = 'hc-embed' + (isPreviewPage ? ' hc-embed--email-selection' : '');
+  var brandLockupHtml = renderBrandLockup();
   appEl.innerHTML =
     '<div class="' +
     embedClassName +
@@ -1204,7 +1237,7 @@ function renderLayout(route) {
     '">\
         <div class="hc-content-brand">\
           ' +
-    renderBrandLockup() +
+    brandLockupHtml +
     '\
         </div>\
         <div id="hc-content"></div>\

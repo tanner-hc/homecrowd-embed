@@ -24,6 +24,7 @@ function resolveApiBaseUrl() {
 
 var baseUrl = resolveApiBaseUrl();
 var accessToken = null;
+var impersonateUserId = null;
 
 function embedClientContext() {
   return { client_surface: 'embed', platform: 'web' };
@@ -51,6 +52,37 @@ export function setTokens(access, refresh) {
   if (refresh) sessionStorage.setItem('hc_refresh_token', refresh);
 }
 
+export function setImpersonation(userId) {
+  impersonateUserId = userId ? String(userId).trim() : '';
+  if (impersonateUserId) {
+    sessionStorage.setItem('hc_impersonate_user_id', impersonateUserId);
+  } else {
+    sessionStorage.removeItem('hc_impersonate_user_id');
+  }
+}
+
+export function getImpersonationUserId() {
+  if (!impersonateUserId) {
+    impersonateUserId = sessionStorage.getItem('hc_impersonate_user_id') || '';
+  }
+  return impersonateUserId || '';
+}
+
+function withImpersonationParam(path, userId) {
+  if (!userId) return path;
+  var joiner = path.indexOf('?') >= 0 ? '&' : '?';
+  return path + joiner + 'impersonate_user_id=' + encodeURIComponent(userId);
+}
+
+function assertImpersonationReadOnly(options, userId) {
+  if (!userId) return;
+  var method = String((options && options.method) || 'GET').toUpperCase();
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return;
+  var err = new Error('Impersonation is read-only');
+  err.status = 403;
+  throw err;
+}
+
 export function getAccessToken() {
   if (!accessToken) {
     accessToken = sessionStorage.getItem('hc_access_token');
@@ -61,8 +93,10 @@ export function getAccessToken() {
 export function clearTokens() {
   accessToken = null;
   refreshToken = null;
+  impersonateUserId = null;
   sessionStorage.removeItem('hc_access_token');
   sessionStorage.removeItem('hc_refresh_token');
+  sessionStorage.removeItem('hc_impersonate_user_id');
 }
 
 export function isAuthenticated() {
@@ -93,17 +127,85 @@ async function request(path, options) {
   var token = getAccessToken();
   var headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
   if (token) headers['Authorization'] = 'Bearer ' + token;
+  var activeImpersonationUserId = getImpersonationUserId();
+  if (activeImpersonationUserId) {
+    headers['X-Homecrowd-Impersonate-User-Id'] = activeImpersonationUserId;
+  }
+  assertImpersonationReadOnly(options, activeImpersonationUserId);
   if (typeof window !== 'undefined' && window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
     headers['X-Homecrowd-Client'] = 'mobile';
   }
 
-  var res = await fetch(baseUrl + path, Object.assign({}, options, { headers: headers }));
+  var requestPath = withImpersonationParam(path, activeImpersonationUserId);
+  var res = await fetch(baseUrl + requestPath, Object.assign({}, options, { headers: headers }));
 
   if (res.status === 401 && token) {
     var refreshed = await refreshAccessToken();
     if (refreshed) {
       headers['Authorization'] = 'Bearer ' + getAccessToken();
-      res = await fetch(baseUrl + path, Object.assign({}, options, { headers: headers }));
+      res = await fetch(baseUrl + requestPath, Object.assign({}, options, { headers: headers }));
+    } else {
+      clearTokens();
+      window.location.hash = '#/login';
+      throw new Error('Session expired');
+    }
+  }
+
+  if (!res.ok) {
+    var body = await res.text();
+    var message = 'Request failed (' + res.status + ')';
+    var parsed = null;
+    try {
+      parsed = JSON.parse(body);
+      if (typeof parsed.error === 'string' && parsed.error) {
+        message = parsed.error;
+      } else if (typeof parsed.message === 'string' && parsed.message) {
+        message = parsed.message;
+      } else if (typeof parsed.detail === 'string') {
+        message = parsed.detail;
+      } else if (parsed.detail != null) {
+        message = String(parsed.detail);
+      } else if (parsed && typeof parsed === 'object') {
+        var parts = [];
+        Object.keys(parsed).forEach(function (k) {
+          var v = parsed[k];
+          if (Array.isArray(v)) parts.push(v.join(' '));
+          else if (typeof v === 'string') parts.push(v);
+        });
+        if (parts.length) message = parts.join(' ');
+      }
+    } catch (e) { }
+    var reqErr = new Error(message);
+    reqErr.status = res.status;
+    reqErr.body = parsed;
+    throw reqErr;
+  }
+
+  return res.json();
+}
+
+async function requestMultipart(path, options) {
+  options = options || {};
+  var token = getAccessToken();
+  var headers = Object.assign({}, options.headers || {});
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  var activeImpersonationUserId = getImpersonationUserId();
+  if (activeImpersonationUserId) {
+    headers['X-Homecrowd-Impersonate-User-Id'] = activeImpersonationUserId;
+  }
+  assertImpersonationReadOnly(options, activeImpersonationUserId);
+  if (typeof window !== 'undefined' && window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+    headers['X-Homecrowd-Client'] = 'mobile';
+  }
+
+  var requestPath = withImpersonationParam(path, activeImpersonationUserId);
+  var res = await fetch(baseUrl + requestPath, Object.assign({}, options, { headers: headers }));
+
+  if (res.status === 401 && token) {
+    var refreshed = await refreshAccessToken();
+    if (refreshed) {
+      headers['Authorization'] = 'Bearer ' + getAccessToken();
+      res = await fetch(baseUrl + requestPath, Object.assign({}, options, { headers: headers }));
     } else {
       clearTokens();
       window.location.hash = '#/login';
@@ -437,7 +539,7 @@ export async function addCardDirect(cardData) {
 
 // --- Offers ---
 
-export async function getOffers(page, pageSize, userLocation) {
+export async function getOffers(page, pageSize, userLocation, options) {
   var params = 'page=' + (page || 1) + '&pageSize=' + (pageSize || 50);
   if (
     userLocation &&
@@ -449,6 +551,9 @@ export async function getOffers(page, pageSize, userLocation) {
       encodeURIComponent(String(userLocation.latitude)) +
       '&longitude=' +
       encodeURIComponent(String(userLocation.longitude));
+  }
+  if (options && options.includeOnline === false) {
+    params += '&includeOnline=false';
   }
   return request('/api/olive/offers/?' + params);
 }
@@ -536,6 +641,31 @@ export async function submitSupportMessage(message, context) {
   return request('/api/users/contact-support/', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export async function uploadReceipt(file, notes, context, transactionAmount, transactionDate) {
+  var formData = new FormData();
+  formData.append('receipt', file);
+  var trimmedNotes = String(notes || '').trim();
+  if (trimmedNotes) {
+    formData.append('notes', trimmedNotes);
+  }
+  if (transactionAmount != null && String(transactionAmount).trim() !== '') {
+    formData.append('transaction_amount', String(transactionAmount).trim());
+  }
+  if (transactionDate != null && String(transactionDate).trim() !== '') {
+    formData.append('transaction_date', String(transactionDate).trim());
+  }
+  Object.keys(context || {}).forEach(function (key) {
+    var value = context[key];
+    if (value != null) {
+      formData.append(key, String(value));
+    }
+  });
+  return requestMultipart('/api/users/upload-receipt/', {
+    method: 'POST',
+    body: formData,
   });
 }
 
