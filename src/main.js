@@ -37,6 +37,8 @@ import { renderBrowserExtension } from './views/browser-extension.js';
 import { renderSupport } from './views/support.js';
 import { renderUploadReceipt } from './views/upload-receipt.js';
 import { renderPreviewScreen } from './views/preview-screen.js';
+import { renderForgotPassword } from './views/forgot-password.js';
+import { renderResetPassword } from './views/reset-password.js';
 import { renderSchoolSelection } from './views/school-selection.js';
 import LoadingSpinner from './base-components/LoadingSpinner.js';
 import { preloadMapKitForEmbed } from './mapkit-embed.js';
@@ -117,7 +119,7 @@ async function applySchoolConfig(nextSchoolId) {
 
   try {
     var config = await api.fetchSchoolConfig(schoolId);
-    applyBrandConfig(config);
+    applyBrandConfig(config, schoolId);
     return;
   } catch (e) { }
 
@@ -699,7 +701,7 @@ async function init() {
   startRouter();
   setupDailyVisitForegroundCheck();
 
-  if (!user && getRoute() !== '/login' && getRoute() !== '/preview') {
+  if (!user && !isPublicAuthPath(routePathOnly(getRoute()))) {
     if (partnerToken) {
       navigate('/preview');
     } else {
@@ -710,7 +712,8 @@ async function init() {
     (getRoute() === '/login' ||
       getRoute() === '/' ||
       getRoute() === '/preview' ||
-      getRoute() === '/school-selection')
+      getRoute() === '/school-selection' ||
+      isPublicAuthPath(routePathOnly(getRoute())))
   ) {
     if (!hasActiveSchool(user)) {
       navigate('/school-selection');
@@ -729,6 +732,16 @@ async function init() {
 function routePathOnly(route) {
   var q = route.indexOf('?');
   return q >= 0 ? route.slice(0, q) : route;
+}
+
+function isPublicAuthPath(pathOnly) {
+  return (
+    pathOnly === '/login' ||
+    pathOnly === '/preview' ||
+    pathOnly === '/forgot-password' ||
+    pathOnly === '/reset-password' ||
+    /^\/reset-password\//.test(pathOnly)
+  );
 }
 
 function getActiveSchool(currentUser) {
@@ -869,8 +882,9 @@ function cleanupOverlays() {
 
 function render(route) {
   var routeEpoch = nextNavEpoch();
+  var pathOnly = routePathOnly(route);
   removeRewardsPointsOverlay();
-  if (!user && route !== '/login' && route !== '/preview') {
+  if (!user && !isPublicAuthPath(pathOnly)) {
     navigate(partnerToken ? '/preview' : '/login');
     return;
   }
@@ -882,7 +896,7 @@ function render(route) {
     navigate('/' + initialView);
     return;
   }
-  if (user && (route === '/login' || route === '/preview')) {
+  if (user && isPublicAuthPath(pathOnly)) {
     navigate(hasActiveSchool(user) ? '/' + initialView : '/school-selection');
     return;
   }
@@ -933,6 +947,18 @@ function render(route) {
     return;
   }
 
+  if (pathOnly === '/forgot-password') {
+    appEl.innerHTML = '';
+    renderForgotPassword(appEl);
+    return;
+  }
+
+  if (pathOnly === '/reset-password' || /^\/reset-password\//.test(pathOnly)) {
+    appEl.innerHTML = '';
+    renderResetPassword(appEl, route);
+    return;
+  }
+
   if (route === '/school-selection') {
     appEl.innerHTML = '';
     renderSchoolSelection(appEl, {
@@ -946,7 +972,6 @@ function render(route) {
     return;
   }
 
-  var pathOnly = routePathOnly(route);
   if (!profileUserForTabs && !profileUserForTabsLoading && user) {
     refreshProfileUserForTabs();
   }

@@ -221,6 +221,14 @@ body {
   background-repeat: no-repeat, no-repeat;
 }
 
+html.hc-embed--no-school-brand .hc-embed--email-selection {
+  background-color: transparent;
+  background-image: var(
+    --hc-email-selection-bg-image,
+    url('https://app.gethomecrowd.com/assets/app-images/load-in.jpg')
+  );
+}
+
 .hc-has-email-selection-bg .hc-embed--email-selection .hc-content-brand {
   background-color: transparent;
   background: transparent;
@@ -251,15 +259,15 @@ body {
   align-items: baseline;
   justify-content: center;
   width: 100%;
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--hc-powered-by-text, rgba(255, 255, 255, 0.78));
 }
 
 .hc-embed--email-selection .hc-content-brand .hc-header-powered-label {
-  color: rgba(255, 255, 255, 0.62);
+  color: var(--hc-powered-by-text-label, rgba(255, 255, 255, 0.62));
 }
 
 .hc-embed--email-selection .hc-content-brand .hc-header-powered-name {
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--hc-powered-by-text-name, rgba(255, 255, 255, 0.92));
 }
 
 .hc-sticky-top {
@@ -326,7 +334,7 @@ body {
   align-items: baseline;
   gap: 6px;
   max-width: 100%;
-  color: #4b5563;
+  color: var(--hc-powered-by-text, #4b5563);
   font-family: 'Baikal-Bold', var(--hc-font);
   font-size: 12px;
   line-height: 1;
@@ -334,11 +342,11 @@ body {
 }
 
 .hc-header-powered-label {
-  color: #6b7280;
+  color: var(--hc-powered-by-text-label, #6b7280);
 }
 
 .hc-header-powered-name {
-  color: #111111;
+  color: var(--hc-powered-by-text-name, #111111);
 }
 
 .hc-nav-brand {
@@ -759,6 +767,10 @@ body {
   background: var(--hc-preview-bg, transparent);
 }
 
+html.hc-embed--no-school-brand .hc-login-overlay {
+  background: transparent;
+}
+
 .hc-login-container {
   flex: 1 1 auto;
   display: flex;
@@ -799,26 +811,30 @@ body {
 }
 
 .hc-login-logo--brand .hc-header-powered {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--hc-powered-by-text, rgba(255, 255, 255, 0.78));
 }
 
 .hc-login-logo--brand .hc-header-powered-label {
-  color: rgba(255, 255, 255, 0.62);
+  color: var(--hc-powered-by-text-label, rgba(255, 255, 255, 0.62));
 }
 
 .hc-login-logo--brand .hc-header-powered-name {
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--hc-powered-by-text-name, rgba(255, 255, 255, 0.92));
 }
 
 .hc-login-card {
-  background: var(--hc-login-card-bg, rgba(255, 255, 255, 0.08));
+  background: var(--hc-login-card-bg, var(--hc-preview-card, rgba(255, 255, 255, 0.08)));
   border-radius: 20px;
-  border: 1px solid rgba(248, 248, 248, 0.14);
+  border: 1.5px solid var(--hc-chrome, var(--hc-border));
   backdrop-filter: blur(var(--hc-login-card-blur, 50px));
   -webkit-backdrop-filter: blur(var(--hc-login-card-blur, 50px));
   padding: 24px;
   width: 100%;
   max-width: 400px;
+}
+
+html.hc-embed--no-school-brand .hc-login-card {
+  background: transparent;
 }
 
 @media (max-height: 760px) {
@@ -888,7 +904,7 @@ body {
 .hc-auth-link {
   border: 0;
   background: transparent;
-  color: var(--hc-login-text, rgba(255, 255, 255, 0.9));
+  color: var(--hc-link, var(--hc-preview-link, #00C8FF));
   font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 13px;
   text-align: center;
@@ -912,7 +928,7 @@ body {
 .hc-login-signup-link {
   border: 0;
   background: transparent;
-  color: var(--hc-login-signup, #ffffff);
+  color: var(--hc-link, var(--hc-preview-link, #00C8FF));
   cursor: pointer;
   font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 13px;
@@ -922,10 +938,10 @@ body {
 
 .hc-signup-back-btn {
   align-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.42);
+  border: 1px solid color-mix(in srgb, var(--hc-powered-by-text-label, rgba(255, 255, 255, 0.62)) 68%, transparent);
   border-radius: 50%;
   background: transparent;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--hc-powered-by-text-label, rgba(255, 255, 255, 0.62));
   cursor: pointer;
   font-family: 'Baikal-Medium', var(--hc-font);
   height: 34px;
@@ -994,18 +1010,18 @@ body {
 }
 
 .hc-login-checkbox-label a {
-  color: var(--hc-login-text, rgba(255, 255, 255, 0.9));
+  color: var(--hc-link, var(--hc-preview-link, #00C8FF));
   text-decoration: underline;
 }
 
 .hc-login-title {
   font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
-  font-size: 50px;
+  font-size: 44px;
   font-weight: normal;
   text-align: center;
   color: var(--hc-login-title, #ffffff);
   margin-bottom: 0;
-  line-height: 65px;
+  line-height: 57px;
 }
 
 .hc-login-card--signup .hc-login-title {
@@ -1028,7 +1044,7 @@ body {
   margin-top: var(--hc-spacing-base);
   font-size: 13px;
   font-weight: 300;
-  color: color-mix(in srgb, var(--hc-login-text, #ffffff) 50%, transparent);
+  color: var(--hc-powered-by-text-label, rgba(255, 255, 255, 0.62));
 }
 
 .hc-login-submit-btn {
@@ -1045,7 +1061,7 @@ body {
 
 .hc-login-container .hc-input {
   color: var(--hc-login-text, rgba(255, 255, 255, 0.7));
-  border-color: rgba(255, 255, 255, 0.3);
+  border: 1.5px solid var(--hc-chrome, var(--hc-border));
   background: transparent;
 }
 

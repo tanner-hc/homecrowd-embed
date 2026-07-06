@@ -9,7 +9,9 @@ var PREVIEW_VARS = [
   '--hc-preview-text-primary',
   '--hc-preview-text-secondary',
   '--hc-preview-link',
+  '--hc-link',
   '--hc-preview-chrome',
+  '--hc-chrome',
   '--hc-preview-primary',
   '--hc-preview-button-border',
   '--hc-preview-button-primary-text',
@@ -17,6 +19,9 @@ var PREVIEW_VARS = [
   '--hc-preview-button-secondary-text',
   '--hc-email-selection-bg-image',
   '--hc-email-card-blur',
+  '--hc-powered-by-text',
+  '--hc-powered-by-text-label',
+  '--hc-powered-by-text-name',
 ];
 
 var LOGIN_VARS = [
@@ -113,8 +118,93 @@ function readBlurPx(config, key, fallbackPx) {
   return value + 'px';
 }
 
-export function applyBrandConfig(config) {
+function normalizeHexInput(value) {
+  var raw = String(value == null ? '' : value).trim();
+  if (!raw) return '';
+  var withHash = raw.charAt(0) === '#' ? raw : '#' + raw;
+  if (/^#[0-9a-fA-F]{6}$/.test(withHash)) return withHash.toUpperCase();
+  if (/^#[0-9a-fA-F]{3}$/.test(withHash)) {
+    return (
+      '#' +
+      withHash.charAt(1) +
+      withHash.charAt(1) +
+      withHash.charAt(2) +
+      withHash.charAt(2) +
+      withHash.charAt(3) +
+      withHash.charAt(3)
+    ).toUpperCase();
+  }
+  return '';
+}
+
+function normalizeOpacityInput(value, fallback) {
+  if (value == null || value === '') return fallback != null ? fallback : 100;
+  var parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback != null ? fallback : 100;
+  return Math.min(100, Math.max(0, Math.round(parsed)));
+}
+
+function getRelativeLuminanceFromHex(hex) {
+  var normalized = normalizeHexInput(hex);
+  if (!normalized) return 0;
+  var r = parseInt(normalized.slice(1, 3), 16);
+  var g = parseInt(normalized.slice(3, 5), 16);
+  var b = parseInt(normalized.slice(5, 7), 16);
+  function linearize(channel) {
+    var value = channel / 255;
+    return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+  }
+  return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b);
+}
+
+function getPoweredByTextVars(backgroundHex, opacityPercent, fallbackHex) {
+  var opacity = normalizeOpacityInput(opacityPercent, 100);
+  if (opacity <= 0) {
+    return {
+      '--hc-powered-by-text': '#FFFFFF',
+      '--hc-powered-by-text-label': 'rgba(255, 255, 255, 0.62)',
+      '--hc-powered-by-text-name': 'rgba(255, 255, 255, 0.92)',
+    };
+  }
+  var hex = normalizeHexInput(backgroundHex) || fallbackHex || '#000000';
+  if (getRelativeLuminanceFromHex(hex) > 0.179) {
+    return {
+      '--hc-powered-by-text': '#111111',
+      '--hc-powered-by-text-label': 'rgba(17, 17, 17, 0.62)',
+      '--hc-powered-by-text-name': 'rgba(17, 17, 17, 0.92)',
+    };
+  }
+  return {
+    '--hc-powered-by-text': '#FFFFFF',
+    '--hc-powered-by-text-label': 'rgba(255, 255, 255, 0.62)',
+    '--hc-powered-by-text-name': 'rgba(255, 255, 255, 0.92)',
+  };
+}
+
+function applyPoweredByTextVars(config, pageBackgroundHex, pageBackgroundOpacity) {
+  var vars = getPoweredByTextVars(
+    pageBackgroundHex,
+    pageBackgroundOpacity != null ? pageBackgroundOpacity : config && config.pageBackgroundOpacity,
+    '#000000',
+  );
+  Object.keys(vars).forEach(function (name) {
+    setVar(name, vars[name]);
+  });
+}
+
+function setNoSchoolBrandState(isNoSchool) {
+  if (!document || !document.documentElement) return;
+  document.documentElement.classList.toggle('hc-embed--no-school-brand', !!isNoSchool);
+}
+
+export function applyBrandConfig(config, activeSchoolId) {
   brandConfig = config && typeof config === 'object' ? config : null;
+  if (!activeSchoolId) {
+    clearBrandConfig();
+    return;
+  }
+
+  setNoSchoolBrandState(false);
 
   var pageBackground = brandConfig && (brandConfig.pageBackground || brandConfig.backgroundColor);
   var cardBackground = brandConfig && (brandConfig.cardBackground || brandConfig.secondaryColor);
@@ -134,15 +224,25 @@ export function applyBrandConfig(config) {
   var loginButtonText = brandConfig && (brandConfig.loginButtonText || brandConfig.loginButtonTextColor);
   var loginTitle = brandConfig && (brandConfig.loginTitle || brandConfig.loginTitleColor);
   var loginText = brandConfig && (brandConfig.loginText || brandConfig.loginTextColor);
-  var loginSignup = brandConfig && (brandConfig.loginSignup || brandConfig.loginSignupColor);
   var loginCardBackground = brandConfig && brandConfig.loginCardBackground;
+  var formBlockBackground = readCssColor(
+    brandConfig,
+    'cardBackground',
+    'cardBackgroundOpacity',
+    cardBackground || loginCardBackground || '#FFFFFF',
+    100,
+  );
+
+  var linkColor = readCssColor(brandConfig, 'link', 'linkOpacity', link, 100);
 
   setVar('--hc-preview-bg', readCssColor(brandConfig, 'pageBackground', 'pageBackgroundOpacity', pageBackground || '#FFFFFF', 0));
-  setVar('--hc-preview-card', readCssColor(brandConfig, 'cardBackground', 'cardBackgroundOpacity', cardBackground, 100));
+  setVar('--hc-preview-card', formBlockBackground);
   setVar('--hc-preview-text-primary', readCssColor(brandConfig, 'headingText', 'headingTextOpacity', headingText, 100));
   setVar('--hc-preview-text-secondary', readCssColor(brandConfig, 'bodyText', 'bodyTextOpacity', bodyText, 100));
-  setVar('--hc-preview-link', readCssColor(brandConfig, 'link', 'linkOpacity', link, 100));
+  setVar('--hc-preview-link', linkColor);
+  setVar('--hc-link', linkColor);
   setVar('--hc-preview-chrome', readCssColor(brandConfig, 'chrome', 'chromeOpacity', chrome, 100));
+  setVar('--hc-chrome', readCssColor(brandConfig, 'chrome', 'chromeOpacity', chrome, 100));
   setVar('--hc-preview-primary', readCssColor(brandConfig, 'button', 'buttonOpacity', button, 100));
   setVar('--hc-preview-button-border', readCssColor(brandConfig, 'button', 'buttonOpacity', button, 100));
   setVar('--hc-preview-button-primary-text', readCssColor(brandConfig, 'buttonPrimaryText', 'buttonPrimaryTextOpacity', buttonPrimaryText, 100));
@@ -156,9 +256,16 @@ export function applyBrandConfig(config) {
   setVar('--hc-login-button-text', readCssColor(brandConfig, 'loginButtonText', 'loginButtonTextOpacity', loginButtonText, 100));
   setVar('--hc-login-title', readCssColor(brandConfig, 'loginTitle', 'loginTitleOpacity', loginTitle, 100));
   setVar('--hc-login-text', readCssColor(brandConfig, 'loginText', 'loginTextOpacity', loginText, 100));
-  setVar('--hc-login-signup', readCssColor(brandConfig, 'loginSignup', 'loginSignupOpacity', loginSignup, 100));
-  setVar('--hc-login-card-bg', readCssColor(brandConfig, 'loginCardBackground', 'loginCardBackgroundOpacity', loginCardBackground || '#FFFFFF', 8));
+  setVar('--hc-login-signup', linkColor);
+  setVar('--hc-login-card-bg', formBlockBackground);
   setVar('--hc-login-card-blur', readBlurPx(brandConfig, 'loginCardBlur', 50));
+  applyPoweredByTextVars(
+    brandConfig,
+    pageBackground || '#FFFFFF',
+    brandConfig && brandConfig.pageBackgroundOpacity != null && brandConfig.pageBackgroundOpacity !== ''
+      ? brandConfig.pageBackgroundOpacity
+      : 0,
+  );
   applyHeaderLogoSize(brandConfig);
 
   if (document && document.documentElement) {
@@ -170,6 +277,9 @@ export function clearBrandConfig() {
   brandConfig = null;
   clearVars(PREVIEW_VARS);
   clearVars(LOGIN_VARS);
+  setVar('--hc-preview-bg', 'transparent');
+  setVar('--hc-login-card-bg', 'transparent');
+  setNoSchoolBrandState(true);
   if (document && document.documentElement) {
     document.documentElement.classList.remove('hc-has-email-selection-bg');
   }
