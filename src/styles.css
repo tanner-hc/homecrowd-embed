@@ -1061,7 +1061,7 @@ html.hc-embed--no-school-brand .hc-login-card {
 
 .hc-login-container .hc-input {
   color: var(--hc-login-text, rgba(255, 255, 255, 0.7));
-  border: 1.5px solid var(--hc-chrome, var(--hc-border));
+  border: 1.5px solid var(--hc-login-text, var(--hc-chrome, var(--hc-border)));
   background: transparent;
 }
 
@@ -10820,22 +10820,24 @@ html.hc-embed--no-school-brand .hc-login-card {
 .hc-preview-btn-primary {
   background: var(--hc-preview-primary, var(--hc-primary));
   color: var(--hc-preview-button-primary-text, var(--hc-button-primary-text));
+  border-color: var(--hc-btn1-border, var(--hc-preview-button-border, var(--hc-button-border)));
 }
 
 .hc-preview-btn-secondary {
   background: var(--hc-preview-button-secondary, var(--hc-preview-bg, var(--hc-bg)));
   color: var(--hc-preview-button-secondary-text, var(--hc-button-secondary-text));
+  border-color: var(--hc-btn2-border, var(--hc-preview-button-border, var(--hc-button-border)));
 }
 
 .hc-preview-btn-primary:not(:disabled):hover {
   background: var(--hc-preview-primary, var(--hc-primary));
-  border-color: var(--hc-preview-button-border, var(--hc-button-border));
+  border-color: var(--hc-btn1-border, var(--hc-preview-button-border, var(--hc-button-border)));
 }
 
 .hc-preview-btn-secondary:not(:disabled):hover {
   background: var(--hc-preview-button-secondary, var(--hc-preview-bg, var(--hc-bg)));
   color: var(--hc-preview-button-secondary-text, var(--hc-button-secondary-text));
-  border-color: var(--hc-preview-button-border, var(--hc-button-border));
+  border-color: var(--hc-btn2-border, var(--hc-preview-button-border, var(--hc-button-border)));
 }
 
 .hc-preview-btn-disabled {
@@ -10854,6 +10856,14 @@ html.hc-embed--no-school-brand .hc-login-card {
   flex-shrink: 0;
   justify-content: center;
   color: var(--hc-preview-chrome, var(--hc-chrome));
+}
+
+.hc-preview-btn-primary .hc-preview-btn-icon {
+  color: var(--hc-btn1-icon, var(--hc-preview-chrome, var(--hc-chrome)));
+}
+
+.hc-preview-btn-secondary .hc-preview-btn-icon {
+  color: var(--hc-btn2-icon, var(--hc-preview-chrome, var(--hc-chrome)));
 }
 
 .hc-preview-btn-label {

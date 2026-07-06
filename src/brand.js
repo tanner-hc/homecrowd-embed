@@ -17,6 +17,10 @@ var PREVIEW_VARS = [
   '--hc-preview-button-primary-text',
   '--hc-preview-button-secondary',
   '--hc-preview-button-secondary-text',
+  '--hc-btn1-border',
+  '--hc-btn1-icon',
+  '--hc-btn2-border',
+  '--hc-btn2-icon',
   '--hc-email-selection-bg-image',
   '--hc-email-card-blur',
   '--hc-powered-by-text',
@@ -214,8 +218,12 @@ export function applyBrandConfig(config, activeSchoolId) {
   var chrome = brandConfig && (brandConfig.chrome || brandConfig.chromeColor);
   var button = brandConfig && (brandConfig.button || brandConfig.buttonColor || brandConfig.buttonFillColor || brandConfig.primaryColor);
   var buttonPrimaryText = brandConfig && (brandConfig.buttonPrimaryText || brandConfig.buttonPrimaryTextColor);
+  var buttonPrimaryBorder = brandConfig && (brandConfig.buttonPrimaryBorder || brandConfig.buttonPrimaryBorderColor);
+  var buttonPrimaryIcon = brandConfig && (brandConfig.buttonPrimaryIcon || brandConfig.buttonPrimaryIconColor);
   var buttonSecondary = brandConfig && (brandConfig.buttonSecondary || brandConfig.buttonSecondaryColor);
   var buttonSecondaryText = brandConfig && (brandConfig.buttonSecondaryText || brandConfig.buttonSecondaryTextColor);
+  var buttonSecondaryBorder = brandConfig && (brandConfig.buttonSecondaryBorder || brandConfig.buttonSecondaryBorderColor);
+  var buttonSecondaryIcon = brandConfig && (brandConfig.buttonSecondaryIcon || brandConfig.buttonSecondaryIconColor);
   var loginBackground = brandConfig && brandConfig.loginBackgroundUrl;
   var emailSelectionBackground = brandConfig && brandConfig.emailSelectionBackgroundUrl;
   var defaultBackground = 'https://app.gethomecrowd.com/assets/app-images/load-in.jpg';
@@ -246,8 +254,12 @@ export function applyBrandConfig(config, activeSchoolId) {
   setVar('--hc-preview-primary', readCssColor(brandConfig, 'button', 'buttonOpacity', button, 100));
   setVar('--hc-preview-button-border', readCssColor(brandConfig, 'button', 'buttonOpacity', button, 100));
   setVar('--hc-preview-button-primary-text', readCssColor(brandConfig, 'buttonPrimaryText', 'buttonPrimaryTextOpacity', buttonPrimaryText, 100));
+  setVar('--hc-btn1-border', readCssColor(brandConfig, 'buttonPrimaryBorder', 'buttonPrimaryBorderOpacity', buttonPrimaryBorder || button, 100));
+  setVar('--hc-btn1-icon', readCssColor(brandConfig, 'buttonPrimaryIcon', 'buttonPrimaryIconOpacity', buttonPrimaryIcon || chrome, 100));
   setVar('--hc-preview-button-secondary', readCssColor(brandConfig, 'buttonSecondary', 'buttonSecondaryOpacity', buttonSecondary || pageBackground, 100));
   setVar('--hc-preview-button-secondary-text', readCssColor(brandConfig, 'buttonSecondaryText', 'buttonSecondaryTextOpacity', buttonSecondaryText || button, 100));
+  setVar('--hc-btn2-border', readCssColor(brandConfig, 'buttonSecondaryBorder', 'buttonSecondaryBorderOpacity', buttonSecondaryBorder || button, 100));
+  setVar('--hc-btn2-icon', readCssColor(brandConfig, 'buttonSecondaryIcon', 'buttonSecondaryIconOpacity', buttonSecondaryIcon || chrome, 100));
   setVar('--hc-email-selection-bg-image', 'url("' + sharedBackground + '")');
   setVar('--hc-email-card-blur', readBlurPx(brandConfig, 'emailSelectionCardBlur', 0));
 
