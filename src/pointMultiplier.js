@@ -9,8 +9,8 @@ export function getPointMultiplierValue(item) {
 export function formatPointMultiplierLabel(value) {
   var normalized = Number(value);
   if (Number.isNaN(normalized) || normalized <= 1) return '';
-  if (Number.isInteger(normalized)) return normalized + 'x';
-  return normalized.toFixed(2).replace(/\.?0+$/, '') + 'x';
+  if (Number.isInteger(normalized)) return normalized + 'x points';
+  return normalized.toFixed(2).replace(/\.?0+$/, '') + 'x points';
 }
 
 export function renderPointMultiplierBadgeHtml(item, variant, compact) {
@@ -20,13 +20,14 @@ export function renderPointMultiplierBadgeHtml(item, variant, compact) {
   if (variant === 'overlay') classes.push('hc-point-multiplier-badge--overlay');
   else classes.push('hc-point-multiplier-badge--block');
   if (compact) classes.push('hc-point-multiplier-badge--compact');
+  var label = formatPointMultiplierLabel(multiplier);
   return (
     '<span class="' +
     classes.join(' ') +
     '" aria-label="' +
-    formatPointMultiplierLabel(multiplier) +
-    ' points multiplier">' +
-    formatPointMultiplierLabel(multiplier) +
+    label +
+    '">' +
+    label +
     '</span>'
   );
 }
