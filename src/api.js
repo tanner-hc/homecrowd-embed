@@ -354,6 +354,17 @@ export async function fetchPublicSchools() {
   return request('/api/school/public-schools/');
 }
 
+export function getApiOrigin() {
+  return baseUrl || window.location.origin;
+}
+
+export async function createTravelSession() {
+  return request('/api/travel/session/', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
 export async function fetchCurrentUser() {
   return request(EMBED_BASE + '/auth/me/');
 }

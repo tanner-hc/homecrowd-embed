@@ -13,8 +13,10 @@ import dollarSignIconSvg from '../assets/icons/dollar-sign.svg?raw';
 import activityIconSvg from '../assets/icons/activity.svg?raw';
 import extensionIconSvg from '../assets/icons/extension.svg?raw';
 import referralIconSvg from '../assets/icons/referral.svg?raw';
+import bagIconSvg from '../assets/icons/bag.svg?raw';
 import chevronRightIconSvg from '../assets/icons/chevron-right.svg?raw';
 import { getReferralReward } from '../referral-reward.js';
+import { openTravel } from './travel.js';
 
 function svgAddClass(svgRaw, className) {
   return String(svgRaw).replace(/^<svg\s/i, '<svg class="' + className + '" ');
@@ -173,6 +175,10 @@ async function loadProfile(container) {
     prefsUser &&
     (prefsUser.emailVerified === false || prefsUser.email_verified === false)
   );
+  var isSuperuser = !!(
+    prefsUser &&
+    (prefsUser.is_superuser === true || prefsUser.isSuperuser === true)
+  );
 
   var html = '';
   html += '<div id="hc-profile-root" class="hc-profile-view">';
@@ -248,6 +254,16 @@ async function loadProfile(container) {
     id: 'hc-profile-upload-receipt',
   });
 
+  if (isSuperuser) {
+    html += SecondaryButton({
+      leftHtml: secondaryIconHtml(bagIconSvg),
+      title: 'Travel',
+      subtitle: 'Open Access Travel platform',
+      rightHtml: chevronRightHtml(),
+      id: 'hc-profile-travel',
+    });
+  }
+
   html += '</div>';
   html += '<div class="hc-profile-logout-section">';
   html += MainButton({
@@ -305,6 +321,13 @@ async function loadProfile(container) {
   if (uploadReceiptBtn) {
     uploadReceiptBtn.addEventListener('click', function () {
       navigate('/upload-receipt');
+    });
+  }
+
+  var travelBtn = container.querySelector('#hc-profile-travel');
+  if (travelBtn) {
+    travelBtn.addEventListener('click', function () {
+      openTravel();
     });
   }
 
