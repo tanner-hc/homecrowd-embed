@@ -36,6 +36,7 @@ import { renderActivityLog } from './views/activity-log.js';
 import { renderBrowserExtension } from './views/browser-extension.js';
 import { renderSupport } from './views/support.js';
 import { renderUploadReceipt } from './views/upload-receipt.js';
+import { renderTravel } from './views/travel.js';
 import { renderPreviewScreen } from './views/preview-screen.js';
 import { renderForgotPassword } from './views/forgot-password.js';
 import { renderResetPassword } from './views/reset-password.js';
@@ -808,7 +809,8 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
     pathOnly === '/activity-log' ||
     pathOnly === '/browser-extension' ||
     pathOnly === '/support' ||
-    pathOnly === '/upload-receipt'
+    pathOnly === '/upload-receipt' ||
+    pathOnly === '/travel'
       ? ' active'
       : '';
 
@@ -1179,6 +1181,8 @@ function render(route) {
     renderSupport(contentEl);
   } else if (pathOnly === '/upload-receipt') {
     renderUploadReceipt(contentEl);
+  } else if (pathOnly === '/travel') {
+    renderTravel(contentEl);
   } else if (pathOnly === '/preview') {
     var previewCtx = pendingSchoolAuthContext || {
       token: partnerToken || '',
@@ -1239,28 +1243,33 @@ function renderLayout(route) {
   var isOfferDetailPage = /^\/offers\/[^/]+$/.test(pathOnly);
   var isContentDetailPage = /^\/content\/[^/]+$/.test(pathOnly);
   var isPreviewPage = pathOnly === '/preview';
+  var isTravelPage = pathOnly === '/travel';
   var hideTabBar = isRewardDetailPage || isOfferDetailPage || isContentDetailPage || isPreviewPage;
   var flushTopContentClass =
     pathOnly === '/invite-friend' ||
     pathOnly === '/support' ||
     pathOnly === '/upload-receipt' ||
-    pathOnly === '/cards/link'
+    pathOnly === '/cards/link' ||
+    isTravelPage
       ? ' hc-content--flush-top'
       : '';
 
   var tabBarHtml = hideTabBar ? '' : buildBottomTabBarHtml(pathOnly, contentTabEnabled);
   var embedClassName = 'hc-embed' + (isPreviewPage ? ' hc-embed--email-selection' : '');
-  var brandLockupHtml = renderBrandLockup();
+  var brandLockupHtml = isTravelPage ? '' : renderBrandLockup();
   appEl.innerHTML =
     '<div class="' +
     embedClassName +
     '">\
       <main class="hc-content' +
     (isRewardDetailPage ? ' hc-content--reward-detail' : '') +
+    (isTravelPage ? ' hc-content--travel' : '') +
     (hideTabBar ? '' : ' hc-content--with-tab-bar') +
     flushTopContentClass +
     '">\
-        <div class="hc-content-brand">\
+        <div class="hc-content-brand' +
+    (isTravelPage ? ' hc-content-brand--hidden' : '') +
+    '">\
           ' +
     brandLockupHtml +
     '\
