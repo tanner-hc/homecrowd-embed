@@ -308,6 +308,18 @@ export function hasCustomHeaderLogo() {
   return !!(brandConfig && brandConfig.headerLogoUrl);
 }
 
+export function renderPoweredByLockup(className) {
+  var extra = className ? ' ' + escapeHtml(className) : '';
+  return (
+    '<div class="hc-header-powered' +
+    extra +
+    '">' +
+    '<span class="hc-header-powered-label">POWERED BY</span>' +
+    '<span class="hc-header-powered-logo" role="img" aria-label="Homecrowd"></span>' +
+    '</div>'
+  );
+}
+
 export function renderBrandLockup() {
   var src = getHeaderLogoUrl();
   var alt = hasCustomHeaderLogo() ? 'School brand' : 'Homecrowd';
@@ -321,10 +333,7 @@ export function renderBrandLockup() {
     '" alt="' +
     escapeHtml(alt) +
     '" class="hc-header-logo hc-header-logo--brand" />' +
-    '<div class="hc-header-powered">' +
-    '<span class="hc-header-powered-label">POWERED BY</span>' +
-    '<span class="hc-header-powered-name">HOMECROWD</span>' +
-    '</div>' +
+    renderPoweredByLockup() +
     '</div>'
   );
 }
