@@ -107,6 +107,7 @@
   --hc-shadow-modal: 0 0 1px rgba(0, 0, 0, 0.06), 0 8px 28px rgba(0, 0, 0, 0.12);
   --hc-shadow-toast: 0 0 1px rgba(0, 0, 0, 0.08), 0 2px 10px rgba(0, 0, 0, 0.12);
   --hc-shadow-cta: 0 2px 10px rgba(37, 47, 63, 0.18);
+  --hc-embed-scale: 0.92;
   --hc-radius: 12px;
   --hc-radius-pill: 25px;
   --hc-spacing-xs: 4px;
@@ -180,14 +181,16 @@ body {
 #app {
   flex: 1 1 auto;
   min-height: 0;
-  min-height: 100%;
-  min-height: 100dvh;
-  height: 100%;
-  height: 100dvh;
-  max-height: 100dvh;
+  min-height: calc(100% / var(--hc-embed-scale));
+  min-height: calc(100dvh / var(--hc-embed-scale));
+  height: calc(100% / var(--hc-embed-scale));
+  height: calc(100dvh / var(--hc-embed-scale));
+  max-height: calc(100dvh / var(--hc-embed-scale));
   display: flex;
   flex-direction: column;
-  width: 100%;
+  width: calc(100% / var(--hc-embed-scale));
+  transform: scale(var(--hc-embed-scale));
+  transform-origin: top left;
   overflow: hidden;
   overflow-x: hidden;
   overscroll-behavior: none;
@@ -240,7 +243,7 @@ html.hc-embed--no-school-brand .hc-embed--email-selection {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 16px 0 0;
+  padding: 0;
   width: 100%;
 }
 
@@ -331,7 +334,7 @@ html.hc-embed--no-school-brand .hc-embed--email-selection {
 
 .hc-header-powered {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
   max-width: 100%;
   color: var(--hc-powered-by-text, #4b5563);
@@ -347,6 +350,16 @@ html.hc-embed--no-school-brand .hc-embed--email-selection {
 
 .hc-header-powered-name {
   color: var(--hc-powered-by-text-name, #111111);
+}
+
+.hc-header-powered-logo {
+  display: inline-block;
+  width: 78px;
+  height: 12px;
+  flex-shrink: 0;
+  background-color: var(--hc-powered-by-text-name, #111111);
+  -webkit-mask: url('./assets/header.png') center / contain no-repeat;
+  mask: url('./assets/header.png') center / contain no-repeat;
 }
 
 .hc-nav-brand {
@@ -589,7 +602,7 @@ html.hc-embed--no-school-brand .hc-embed--email-selection {
 .hc-content {
   flex: 1;
   min-height: 0;
-  padding-top: var(--hc-spacing-lg);
+  padding-top: var(--hc-spacing-sm);
   padding-bottom: 100px;
   width: 100%;
   max-width: 600px;
@@ -778,6 +791,7 @@ html.hc-embed--no-school-brand .hc-login-overlay {
   align-items: center;
   justify-content: flex-start;
   padding: clamp(20px, 6vh, 56px) 20px;
+  padding-top: 8px;
   padding-bottom: max(clamp(20px, 4vh, 40px), env(safe-area-inset-bottom, 0px));
   width: 100%;
   max-width: 100%;
@@ -806,7 +820,7 @@ html.hc-embed--no-school-brand .hc-login-overlay {
 }
 
 .hc-login-logo--brand .hc-header {
-  padding: 16px 0 0;
+  padding: 0;
   width: 100%;
 }
 
@@ -1040,11 +1054,17 @@ html.hc-embed--no-school-brand .hc-login-card {
 }
 
 .hc-login-footer {
+  display: flex;
+  justify-content: center;
   text-align: center;
   margin-top: var(--hc-spacing-base);
   font-size: 13px;
   font-weight: 300;
   color: var(--hc-powered-by-text-label, rgba(255, 255, 255, 0.62));
+}
+
+.hc-login-footer .hc-header-powered-logo {
+  background-color: var(--hc-powered-by-text-name, rgba(255, 255, 255, 0.92));
 }
 
 .hc-login-submit-btn {
@@ -5199,7 +5219,7 @@ html.hc-embed--no-school-brand .hc-login-card {
   }
 
   .hc-content {
-    padding-top: var(--hc-spacing-base);
+    padding-top: var(--hc-spacing-sm);
     padding-left: max(var(--hc-spacing-sm), env(safe-area-inset-left, 0px));
     padding-right: max(var(--hc-spacing-sm), env(safe-area-inset-right, 0px));
     max-width: 100%;

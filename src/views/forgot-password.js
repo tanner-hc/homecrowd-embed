@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import { getHeaderLogoUrl } from '../brand.js';
+import { getHeaderLogoUrl, renderPoweredByLockup } from '../brand.js';
 import Input from '../base-components/Input.js';
 import Button from '../base-components/Button.js';
 import { escapeHtml } from '../base-components/html.js';
@@ -48,7 +48,7 @@ export function renderForgotPassword(container) {
     '</form>' +
     '<button type="button" id="hc-forgot-back" class="hc-auth-link">Back to Login</button>' +
     '</div>' +
-    '<div class="hc-login-footer">Powered by Homecrowd</div>' +
+    renderPoweredByLockup('hc-login-footer') +
     '</div>' +
     '</div>' +
     '</div>' +

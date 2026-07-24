@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import { getHeaderLogoUrl } from '../brand.js';
+import { getHeaderLogoUrl, renderPoweredByLockup } from '../brand.js';
 import Button from '../base-components/Button.js';
 
 function getResetParams(route) {
@@ -97,7 +97,7 @@ export function renderResetPassword(container, route) {
       }) +
       '</form>') +
     '<button type="button" id="hc-reset-back" class="hc-auth-link">Back to Login</button>' +
-    '<div class="hc-login-footer">Powered by Homecrowd</div>' +
+    renderPoweredByLockup('hc-login-footer') +
     '</div>' +
     '</div>' +
     '</div>' +

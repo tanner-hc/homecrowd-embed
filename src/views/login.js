@@ -1,5 +1,10 @@
 import * as api from '../api.js';
-import { getHeaderLogoUrl, hasCustomHeaderLogo, renderBrandLockup } from '../brand.js';
+import {
+  getHeaderLogoUrl,
+  hasCustomHeaderLogo,
+  renderBrandLockup,
+  renderPoweredByLockup,
+} from '../brand.js';
 import Input from '../base-components/Input.js';
 import { escapeAttr, escapeHtml } from '../base-components/html.js';
 import { PRIVACY_URL, TERMS_URL } from '../legal-urls.js';
@@ -146,7 +151,7 @@ export function renderLogin(container, onLoginSuccess, options) {
     '</label>' +
     '</div>' +
     '</form>' +
-    '<div class="hc-login-footer">Powered by Homecrowd</div>' +
+    renderPoweredByLockup('hc-login-footer') +
     '</div>' +
     '<button class="hc-btn hc-btn-primary hc-btn-large hc-login-submit-btn" id="hc-login-btn" type="submit" form="hc-login-form">Log In</button>' +
     '</div>' +
