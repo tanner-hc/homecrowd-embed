@@ -263,7 +263,8 @@ export function applyBrandConfig(config, activeSchoolId) {
   setVar('--hc-email-selection-bg-image', 'url("' + sharedBackground + '")');
   setVar('--hc-email-card-blur', readBlurPx(brandConfig, 'emailSelectionCardBlur', 0));
 
-  setVar('--hc-login-bg-image', loginBackground ? 'url("' + loginBackground + '")' : '');
+  var loginBgUrl = loginBackground || emailSelectionBackground || defaultBackground;
+  setVar('--hc-login-bg-image', 'url("' + loginBgUrl + '")');
   setVar('--hc-login-button', readCssColor(brandConfig, 'loginButton', 'loginButtonOpacity', loginButton, 100));
   setVar('--hc-login-button-text', readCssColor(brandConfig, 'loginButtonText', 'loginButtonTextOpacity', loginButtonText, 100));
   setVar('--hc-login-title', readCssColor(brandConfig, 'loginTitle', 'loginTitleOpacity', loginTitle, 100));
