@@ -2027,7 +2027,7 @@ function initOffersMap(container, cardlinked) {
   function applyStoredLocationFallback() {
     try {
       var raw = readStoredOfferLocationRaw();
-      if (!raw) return false;
+      if (!raw) return Promise.resolve(false);
       var o = JSON.parse(raw);
       if (o && o.lat != null && o.lng != null) {
         return applyFreshLocation(Number(o.lat), Number(o.lng), {
