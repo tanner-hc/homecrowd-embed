@@ -59,3 +59,11 @@ export async function claimSetupTaskReward(task) {
   }
   return result;
 }
+
+export async function syncSetupTaskRewards() {
+  var result = await api.syncSetupTaskRewards();
+  if (result && result.rewards) {
+    cachedSetupRewardPoints = normalizeRewards(result.rewards);
+  }
+  return result;
+}

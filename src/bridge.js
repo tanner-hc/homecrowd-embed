@@ -16,6 +16,7 @@
  * Commands:
  *   homecrowd:configure  — { schoolId, token, view, wildfireAppId }
  *   homecrowd:navigate   — { view: 'rewards' | 'cards' | 'login' }
+ *   homecrowd:extension-status — { enabled: boolean }  (reply to request, or push anytime)
  *
  * --- WebView → Native ---
  * Events sent to the native layer:
@@ -28,10 +29,37 @@
  *   homecrowd:open-merchant-webview    — Open URL in a top-level native WebView on top of the embed
  *                                        (bypasses X-Frame-Options that block iframe embedding),
  *                                        payload: { url, title }
+ *   homecrowd:request-extension-status — Ask host if Safari extension is enabled
  *   homecrowd:error                    — Something went wrong, payload: { message }
  */
 
 var listeners = {};
+var EXTENSION_STATUS_TIMEOUT_MS = 2500;
+var pendingExtensionStatusResolvers = [];
+
+function coerceExtensionEnabled(payload) {
+  if (payload === true || payload === 1 || payload === '1' || payload === 'true') return true;
+  if (payload === false || payload === 0 || payload === '0' || payload === 'false') return false;
+  if (!payload || typeof payload !== 'object') return null;
+  if (payload.enabled === true || payload.isEnabled === true || payload.is_extension_enabled === true) {
+    return true;
+  }
+  if (payload.enabled === false || payload.isEnabled === false || payload.is_extension_enabled === false) {
+    return false;
+  }
+  return null;
+}
+
+function resolvePendingExtensionStatus(payload) {
+  var enabled = coerceExtensionEnabled(payload);
+  var resolvers = pendingExtensionStatusResolvers.slice();
+  pendingExtensionStatusResolvers = [];
+  for (var i = 0; i < resolvers.length; i++) {
+    try {
+      resolvers[i](enabled);
+    } catch (_e) {}
+  }
+}
 
 /**
  * Returns true when a real native shell (iOS / Android / RN / Flutter) is
@@ -94,7 +122,33 @@ export function onNativeMessage(type, fn) {
   listeners[type].push(fn);
 }
 
+export function requestNativeExtensionEnabled() {
+  return new Promise(function (resolve) {
+    if (!hasNativeBridge()) {
+      resolve(null);
+      return;
+    }
+    var settled = false;
+    function finish(value) {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    }
+    var timer = window.setTimeout(function () {
+      finish(null);
+    }, EXTENSION_STATUS_TIMEOUT_MS);
+    pendingExtensionStatusResolvers.push(function (enabled) {
+      window.clearTimeout(timer);
+      finish(enabled);
+    });
+    postToNative('homecrowd:request-extension-status');
+  });
+}
+
 function dispatch(type, payload) {
+  if (type === 'homecrowd:extension-status') {
+    resolvePendingExtensionStatus(payload);
+  }
   var fns = listeners[type];
   if (fns) {
     fns.forEach(function (fn) { fn(payload); });
@@ -116,5 +170,8 @@ window.HomecrowdEmbed = {
   },
   navigate: function (view) {
     dispatch('homecrowd:navigate', { view: view });
+  },
+  setExtensionStatus: function (payload) {
+    dispatch('homecrowd:extension-status', payload);
   },
 };

@@ -4,6 +4,7 @@ if (import.meta.env.DEV) {
 import * as api from './api.js';
 import * as analytics from './analytics.js';
 import { postToNative, onNativeMessage } from './bridge.js';
+import { syncExtensionEnabledFromNative, extensionFlagTrue } from './extension-status.js';
 import { navigate, getRoute, onRouteChange, startRouter, nextNavEpoch } from './router.js';
 import { applyBrandConfig, clearBrandConfig, renderBrandLockup } from './brand.js';
 import { renderLogin } from './views/login.js';
@@ -204,6 +205,7 @@ function completeLoginState(nextUser, tokenUsed) {
   postToNative('homecrowd:login', { user: nextUser });
   preloadMapKitForEmbed();
   scheduleDailyVisitCheck();
+  scheduleExtensionStatusSync();
   refreshProfileUserForTabs();
 }
 
@@ -282,6 +284,7 @@ async function applyAutologinToken(token, view, nextSchoolId) {
     postToNative('homecrowd:login', { user: user });
     preloadMapKitForEmbed();
     scheduleDailyVisitCheck();
+    scheduleExtensionStatusSync();
     navigate('/' + (view || initialView));
     return true;
   } catch (e) {
@@ -617,18 +620,36 @@ function scheduleDailyVisitCheck() {
   }, 2000);
 }
 
+function scheduleExtensionStatusSync() {
+  window.setTimeout(function () {
+    syncExtensionFlagIfNeeded();
+  }, 500);
+}
+
+async function syncExtensionFlagIfNeeded() {
+  if (!user || !api.isAuthenticated()) return;
+  try {
+    var next = await syncExtensionEnabledFromNative(user);
+    if (next && extensionFlagTrue(next)) {
+      user = next;
+    }
+  } catch (_e) {}
+}
+
 function setupDailyVisitForegroundCheck() {
   dailyVisitForegroundReady = true;
   document.addEventListener('visibilitychange', function () {
     console.log('🎯 [embed] visibilitychange:', document.visibilityState);
     if (document.visibilityState === 'visible' && user && dailyVisitForegroundReady) {
       checkDailyVisit();
+      syncExtensionFlagIfNeeded();
     }
   });
   window.addEventListener('focus', function () {
     console.log('🎯 [embed] window focus');
     if (user && dailyVisitForegroundReady) {
       checkDailyVisit();
+      syncExtensionFlagIfNeeded();
     }
   });
 }
@@ -657,6 +678,7 @@ async function init() {
       postToNative('homecrowd:login', { user: user });
       preloadMapKitForEmbed();
       scheduleDailyVisitCheck();
+      scheduleExtensionStatusSync();
     } catch (e) {
       api.clearTokens();
       user = null;
@@ -1323,19 +1345,22 @@ function renderLayout(route) {
   var isContentDetailPage = /^\/content\/[^/]+$/.test(pathOnly);
   var isPreviewPage = pathOnly === '/preview';
   var isTravelPage = pathOnly === '/travel';
+  var isHomePage = pathOnly === '/home';
+  var hideBrandLockup = isTravelPage || isHomePage;
   var hideTabBar = isRewardDetailPage || isOfferDetailPage || isContentDetailPage || isPreviewPage;
   var flushTopContentClass =
     pathOnly === '/invite-friend' ||
     pathOnly === '/support' ||
     pathOnly === '/upload-receipt' ||
     pathOnly === '/cards/link' ||
-    isTravelPage
+    isTravelPage ||
+    isHomePage
       ? ' hc-content--flush-top'
       : '';
 
   var tabBarHtml = hideTabBar ? '' : buildBottomTabBarHtml(pathOnly, contentTabEnabled);
   var embedClassName = 'hc-embed' + (isPreviewPage ? ' hc-embed--email-selection' : '');
-  var brandLockupHtml = isTravelPage ? '' : renderBrandLockup();
+  var brandLockupHtml = hideBrandLockup ? '' : renderBrandLockup();
   appEl.innerHTML =
     '<div class="' +
     embedClassName +
@@ -1347,7 +1372,7 @@ function renderLayout(route) {
     flushTopContentClass +
     '">\
         <div class="hc-content-brand' +
-    (isTravelPage ? ' hc-content-brand--hidden' : '') +
+    (hideBrandLockup ? ' hc-content-brand--hidden' : '') +
     '">\
           ' +
     brandLockupHtml +

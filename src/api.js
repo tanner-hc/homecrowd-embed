@@ -389,6 +389,13 @@ export async function claimSetupTaskReward(task) {
   });
 }
 
+export async function syncSetupTaskRewards() {
+  return request('/api/rewards/setup-task-rewards/sync/', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
 export function getApiOrigin() {
   return baseUrl || window.location.origin;
 }

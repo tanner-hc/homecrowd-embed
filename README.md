@@ -91,7 +91,17 @@ The webview sends events to the native layer via `postMessage`. Each event has a
 | `homecrowd:logout`           | —                    | User logged out                 |
 | `homecrowd:route-change`     | `{ route }`          | Navigation occurred             |
 | `homecrowd:card-link`        | `{ type }`           | Card linking initiated          |
+| `homecrowd:open-url`         | `{ url }`            | Open external URL               |
+| `homecrowd:request-extension-status` | —            | Ask host whether the Safari extension has been detected on device |
 | `homecrowd:error`            | `{ message }`        | Something went wrong            |
+
+Host → embed replies (postMessage or `HomecrowdEmbed.setExtensionStatus`):
+
+| Event                        | Payload                    | Description |
+|------------------------------|----------------------------|-------------|
+| `homecrowd:extension-status` | `{ enabled: boolean }`     | Detected Safari extension status (App Group ping), not the Settings toggle alone |
+
+**What `enabled` means:** Safari Settings → Extensions ON is required, but `enabled: true` only after the extension has pinged the host via the shared App Group (typically when the user opens the extension popup once). Toggle ON ≠ detected.
 
 ### Listening in React Native
 

@@ -14,36 +14,10 @@ import extensionBodyImg from '../assets/images/extension-body.png';
 import safariThinUrl from '../assets/icons/safari-thin.png';
 import offerThinUrl from '../assets/icons/offer-thin.png';
 import safariIconRaw from '../assets/icons/safari.svg?raw';
+import { userExtensionEnabled, syncExtensionEnabledFromNative } from '../extension-status.js';
+import { syncSetupTaskRewards } from '../setup-rewards.js';
 
 var EXTENSION_URL = 'https://app.gethomecrowd.com/extension-download/';
-
-function extensionFlagTrue(obj) {
-  if (!obj || typeof obj !== 'object') return false;
-  if (obj.is_extension_enabled === true) return true;
-  if (obj.isExtensionEnabled === true) return true;
-  return false;
-}
-
-function extensionOnFromTier(user) {
-  if (!user || typeof user !== 'object') return false;
-  var t =
-    user.currentTier != null
-      ? user.currentTier
-      : user.current_tier != null
-        ? user.current_tier
-        : null;
-  if (!t || typeof t !== 'object') return false;
-  var o = t.onboarding_status || t.onboardingStatus;
-  if (!o || typeof o !== 'object') return false;
-  return !!(o.extension_installed || o.extensionInstalled);
-}
-
-function userExtensionEnabled(embedUser, profileUser) {
-  if (extensionFlagTrue(embedUser)) return true;
-  if (extensionFlagTrue(profileUser)) return true;
-  if (extensionOnFromTier(embedUser)) return true;
-  return false;
-}
 
 function buildExtensionHeaderHtml(opts) {
   opts = opts || {};
@@ -308,13 +282,22 @@ export async function mountBrowserExtensionInline(panelEl) {
       '<div class="hc-alert-error">' + escapeHtml(err.message || 'Failed to load') + '</div>';
     return;
   }
+  try {
+    embedUser = (await syncExtensionEnabledFromNative(embedUser)) || embedUser;
+  } catch (_extSync) {}
   var profileUser = null;
   try {
     profileUser = await api.getUserProfile();
   } catch (_e) {
     profileUser = null;
   }
-  var enabled = userExtensionEnabled(embedUser, profileUser);
+  var syncResult = null;
+  try {
+    syncResult = await syncSetupTaskRewards();
+  } catch (_syncErr) {
+    syncResult = null;
+  }
+  var enabled = userExtensionEnabled(embedUser, profileUser, syncResult);
   var installId = 'hc-offers-ext-install';
   panelEl.innerHTML =
     '<div class="hc-browser-extension hc-browser-extension--inline">' +
@@ -343,6 +326,10 @@ async function loadBrowserExtension(container) {
     return;
   }
 
+  try {
+    embedUser = (await syncExtensionEnabledFromNative(embedUser)) || embedUser;
+  } catch (_extSync) {}
+
   var profileUser = null;
   try {
     profileUser = await api.getUserProfile();
@@ -350,7 +337,14 @@ async function loadBrowserExtension(container) {
     profileUser = null;
   }
 
-  var enabled = userExtensionEnabled(embedUser, profileUser);
+  var syncResult = null;
+  try {
+    syncResult = await syncSetupTaskRewards();
+  } catch (_syncErr) {
+    syncResult = null;
+  }
+
+  var enabled = userExtensionEnabled(embedUser, profileUser, syncResult);
   var html = '';
   html += '<div class="hc-browser-extension">';
   html += '<div class="hc-account-settings-nav">';
