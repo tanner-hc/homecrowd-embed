@@ -1,7 +1,7 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
 import { showError } from '../base-components/toastApi.js';
-import { escapeAttr, escapeHtml } from '../base-components/html.js';
+import { escapeAttr } from '../base-components/html.js';
 import { getPendingSignupSchool } from './find-your-school.js';
 import headerUrl from '../assets/header.png';
 import googleIconUrl from '../assets/providers/googleIcon.png';

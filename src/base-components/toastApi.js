@@ -33,7 +33,7 @@ export function showToast(message, type, duration) {
 
   var bar = document.createElement('div');
   bar.className =
-    'hc-toast hc-bc-toast-bar ' + (type === 'success' ? 'hc-bc-toast--success' : 'hc-bc-toast--error');
+    'hc-bc-toast-bar ' + (type === 'success' ? 'hc-bc-toast--success' : 'hc-bc-toast--error');
 
   var text = document.createElement('span');
   text.className = 'hc-bc-toast-msg';

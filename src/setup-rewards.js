@@ -45,3 +45,17 @@ export async function fetchSetupRewardPoints() {
   } catch (_e) { }
   return getSetupRewardPoints();
 }
+
+export async function claimSetupTaskReward(task) {
+  var apiTask =
+    task === 'linkCard'
+      ? 'link_card'
+      : task === 'safariExtension'
+        ? 'safari_extension'
+        : task;
+  var result = await api.claimSetupTaskReward(apiTask);
+  if (result && result.rewards) {
+    cachedSetupRewardPoints = normalizeRewards(result.rewards);
+  }
+  return result;
+}

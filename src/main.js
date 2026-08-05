@@ -11,6 +11,9 @@ import { renderGetStarted } from './views/get-started.js';
 import { renderFindYourSchool } from './views/find-your-school.js';
 import { renderYoureIn } from './views/youre-in.js';
 import { renderCreateAccount } from './views/create-account.js';
+import { renderEnterFullName } from './views/enter-full-name.js';
+import { renderEnterPassword } from './views/enter-password.js';
+import { renderAccountCreated } from './views/account-created.js';
 import { renderHome } from './views/home.js';
 import { renderRewards } from './views/rewards.js';
 import { renderCards } from './views/cards.js';
@@ -747,12 +750,17 @@ function isPublicAuthPath(pathOnly) {
     pathOnly === '/youre-in' ||
     pathOnly === '/create-account' ||
     pathOnly === '/enter-full-name' ||
+    pathOnly === '/enter-password' ||
     pathOnly === '/login' ||
     pathOnly === '/preview' ||
     pathOnly === '/forgot-password' ||
     pathOnly === '/reset-password' ||
     /^\/reset-password\//.test(pathOnly)
   );
+}
+
+function isSignupOnboardingPath(pathOnly) {
+  return pathOnly === '/account-created';
 }
 
 function getActiveSchool(currentUser) {
@@ -900,7 +908,7 @@ function render(route) {
     navigate(partnerToken ? '/preview' : '/get-started');
     return;
   }
-  if (user && !hasActiveSchool(user) && route !== '/school-selection') {
+  if (user && !hasActiveSchool(user) && route !== '/school-selection' && !isSignupOnboardingPath(pathOnly)) {
     navigate('/school-selection');
     return;
   }
@@ -908,7 +916,7 @@ function render(route) {
     navigate('/' + initialView);
     return;
   }
-  if (user && isPublicAuthPath(pathOnly)) {
+  if (user && isPublicAuthPath(pathOnly) && !isSignupOnboardingPath(pathOnly)) {
     navigate(hasActiveSchool(user) ? '/' + initialView : '/school-selection');
     return;
   }
@@ -938,17 +946,32 @@ function render(route) {
   }
 
   if (pathOnly === '/enter-full-name') {
-    appEl.innerHTML =
-      '<div class="hc-create-account" style="padding:40px 20px;text-align:center">' +
-      '<p style="font-family:Baikal-Bold,sans-serif;font-size:18px">Enter Full Name — next screen</p>' +
-      '<button type="button" id="hc-enter-name-back" class="hc-create-account-btn" style="margin-top:24px;max-width:320px">Back</button>' +
-      '</div>';
-    var nameBack = appEl.querySelector('#hc-enter-name-back');
-    if (nameBack) {
-      nameBack.addEventListener('click', function () {
-        navigate('/create-account');
-      });
+    appEl.innerHTML = '';
+    renderEnterFullName(appEl);
+    return;
+  }
+
+  if (pathOnly === '/enter-password') {
+    appEl.innerHTML = '';
+    renderEnterPassword(appEl, async function (u) {
+      completeLoginState(u);
+      navigate('/account-created');
+    });
+    return;
+  }
+
+  if (pathOnly === '/account-created') {
+    if (!user) {
+      navigate('/get-started');
+      return;
     }
+    appEl.innerHTML = '';
+    renderAccountCreated(appEl, {
+      user: user,
+      onContinue: function () {
+        navigate(hasActiveSchool(user) ? '/' + initialView : '/school-selection');
+      },
+    });
     return;
   }
 

@@ -382,6 +382,13 @@ export async function fetchSetupTaskRewards() {
   return request('/api/rewards/setup-task-rewards/');
 }
 
+export async function claimSetupTaskReward(task) {
+  return request('/api/rewards/setup-task-rewards/claim/', {
+    method: 'POST',
+    body: JSON.stringify({ task: String(task || '') }),
+  });
+}
+
 export function getApiOrigin() {
   return baseUrl || window.location.origin;
 }

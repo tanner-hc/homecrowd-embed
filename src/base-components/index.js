@@ -14,6 +14,8 @@ export {
 } from './CurvedLogoCarousel.js';
 export { openBottomSheet } from './BottomSheetModal.js';
 export { openGetNotifiedModal } from './GetNotifiedModal.js';
+export { mountSignupFieldLayout } from './SignupFieldLayout.js';
+export { showPointsEarnedToast } from './PointsEarnedToast.js';
 export { default as SecondaryButton } from './SecondaryButton.js';
 export { default as SecondaryButtonWithSwitch } from './SecondaryButtonWithSwitch.js';
 export { default as Header } from './Header.js';

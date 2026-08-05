@@ -6101,17 +6101,32 @@ html.hc-embed--no-school-brand .hc-login-card {
 
 .hc-bc-toast-bar {
   pointer-events: auto;
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  left: auto;
-  transform: none;
   max-width: calc(100vw - 48px);
   width: min(480px, 100%);
   padding: 12px 16px;
   border-radius: 12px;
   box-shadow: var(--hc-shadow-toast);
+  transform: none;
+  animation: hc-bc-toast-in 0.25s ease;
+}
+
+@keyframes hc-bc-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .hc-bc-toast-msg {
@@ -12256,4 +12271,342 @@ html.hc-embed--no-school-brand .hc-login-card {
   border-top-color: #000;
   border-radius: 50%;
   animation: hc-spin 0.8s linear infinite;
+}
+
+/* ── Signup field layout (Enter name / password) ── */
+#app:has(.hc-signup-field) {
+  --hc-embed-scale: 1;
+}
+
+.hc-signup-field {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  background: #fff;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.hc-signup-field-nav {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 16px 8px;
+  flex: 0 0 auto;
+}
+
+.hc-signup-field-back {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  border: none;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  color: #666;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-signup-field-back svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.hc-signup-field-logo {
+  width: 132px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+}
+
+.hc-signup-field-nav-spacer {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.hc-signup-field-header {
+  padding: 28px 24px 0;
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.hc-signup-field-title {
+  margin: 0 0 8px;
+  font-family: 'Baikal-Medium', 'Baikal', sans-serif;
+  font-size: 20px;
+  line-height: 24px;
+  letter-spacing: 0;
+  color: #000;
+  font-weight: 500;
+}
+
+.hc-signup-field-subtitle {
+  margin: 0 0 168px;
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 14px;
+  line-height: 14px;
+  letter-spacing: 0;
+  color: #9a9a9a;
+}
+
+.hc-signup-field-wrap {
+  flex: 1 1 auto;
+  width: 100%;
+  padding: 0 8px;
+  box-sizing: border-box;
+  min-height: 0;
+  overflow: visible;
+}
+
+.hc-signup-field-row {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hc-signup-field-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Baikal-ExtraCondensedBold', 'Baikal', sans-serif;
+  font-size: 52px;
+  line-height: 62px;
+  letter-spacing: 0;
+  color: #000;
+  text-align: center;
+  padding: 10px 0 8px;
+  margin: 0;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.hc-signup-field-row:has(.hc-signup-field-eye) .hc-signup-field-input {
+  padding-right: 40px;
+}
+
+.hc-signup-field-input--empty,
+.hc-signup-field-input::placeholder {
+  color: #c6c6c6;
+}
+
+.hc-signup-field-input[type='password'] {
+  font-family: 'Baikal-ExtraCondensedBold', 'Baikal', sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.hc-signup-field-eye {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #666;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-signup-field-eye svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.hc-signup-field-actions {
+  flex: 0 0 auto;
+  padding: 0 16px max(12px, env(safe-area-inset-bottom, 0px));
+}
+
+.hc-signup-field-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 53px;
+  border-radius: 100px;
+  border: none;
+  background: var(--hc-app-primary, #00c8ff);
+  font-family: 'Baikal-Bold', 'Baikal', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-signup-field-btn:active:not(:disabled) {
+  opacity: 0.85;
+}
+
+.hc-signup-field-btn--disabled,
+.hc-signup-field-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.hc-create-account-title {
+  margin-bottom: 28px;
+}
+
+/* ── Points earned toast (inline banner) ── */
+.hc-points-earned-toast {
+  align-self: center;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 280ms ease, transform 280ms ease;
+  pointer-events: none;
+}
+
+.hc-points-earned-toast--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hc-points-earned-toast--hiding {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 250ms ease, transform 250ms ease;
+}
+
+.hc-points-earned-toast-banner {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  background: #eaf6d8;
+  border-radius: 100px;
+  padding: 10px 14px;
+}
+
+.hc-points-earned-toast-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+}
+
+.hc-points-earned-toast-text {
+  font-family: 'Baikal-Bold', 'Baikal', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #000;
+  white-space: nowrap;
+}
+
+/* ── Account Created ── */
+#app:has(.hc-account-created) {
+  --hc-embed-scale: 1;
+}
+
+.hc-account-created {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  background: #fff;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.hc-account-created-banner-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 8px;
+  min-height: 52px;
+  flex: 0 0 auto;
+}
+
+.hc-account-created-banner-placeholder {
+  height: 42px;
+}
+
+.hc-account-created-content {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 72px 28px 0;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+.hc-account-created-logo {
+  width: 148px;
+  height: 94px;
+  object-fit: contain;
+  display: block;
+  margin-bottom: 28px;
+}
+
+.hc-account-created-title {
+  margin: 0 0 12px;
+  padding-top: 6px;
+  font-family: 'Baikal-ExtraCondensedBold', 'Baikal', sans-serif;
+  font-size: 64px;
+  line-height: 64px;
+  letter-spacing: 0;
+  color: #000;
+  text-align: center;
+  font-weight: 700;
+}
+
+.hc-account-created-subtitle {
+  margin: 0;
+  padding: 0 12px;
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 18px;
+  line-height: 22px;
+  letter-spacing: 0;
+  color: #9a9a9a;
+  text-align: center;
+}
+
+.hc-account-created-actions {
+  flex: 0 0 auto;
+  padding: 0 16px max(12px, env(safe-area-inset-bottom, 0px));
+}
+
+.hc-account-created-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 53px;
+  border-radius: 100px;
+  border: none;
+  background: var(--hc-app-primary, #00c8ff);
+  font-family: 'Baikal-Bold', 'Baikal', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #000;
+  cursor: pointer;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-account-created-btn:active {
+  opacity: 0.85;
 }
