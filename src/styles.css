@@ -11176,3 +11176,1084 @@ html.hc-embed--no-school-brand .hc-login-card {
     padding-bottom: 0;
   }
 }
+/* ── Get Started (mobile GetStartedScreen 1:1) ── */
+#app:has(.hc-get-started) {
+  --hc-embed-scale: 1;
+}
+
+.hc-get-started {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  background: #fff;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.hc-get-started-top {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 13px 0;
+  text-align: center;
+}
+
+.hc-get-started-logo {
+  display: block;
+  width: 132px;
+  height: 20px;
+  object-fit: contain;
+  margin-bottom: 22px;
+}
+
+.hc-get-started-headline {
+  margin: 0 0 14px;
+  font-family: 'Baikal-ExtraCondensedBold', 'Baikal', sans-serif;
+  font-size: 36px;
+  line-height: 0.9;
+  letter-spacing: 0;
+  color: #000;
+  font-weight: 700;
+}
+
+.hc-get-started-subtitle {
+  margin: 0 0 10px;
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 14px;
+  line-height: 14px;
+  letter-spacing: 0;
+  color: #666;
+}
+
+.hc-curved-logo-carousel {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  align-self: center;
+  overflow: visible;
+  transform: translateY(30px);
+  pointer-events: none;
+}
+
+.hc-curved-logo {
+  position: absolute;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.hc-get-started-hero {
+  flex: 1 1 auto;
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+  margin-top: -40px;
+  min-height: 0;
+}
+
+.hc-get-started-phone {
+  position: relative;
+  width: 236px;
+  height: 444px;
+  flex: 0 0 auto;
+}
+
+.hc-get-started-hero-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.hc-get-started-hero-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 300px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.55) 25%,
+    rgba(255, 255, 255, 0.92) 55%,
+    #ffffff 100%
+  );
+}
+
+.hc-get-started-actions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 16px max(12px, env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+}
+
+.hc-get-started-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 53px;
+  border-radius: 100px;
+  font-family: 'Baikal-Bold', 'Baikal', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #000;
+  cursor: pointer;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-get-started-btn--primary {
+  background: var(--hc-app-primary, #00c8ff);
+  border: none;
+}
+
+.hc-get-started-btn--primary:active {
+  opacity: 0.85;
+}
+
+.hc-get-started-btn--secondary {
+  background: #fff;
+  border: 1.5px solid var(--hc-app-primary, #00c8ff);
+}
+
+.hc-get-started-btn--secondary:active {
+  opacity: 0.85;
+}
+
+/* ── Bottom sheet (mobile BottomSheetModal 1:1) ── */
+.hc-bs-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.hc-bs-root--keyboard {
+  padding-bottom: env(keyboard-inset-height, 0px);
+}
+
+.hc-bs-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 220ms ease;
+  pointer-events: auto;
+}
+
+.hc-bs-overlay--visible {
+  opacity: 1;
+}
+
+.hc-bs-sheet {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  padding: 8px 22px max(16px, env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateY(100%);
+  transition: transform 280ms ease;
+  pointer-events: auto;
+}
+
+.hc-bs-sheet--visible {
+  transform: translateY(0);
+}
+
+.hc-bs-handle-area {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0;
+  margin-bottom: 8px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.hc-bs-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: #c0c0c0;
+}
+
+.hc-bs-icon {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hc-bs-title {
+  margin: 0 0 10px;
+  padding-top: 4px;
+  font-family: 'Baikal-ExtraCondensedBold', 'Baikal', sans-serif;
+  font-size: 36px;
+  line-height: 36px;
+  letter-spacing: 0;
+  color: #000;
+  text-align: center;
+  font-weight: 700;
+}
+
+.hc-bs-subtitle {
+  margin: 0 0 22px;
+  padding: 0 8px;
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: 0;
+  color: #9a9a9a;
+  text-align: center;
+}
+
+.hc-bs-subtitle--success {
+  margin-bottom: 28px;
+}
+
+.hc-bs-body {
+  width: 100%;
+}
+
+.hc-bs-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 50px;
+  border-radius: 100px;
+  font-family: 'Baikal-Bold', 'Baikal', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #000;
+  cursor: pointer;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-bs-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.hc-bs-btn--primary {
+  background: var(--hc-app-primary, #00c8ff);
+  border: none;
+}
+
+.hc-bs-btn--spaced {
+  margin-bottom: 10px;
+}
+
+.hc-bs-btn--secondary {
+  background: #fff;
+  border: 1.5px solid var(--hc-app-primary, #00c8ff);
+}
+
+.hc-bs-btn-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: hc-spin 0.8s linear infinite;
+}
+
+/* ── Get notified modal ── */
+.hc-get-notified-mail-icon {
+  width: 26px;
+  height: 24px;
+  object-fit: contain;
+  display: block;
+}
+
+.hc-get-notified-form {
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+.hc-get-notified-label {
+  display: block;
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 14px;
+  color: #000;
+  margin-bottom: 8px;
+}
+
+.hc-get-notified-input-wrap {
+  height: 56px;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.hc-get-notified-input-wrap--error {
+  border-color: #e5484d;
+}
+
+.hc-get-notified-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 15px;
+  color: #000;
+  padding: 0;
+}
+
+.hc-get-notified-input::placeholder {
+  color: #c0c0c0;
+}
+
+.hc-get-notified-error {
+  margin: 8px 0 0;
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 13px;
+  color: #e5484d;
+}
+
+/* ── Find Your School ── */
+#app:has(.hc-find-school) {
+  --hc-embed-scale: 1;
+}
+
+.hc-find-school {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  background: #fff;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.hc-find-school-nav {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 16px 8px;
+  flex: 0 0 auto;
+}
+
+.hc-find-school-back {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  border: none;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  color: #666;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+
+.hc-find-school-back svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.hc-find-school-logo {
+  width: 132px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+}
+
+.hc-find-school-nav-spacer {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.hc-find-school-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 20px 0;
+  box-sizing: border-box;
+}
+
+.hc-find-school-title {
+  margin: 0 0 12px;
+  padding-top: 4px;
+  font-family: 'Baikal-ExtraCondensedBold', 'Baikal', sans-serif;
+  font-size: 36px;
+  line-height: 36px;
+  letter-spacing: 0;
+  color: #000;
+  text-align: center;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.hc-find-school-subtitle {
+  margin: 0 0 28px;
+  padding: 0 12px;
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 14px;
+  line-height: 18px;
+  color: #9a9a9a;
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.hc-find-school-search {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  max-width: 370px;
+  align-self: center;
+  height: 56px;
+  min-height: 56px;
+  max-height: 56px;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  padding: 0 14px;
+  gap: 8px;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+  flex: 0 0 56px;
+}
+
+.hc-find-school-search-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.hc-find-school-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 15px;
+  line-height: 20px;
+  color: #000;
+  padding: 0;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.hc-find-school-search-input::-webkit-search-decoration,
+.hc-find-school-search-input::-webkit-search-cancel-button,
+.hc-find-school-search-input::-webkit-search-results-button,
+.hc-find-school-search-input::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+.hc-find-school-search-input::placeholder {
+  color: #c0c0c0;
+}
+
+.hc-find-school-results {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hc-find-school-loader {
+  width: 28px;
+  height: 28px;
+  margin: 40px auto 0;
+  border: 2.5px solid rgba(0, 200, 255, 0.25);
+  border-top-color: var(--hc-app-primary, #00c8ff);
+  border-radius: 50%;
+  animation: hc-spin 0.8s linear infinite;
+}
+
+.hc-find-school-results-list {
+  padding: 8px 0 24px;
+}
+
+.hc-find-school-result {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  padding: 14px 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-find-school-result:active {
+  opacity: 0.7;
+}
+
+.hc-find-school-result-logo-wrap {
+  width: 36px;
+  height: 36px;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.hc-find-school-result-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  display: block;
+}
+
+.hc-find-school-result-text {
+  flex: 1;
+  min-width: 0;
+  margin-right: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.hc-find-school-result-name {
+  font-family: 'Baikal-Bold', 'Baikal', sans-serif;
+  font-size: 15px;
+  color: #000;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hc-find-school-result-location {
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 13px;
+  color: #c0c0c0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hc-find-school-result-chevron {
+  flex: 0 0 auto;
+  display: flex;
+  color: #c0c0c0;
+}
+
+.hc-find-school-result-chevron svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.hc-find-school-pin-icon {
+  width: 23.66px;
+  height: 30.61px;
+  object-fit: contain;
+  display: block;
+}
+
+.hc-find-school-success-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  background: #22c55e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.hc-find-school-success-icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+/* ── You're In (mobile YoureInScreen 1:1) ── */
+#app:has(.hc-youre-in) {
+  --hc-embed-scale: 1;
+}
+
+.hc-youre-in {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  background: #fff;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.hc-youre-in-nav {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 16px 8px;
+  flex: 0 0 auto;
+  z-index: 4;
+}
+
+.hc-youre-in-back {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  border: none;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  color: #666;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-youre-in-back svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.hc-youre-in-nav-logo {
+  width: 132px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+}
+
+.hc-youre-in-nav-spacer {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.hc-youre-in-content {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 89px 28px 0;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+.hc-youre-in-logo-stage {
+  position: relative;
+  width: 280px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  flex: 0 0 auto;
+}
+
+.hc-youre-in-logo-wrap {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.72);
+  will-change: opacity, transform;
+}
+
+.hc-youre-in-school-logo {
+  width: 158px;
+  height: 98px;
+  object-fit: contain;
+  display: block;
+}
+
+.hc-youre-in-school-logo-placeholder {
+  width: 158px;
+  height: 98px;
+  border-radius: 12px;
+  background: #f0f0f0;
+}
+
+.hc-youre-in-confetti {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.hc-youre-in-confetti svg {
+  width: 320px !important;
+  height: 320px !important;
+  max-width: none;
+  overflow: visible;
+}
+
+.hc-youre-in-title {
+  margin: 0 0 12px;
+  padding-top: 6px;
+  font-family: 'Baikal-ExtraCondensedBold', 'Baikal', sans-serif;
+  font-size: 64px;
+  line-height: 64px;
+  letter-spacing: 0;
+  color: #000;
+  text-align: center;
+  font-weight: 700;
+  opacity: 0;
+  transform: translateY(10px);
+  will-change: opacity, transform;
+  flex: 0 0 auto;
+}
+
+.hc-youre-in-subtitle {
+  margin: 0;
+  padding: 0 12px;
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 18px;
+  line-height: 22px;
+  letter-spacing: 0;
+  color: #9a9a9a;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(8px);
+  will-change: opacity, transform;
+  flex: 0 0 auto;
+}
+
+.hc-youre-in-actions {
+  flex: 0 0 auto;
+  padding: 0 16px max(12px, env(safe-area-inset-bottom, 0px));
+  opacity: 0;
+  transform: translateY(12px);
+  will-change: opacity, transform;
+}
+
+.hc-youre-in-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 53px;
+  border-radius: 100px;
+  border: none;
+  background: var(--hc-app-primary, #00c8ff);
+  font-family: 'Baikal-Bold', 'Baikal', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #000;
+  cursor: pointer;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-youre-in-btn:active {
+  opacity: 0.85;
+}
+
+/* ── Create Account (mobile CreateAccountScreen 1:1) ── */
+#app:has(.hc-create-account) {
+  --hc-embed-scale: 1;
+}
+
+.hc-create-account {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  background: #fff;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.hc-create-account-nav {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 16px 8px;
+  flex: 0 0 auto;
+}
+
+.hc-create-account-back {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  border: none;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  color: #666;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-create-account-back svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.hc-create-account-logo {
+  width: 132px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+}
+
+.hc-create-account-nav-spacer {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.hc-create-account-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 24px 20px;
+  box-sizing: border-box;
+}
+
+.hc-create-account-title {
+  margin: 0 0 28px;
+  padding-top: 4px;
+  font-family: 'Baikal-ExtraCondensedBold', 'Baikal', sans-serif;
+  font-size: 36px;
+  line-height: 36px;
+  color: #000;
+  text-align: center;
+  font-weight: 700;
+}
+
+.hc-create-account-social {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 54px;
+  border-radius: 100px;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  margin-bottom: 12px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  cursor: pointer;
+  font-family: 'Baikal-Bold', 'Baikal', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #000;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-create-account-social:active {
+  opacity: 0.85;
+}
+
+.hc-create-account-social-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  margin-right: 10px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.hc-create-account-divider {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 12px;
+  margin-bottom: 24px;
+}
+
+.hc-create-account-divider-line {
+  flex: 1 1 auto;
+  height: 1px;
+  background: #e0e0e0;
+}
+
+.hc-create-account-divider-text {
+  margin: 0 10px;
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 13px;
+  color: #c0c0c0;
+  flex-shrink: 0;
+}
+
+.hc-create-account-label {
+  display: block;
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 14px;
+  color: #000;
+  margin-bottom: 8px;
+}
+
+.hc-create-account-input-wrap {
+  height: 56px;
+  min-height: 56px;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+}
+
+.hc-create-account-input-wrap--error {
+  border-color: #e5484d;
+}
+
+.hc-create-account-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 15px;
+  color: #000;
+  padding: 0;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.hc-create-account-input::placeholder {
+  color: #c0c0c0;
+}
+
+.hc-create-account-exists {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.hc-create-account-exists-text {
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 13px;
+  color: #e5484d;
+}
+
+.hc-create-account-exists-link {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-family: 'Baikal-Bold', 'Baikal', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #000;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.hc-create-account-actions {
+  flex: 0 0 auto;
+  padding: 0 16px max(12px, env(safe-area-inset-bottom, 0px));
+}
+
+.hc-create-account-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 53px;
+  border-radius: 100px;
+  border: none;
+  background: var(--hc-app-primary, #00c8ff);
+  font-family: 'Baikal-Bold', 'Baikal', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #000;
+  cursor: pointer;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-create-account-btn:active:not(:disabled) {
+  opacity: 0.85;
+}
+
+.hc-create-account-btn--disabled,
+.hc-create-account-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.hc-create-account-btn-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: hc-spin 0.8s linear infinite;
+}

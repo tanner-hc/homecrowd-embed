@@ -272,6 +272,16 @@ export async function register(userData) {
   return data;
 }
 
+export async function checkEmailExists(email) {
+  var data = await request('/api/auth/check-email-exists/', {
+    method: 'POST',
+    body: JSON.stringify({
+      email: String(email || '').trim().toLowerCase(),
+    }),
+  });
+  return !!(data && data.email_exists === true);
+}
+
 export async function assignSchool(schoolId) {
   return request('/api/assign-school/', {
     method: 'POST',
@@ -350,8 +360,26 @@ export async function fetchSchoolConfig(schoolId) {
   return request('/api/school/merchants-page-config/' + encodeURIComponent(schoolId) + '/');
 }
 
-export async function fetchPublicSchools() {
-  return request('/api/school/public-schools/');
+export async function fetchPublicSchools(includeInactive) {
+  var path = '/api/school/public-schools/';
+  if (includeInactive) {
+    path += '?include_inactive=true';
+  }
+  return request(path);
+}
+
+export async function submitSchoolAvailabilityNotify(schoolId, email) {
+  return request(
+    '/api/school/availability-notify/' + encodeURIComponent(String(schoolId)) + '/',
+    {
+      method: 'POST',
+      body: JSON.stringify({ email: String(email || '').trim() }),
+    }
+  );
+}
+
+export async function fetchSetupTaskRewards() {
+  return request('/api/rewards/setup-task-rewards/');
 }
 
 export function getApiOrigin() {

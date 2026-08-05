@@ -7,6 +7,10 @@ import { postToNative, onNativeMessage } from './bridge.js';
 import { navigate, getRoute, onRouteChange, startRouter, nextNavEpoch } from './router.js';
 import { applyBrandConfig, clearBrandConfig, renderBrandLockup } from './brand.js';
 import { renderLogin } from './views/login.js';
+import { renderGetStarted } from './views/get-started.js';
+import { renderFindYourSchool } from './views/find-your-school.js';
+import { renderYoureIn } from './views/youre-in.js';
+import { renderCreateAccount } from './views/create-account.js';
 import { renderHome } from './views/home.js';
 import { renderRewards } from './views/rewards.js';
 import { renderCards } from './views/cards.js';
@@ -690,7 +694,7 @@ async function init() {
     }
     function finishLogout() {
       postToNative('homecrowd:logout');
-      navigate('/login');
+      navigate('/get-started');
       api.logout().catch(function () { });
     }
     if (schoolId) {
@@ -706,11 +710,12 @@ async function init() {
     if (partnerToken) {
       navigate('/preview');
     } else {
-      navigate('/login');
+      navigate('/get-started');
     }
   } else if (
     user &&
     (getRoute() === '/login' ||
+      getRoute() === '/get-started' ||
       getRoute() === '/' ||
       getRoute() === '/preview' ||
       getRoute() === '/school-selection' ||
@@ -737,6 +742,11 @@ function routePathOnly(route) {
 
 function isPublicAuthPath(pathOnly) {
   return (
+    pathOnly === '/get-started' ||
+    pathOnly === '/find-your-school' ||
+    pathOnly === '/youre-in' ||
+    pathOnly === '/create-account' ||
+    pathOnly === '/enter-full-name' ||
     pathOnly === '/login' ||
     pathOnly === '/preview' ||
     pathOnly === '/forgot-password' ||
@@ -887,7 +897,7 @@ function render(route) {
   var pathOnly = routePathOnly(route);
   removeRewardsPointsOverlay();
   if (!user && !isPublicAuthPath(pathOnly)) {
-    navigate(partnerToken ? '/preview' : '/login');
+    navigate(partnerToken ? '/preview' : '/get-started');
     return;
   }
   if (user && !hasActiveSchool(user) && route !== '/school-selection') {
@@ -903,9 +913,55 @@ function render(route) {
     return;
   }
 
-  if (route === '/login') {
+  if (pathOnly === '/get-started') {
+    appEl.innerHTML = '';
+    renderGetStarted(appEl);
+    return;
+  }
+
+  if (pathOnly === '/find-your-school') {
+    appEl.innerHTML = '';
+    renderFindYourSchool(appEl);
+    return;
+  }
+
+  if (pathOnly === '/youre-in') {
+    appEl.innerHTML = '';
+    renderYoureIn(appEl);
+    return;
+  }
+
+  if (pathOnly === '/create-account') {
+    appEl.innerHTML = '';
+    renderCreateAccount(appEl);
+    return;
+  }
+
+  if (pathOnly === '/enter-full-name') {
+    appEl.innerHTML =
+      '<div class="hc-create-account" style="padding:40px 20px;text-align:center">' +
+      '<p style="font-family:Baikal-Bold,sans-serif;font-size:18px">Enter Full Name — next screen</p>' +
+      '<button type="button" id="hc-enter-name-back" class="hc-create-account-btn" style="margin-top:24px;max-width:320px">Back</button>' +
+      '</div>';
+    var nameBack = appEl.querySelector('#hc-enter-name-back');
+    if (nameBack) {
+      nameBack.addEventListener('click', function () {
+        navigate('/create-account');
+      });
+    }
+    return;
+  }
+
+  if (route === '/login' || pathOnly === '/login') {
     var pendingLink = readPendingPasswordLink();
     var pendingEmail = readPendingLoginEmail();
+    var loginParams = new URLSearchParams(
+      String(route).indexOf('?') >= 0 ? String(route).slice(String(route).indexOf('?') + 1) : ''
+    );
+    var queryEmail = String(loginParams.get('email') || '').trim();
+    if (queryEmail && !pendingEmail) {
+      pendingEmail = queryEmail;
+    }
     var noticeText = pendingLink
       ? 'Account exists. Enter password to continue.'
       : '';
