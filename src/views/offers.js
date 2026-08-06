@@ -1,3 +1,4 @@
+import iconTransparentUrl from '../assets/icon-transparent.png';
 import * as api from '../api.js';
 import * as analytics from '../analytics.js';
 import shopIconUrl from '../assets/icons/store.svg';
@@ -17,9 +18,32 @@ import Button from '../base-components/Button.js';
 import LinkCardBanner from '../base-components/LinkCardBanner.js';
 import NoExtraCostFooter from '../base-components/NoExtraCostFooter.js';
 import PointsPerDollarBanner from '../base-components/PointsPerDollarBanner.js';
+import { buildAppHeaderHtml, attachAppHeader } from '../base-components/AppHeader.js';
+import {
+  buildLinkCardUnlockBarHtml,
+  bindLinkCardUnlockBar,
+} from '../base-components/LinkCardUnlockBar.js';
+import { openBottomSheet } from '../base-components/BottomSheetModal.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { renderPointMultiplierBadgeHtml } from '../pointMultiplier.js';
 import { searchUSCities, lookupUSCity } from '../usCitySearch.js';
+import { navigate } from '../router.js';
+import {
+  buildHomeFeaturedStoresHtml,
+  bindHomeFeaturedStores,
+  normalizeFeaturedStores,
+} from '../components/Dashboard/HomeFeaturedStores.js';
+import {
+  buildBottomFeaturedGridHtml,
+  bindBottomFeaturedGrid,
+  fetchBottomFeaturedMerchants,
+} from '../components/Marketplace/BottomFeaturedGrid.js';
+import {
+  buildShopByCategoryHtml,
+  bindShopByCategory,
+} from '../components/Marketplace/ShopByCategory.js';
+import { getSetupRewardPoints } from '../setup-rewards.js';
+import lockIconUrl from '../assets/icons/lock_icon.png';
 
 var trophyIconSvg =
   '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
@@ -145,59 +169,309 @@ function getActiveOfferLocation() {
 }
 
 export function renderOffers(container) {
-  container.innerHTML = buildOffersShell('stores');
+  container.innerHTML = buildMarketplaceShell();
 
   var carouselTapDedupe = { card: null, until: 0 };
   container._hcCarouselDedupe = carouselTapDedupe;
   container._hcStoresLoaded = { featured: false, grid: false };
   container._hcOnlineLoaded = { featured: false, grid: false };
 
-  wireUpOffersTabs(container);
+  attachAppHeader(container, {});
   wireUpOffersCardClicks(container, carouselTapDedupe);
-  initStoresBannerAndSchoolName(container);
+  wireMarketplaceInteractions(container);
 
   api
-    .getFeaturedOffers('card_linked')
-    .then(function (raw) {
+    .fetchCurrentUser()
+    .then(function (user) {
       if (!container.isConnected) return;
-      populateFeaturedStores(container, pickFeaturedList(raw));
+      container._hcOffersUser = user;
+      return api.getCards().then(function (cards) {
+        if (!container.isConnected) return;
+        var status = resolveCardLinkStatus(user, cards) || 'unknown';
+        mountLinkCardGate(container, user, status);
+      });
     })
-    .catch(function () {
-      if (!container.isConnected) return;
-      populateFeaturedStores(container, []);
-    });
+    .catch(function () {});
 
   api
     .getFeaturedOffers('click')
     .then(function (raw) {
       if (!container.isConnected) return;
-      populateFeaturedOnline(container, pickFeaturedList(raw));
+      populateMarketplaceFeaturedShops(container, normalizeFeaturedStores(raw));
     })
     .catch(function () {
       if (!container.isConnected) return;
-      populateFeaturedOnline(container, []);
+      populateMarketplaceFeaturedShops(container, []);
+    });
+
+  fetchBottomFeaturedMerchants()
+    .then(function (merchants) {
+      if (!container.isConnected) return;
+      populateMarketplaceBottomGrid(container, merchants);
+    })
+    .catch(function () {
+      if (!container.isConnected) return;
+      populateMarketplaceBottomGrid(container, []);
     });
 
   getOffersWithLocationRetry(1, 50, null)
     .then(function (raw) {
       if (!container.isConnected) return;
-      populateStoresGrid(container, pickOliveList(raw));
+      var cardlinked = pickOliveList(raw);
+      initOffersMap(container, cardlinked);
+      container._hcStoresLoaded.grid = true;
+      container._hcStoresGridHasItems = cardlinked.length > 0;
     })
     .catch(function () {
       if (!container.isConnected) return;
-      populateStoresGrid(container, []);
+      initOffersMap(container, []);
     });
 
   api
-    .getWildfireOffers(1, 50)
+    .getFeaturedOffers('card_linked')
     .then(function (raw) {
       if (!container.isConnected) return;
-      populateOnlineGrid(container, pickWildfireList(raw), pickWildfirePagination(raw));
+      var list = (raw && raw.results) || (Array.isArray(raw) ? raw : []);
+      container._hcFeaturedMapOffers = (list || []).filter(function (offer) {
+        return (
+          offer &&
+          offer.is_active !== false &&
+          (offer.top_featured || offer.bottom_featured)
+        );
+      });
+    })
+    .catch(function () {
+      container._hcFeaturedMapOffers = [];
+    });
+}
+
+export function renderStoresMap(container) {
+  container.innerHTML =
+    '<div class="hc-stores-map-page">' +
+    buildAppHeaderHtml({ showBack: true }) +
+    '<div class="hc-stores-map-body">' +
+    renderLocationMapSection({ includeSearch: false }) +
+    '</div>' +
+    '</div>';
+
+  attachAppHeader(container, {
+    showBack: true,
+    onBackPress: function () {
+      navigate('/offers');
+    },
+  });
+
+  api
+    .getFeaturedOffers('card_linked')
+    .then(function (raw) {
+      if (!container.isConnected) return;
+      var list = (raw && raw.results) || (Array.isArray(raw) ? raw : []);
+      container._hcFeaturedMapOffers = (list || []).filter(function (offer) {
+        return (
+          offer &&
+          offer.is_active !== false &&
+          (offer.top_featured || offer.bottom_featured)
+        );
+      });
+    })
+    .catch(function () {
+      container._hcFeaturedMapOffers = [];
+    });
+
+  getOffersWithLocationRetry(1, 50, null)
+    .then(function (raw) {
+      if (!container.isConnected) return;
+      initOffersMap(container, pickOliveList(raw));
     })
     .catch(function () {
       if (!container.isConnected) return;
-      populateOnlineGrid(container, [], null);
+      initOffersMap(container, []);
     });
+}
+
+function buildMarketplaceShell() {
+  return (
+    '<div class="hc-offers-page hc-offers-page--marketplace">' +
+    buildAppHeaderHtml({}) +
+    '<div class="hc-marketplace-scroll">' +
+    '<div class="hc-marketplace-hero">' +
+    '<div class="hc-marketplace-hero-title">Shop and earn points</div>' +
+    '<div class="hc-marketplace-hero-sub">Pay like you always do, you earn points and support your team!</div>' +
+    '</div>' +
+    '<div class="hc-marketplace-search-wrap">' +
+    '<button type="button" class="hc-marketplace-search-hit" id="hc-marketplace-search-hit" aria-label="Search shops">' +
+    SearchBar({
+      id: 'hc-marketplace-search-fake',
+      placeholder: 'Search anything',
+      value: '',
+      disabled: true,
+      className: 'hc-marketplace-search-bar',
+    }) +
+    '</button>' +
+    '</div>' +
+    '<div id="hc-marketplace-featured-shops" class="hc-marketplace-featured-shops"></div>' +
+    '<div id="hc-marketplace-bottom-grid" class="hc-marketplace-bottom-grid"></div>' +
+    '<div class="hc-marketplace-map-block">' +
+    '<div class="hc-marketplace-map-header">' +
+    '<div class="hc-marketplace-map-title">Earn points near you</div>' +
+    '<button type="button" class="hc-marketplace-map-view" id="hc-marketplace-view-map">View map</button>' +
+    '</div>' +
+    renderLocationMapSection({ includeSearch: false }) +
+    '</div>' +
+    '<div id="hc-marketplace-categories" class="hc-marketplace-categories">' +
+    buildShopByCategoryHtml({ selectedId: 'all' }) +
+    '</div>' +
+    '<div class="hc-marketplace-bottom-space"></div>' +
+    '</div>' +
+    '<div id="hc-marketplace-unlock-slot"></div>' +
+    '</div>'
+  );
+}
+
+function wireMarketplaceInteractions(container) {
+  var searchHit = container.querySelector('#hc-marketplace-search-hit');
+  if (searchHit) {
+    searchHit.addEventListener('click', function () {
+      navigate('/offers/all-shops?autoFocusSearch=1&categoryId=all');
+    });
+  }
+
+  var viewMap = container.querySelector('#hc-marketplace-view-map');
+  if (viewMap) {
+    viewMap.addEventListener('click', function () {
+      navigate('/offers/map');
+    });
+  }
+
+  var categoriesRoot = container.querySelector('#hc-marketplace-categories');
+  if (categoriesRoot) {
+    bindShopByCategory(categoriesRoot, function (id) {
+      navigate(
+        '/offers/all-shops?categoryId=' + encodeURIComponent(id || 'all')
+      );
+    });
+  }
+}
+
+function populateMarketplaceFeaturedShops(container, stores) {
+  var wrap = container.querySelector('#hc-marketplace-featured-shops');
+  if (!wrap) return;
+  wrap.innerHTML = buildHomeFeaturedStoresHtml({
+    title: 'Featured shops',
+    stores: stores,
+  });
+  bindHomeFeaturedStores(wrap, {
+    onSeeAll: function () {
+      navigate('/offers/all-shops?categoryId=all');
+    },
+    onStorePress: function (id) {
+      var store = (stores || []).find(function (s) {
+        return String(s.id) === String(id);
+      });
+      if (!store) {
+        navigate('/offers/all-shops?categoryId=all');
+        return;
+      }
+      openFeaturedClickStore(store);
+    },
+  });
+}
+
+function populateMarketplaceBottomGrid(container, merchants) {
+  var wrap = container.querySelector('#hc-marketplace-bottom-grid');
+  if (!wrap) return;
+  wrap.innerHTML = buildBottomFeaturedGridHtml({ merchants: merchants });
+  bindBottomFeaturedGrid(wrap, {
+    onPress: function (offer) {
+      var offerId = offer && (offer.id || offer.offer_id || offer.offerId);
+      if (offerId) {
+        try {
+          sessionStorage.setItem(
+            'hc_offer_detail_initial',
+            JSON.stringify({ offerId: String(offerId), offer: offer })
+          );
+        } catch (_e) { }
+        window.location.hash = '#/offers/' + encodeURIComponent(offerId);
+        return;
+      }
+      navigate('/offers/all-shops?categoryId=all');
+    },
+  });
+}
+
+function openFeaturedClickStore(store) {
+  var offerId = store.offer_id || store.id;
+  var merchantId = store.wildfire_merchant_id || store.merchant_id || store.id;
+  if (merchantId && (store.offer_type === 'click' || !store.offer_id)) {
+    var url = api.buildWildfireRedirectUrl(merchantId);
+    if (url) {
+      showWebviewOverlay(url, { title: store.name || 'Offer' });
+      return;
+    }
+  }
+  if (offerId) {
+    api.trackOfferClick(offerId).catch(function () {
+      return null;
+    }).then(function (trackResult) {
+      var trackUrl =
+        trackResult && (trackResult.tracking_url || trackResult.trackingUrl);
+      if (trackUrl) {
+        if (trackUrl.indexOf('http') !== 0) trackUrl = 'https://' + trackUrl;
+        showWebviewOverlay(trackUrl, { title: store.name || 'Offer' });
+        return;
+      }
+      window.location.hash = '#/offers/' + encodeURIComponent(offerId);
+    });
+  }
+}
+
+function mountLinkCardGate(container, user, status) {
+  var earlyRelease = !!(
+    (user && user.active_school && (user.active_school.early_release || user.active_school.earlyRelease)) ||
+    (user && user.activeSchool && (user.activeSchool.early_release || user.activeSchool.earlyRelease))
+  );
+  if (earlyRelease || status !== 'unlinked') return;
+
+  var slot = container.querySelector('#hc-marketplace-unlock-slot');
+  if (!slot) return;
+  var pts = getSetupRewardPoints().linkCard;
+  slot.innerHTML = buildLinkCardUnlockBarHtml({ points: pts });
+  bindLinkCardUnlockBar(slot, function () {
+    navigate('/cards/link');
+  });
+
+  var dismissedKey = 'hc_link_card_modal_dismissed';
+  var already = false;
+  try {
+    already = sessionStorage.getItem(dismissedKey) === '1';
+  } catch (_e) { }
+  if (already) return;
+
+  openBottomSheet({
+    iconHtml:
+      '<img src="' +
+      lockIconUrl +
+      '" alt="" class="hc-link-card-lock-icon" />',
+    title: 'Almost there',
+    subtitle: 'Link your card to unlock shopping and start earning points.',
+    primaryButton: {
+      label: 'Link my card +' + pts + ' pts',
+      onPress: function () {
+        try {
+          sessionStorage.setItem(dismissedKey, '1');
+        } catch (_e2) { }
+        navigate('/cards/link');
+      },
+    },
+    secondaryButton: {
+      label: 'Keep browsing shops',
+      onPress: function () {
+        try {
+          sessionStorage.setItem(dismissedKey, '1');
+        } catch (_e3) { }
+      },
+    },
+  });
 }
 
 function pickWildfirePagination(raw) {
@@ -756,7 +1030,9 @@ var OFFERS_MAP_SEARCH_ICON_SVG =
   '<path d="M16 16l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
   '</svg>';
 
-function renderLocationMapSection() {
+function renderLocationMapSection(opts) {
+  opts = opts || {};
+  var includeSearch = opts.includeSearch !== false;
   return (
     '<div class="hc-offers-map-section">' +
     '<div id="hc-offers-location-loading" class="hc-offers-location-card">' +
@@ -770,7 +1046,7 @@ function renderLocationMapSection() {
     '<button type="button" class="hc-offers-location-btn" id="hc-offers-enable-loc">Enable Location</button>' +
     '</div>' +
     '<div id="hc-offers-map-location-wrap" class="hc-offers-map-location-wrap" style="display:none">' +
-    MapLocationSearchBar() +
+    (includeSearch ? MapLocationSearchBar() : '') +
     '<div id="hc-offers-map-shell" class="hc-offers-map-shell">' +
     '<div id="hc-offers-map-mount" class="hc-offers-map-mount" aria-label="Map"></div>' +
     '<button type="button" class="hc-offers-map-my-location" id="hc-offers-map-my-location" aria-label="My location">' +
@@ -779,6 +1055,7 @@ function renderLocationMapSection() {
     '<div id="hc-offers-map-busy-overlay" class="hc-offers-map-busy-overlay" style="display:none" aria-hidden="true">' +
     '<div class="hc-offers-location-spinner" role="status" aria-label="Updating map"></div>' +
     '</div>' +
+    '<div id="hc-offers-map-merchant-card" class="hc-offers-map-merchant-card" style="display:none" hidden></div>' +
     '</div>' +
     '</div>' +
     '<div id="hc-offers-no-stores" class="hc-offers-no-stores-card" style="display:none">' +
@@ -991,33 +1268,20 @@ function addMerchantPinsToLiveMap(container, merchants) {
   var loc = container._hcMapUserLoc || {};
   var data = [];
   (merchants || []).forEach(function (m) {
-    var p = pickMerchantLatLng(m);
-    if (!p) return;
-    data.push({
-      lat: p.lat,
-      lng: p.lng,
-      name: m.name || m.merchantName || '',
-      subtitle: storeMapMerchantMapKitSubtitle(m, loc.lat, loc.lng),
-    });
+    var item = buildMerchantMarkerDataItem(m, loc.lat, loc.lng);
+    if (item) data.push(item);
   });
   if (!data.length) return;
 
   var mk = container._hcMkMap;
   if (mk && window.mapkit) {
     try {
-      var calloutDel = offersMapAnnotationCalloutDelegate();
+      if (!container._hcMkMerchantAnnotations) container._hcMkMerchantAnnotations = [];
       var anns = data.map(function (d) {
-        return new window.mapkit.MarkerAnnotation(new window.mapkit.Coordinate(d.lat, d.lng), {
-          title: (d.name || '').trim() || 'Partner store',
-          subtitle: (d.subtitle || '').trim(),
-          color: MAP_PIN_MERCHANT_COLOR,
-          calloutEnabled: true,
-          titleVisibility: 'hidden',
-          subtitleVisibility: 'hidden',
-          callout: calloutDel,
-        });
+        return createMapKitMerchantAnnotation(window.mapkit, d, container);
       });
       mk.addAnnotations(anns);
+      container._hcMkMerchantAnnotations = container._hcMkMerchantAnnotations.concat(anns);
     } catch (e) {
       console.warn('[HC offers map] addAnnotations failed', e);
     }
@@ -1027,16 +1291,19 @@ function addMerchantPinsToLiveMap(container, merchants) {
   var lf = container._hcLeafletMap;
   if (lf && window.L) {
     try {
-      var icon = leafletMapPinIcon(window.L, MAP_PIN_MERCHANT_COLOR);
+      if (!container._hcLeafletMerchantMarkers) container._hcLeafletMerchantMarkers = [];
       data.forEach(function (d) {
-        var title = (d.name || '').trim() || 'Partner store';
-        var sub = (d.subtitle || '').trim();
-        var body =
-          '<strong>' +
-          escapeHtml(title) +
-          '</strong>' +
-          (sub ? '<br/>' + escapeHtml(sub).replace(/\n/g, '<br/>') : '');
-        window.L.marker([d.lat, d.lng], { icon: icon }).addTo(lf).bindPopup(body);
+        var marker = window.L.marker([d.lat, d.lng], {
+          icon: leafletMerchantPinIcon(window.L, d, false),
+        }).addTo(lf);
+        marker.on('click', function (ev) {
+          if (ev && ev.originalEvent) {
+            window.L.DomEvent.stopPropagation(ev.originalEvent);
+            window.L.DomEvent.preventDefault(ev.originalEvent);
+          }
+          showSelectedMapMerchant(container, d.merchant);
+        });
+        container._hcLeafletMerchantMarkers.push({ marker: marker, mk: d });
       });
     } catch (e2) {
       console.warn('[HC offers map] leaflet marker add failed', e2);
@@ -1096,6 +1363,9 @@ function destroyOffersMapInstance(container) {
     } catch (e2) {}
   }
   container._hcLeafletMap = null;
+  container._hcLeafletMerchantMarkers = [];
+  container._hcMkMerchantAnnotations = [];
+  hideSelectedMapMerchant(container);
 }
 
 function focusOffersMap(container, lat, lng) {
@@ -1129,18 +1399,300 @@ function focusOffersMap(container, lat, lng) {
 
 function leafletMapPinIcon(L, fillHex) {
   var html =
-    '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42" aria-hidden="true">' +
+    '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36" aria-hidden="true">' +
     '<path fill="' +
     fillHex +
-    '" d="M16 0C7.2 0 0 7.2 0 16c0 11 16 26 16 26s16-15 16-26C32 7.2 24.8 0 16 0zm0 22a6 6 0 110-12 6 6 0 010 12z"/>' +
+    '" stroke="#ffffff" stroke-width="1.5" d="M14 0C6.268 0 0 6.268 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.268 21.732 0 14 0z"/>' +
     '</svg>';
   return L.divIcon({
     className: 'hc-map-pin-icon',
     html: html,
-    iconSize: [32, 42],
-    iconAnchor: [16, 42],
-    popupAnchor: [0, -38],
+    iconSize: [28, 36],
+    iconAnchor: [14, 36],
+    popupAnchor: [0, -34],
   });
+}
+
+function resolveMerchantLogoUrl(m) {
+  if (!m || typeof m !== 'object') return '';
+  return (
+    m.logoUrl ||
+    m.logo ||
+    m.small_logo_url ||
+    m.smallLogoUrl ||
+    m.large_logo_url ||
+    m.largeLogoUrl ||
+    ''
+  );
+}
+
+function formatMerchantCardLocation(m) {
+  if (!m || typeof m !== 'object') return '';
+  var parts = [m.city, m.state, m.country || m.country_name || 'United States'].filter(
+    function (part) {
+      return typeof part === 'string' && part.trim().length > 0;
+    }
+  );
+  if (parts.length) return parts.join(', ');
+  var addressParts = [m.address, m.city, m.state].filter(function (part) {
+    return typeof part === 'string' && part.trim().length > 0;
+  });
+  return addressParts.join(', ');
+}
+
+function normalizeMerchantMapName(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function isFeaturedMapMerchant(container, merchant) {
+  if (!merchant) return false;
+  var featured = (container && container._hcFeaturedMapOffers) || [];
+  if (!featured.length) return false;
+  var offerId = merchant.offerId || merchant.offer_id;
+  if (offerId) {
+    var idStr = String(offerId).trim();
+    for (var i = 0; i < featured.length; i++) {
+      var fid = featured[i] && (featured[i].offer_id || featured[i].offerId);
+      if (fid && String(fid).trim() === idStr) return true;
+    }
+  }
+  var name = normalizeMerchantMapName(merchant.name || merchant.merchantName);
+  if (!name) return false;
+  for (var j = 0; j < featured.length; j++) {
+    var fname = normalizeMerchantMapName(
+      (featured[j] && (featured[j].name || featured[j].merchantName)) || ''
+    );
+    if (fname && fname === name) return true;
+  }
+  return false;
+}
+
+function buildMerchantPinHtml(mk, selected) {
+  var size = selected ? 44 : 40;
+  var tipW = selected ? 18 : 16;
+  var tipH = selected ? 11 : 10;
+  var border = selected ? 3 : 2.5;
+  var logoUrl = (mk && mk.logoUrl) || resolveMerchantLogoUrl(mk && mk.merchant);
+  var name = (mk && mk.name) || (mk && mk.merchant && (mk.merchant.name || mk.merchant.merchantName)) || '?';
+  var initial = String(name).trim().charAt(0).toUpperCase() || '?';
+  var inner = logoUrl
+    ? '<img src="' +
+      escapeAttr(logoUrl) +
+      '" alt="" class="hc-merchant-pin-img" />'
+    : '<span class="hc-merchant-pin-fallback">' + escapeHtml(initial) + '</span>';
+  return (
+    '<div class="hc-merchant-pin' +
+    (selected ? ' hc-merchant-pin--selected' : '') +
+    '" style="--hc-pin-size:' +
+    size +
+    'px;--hc-pin-border:' +
+    border +
+    'px;--hc-pin-tip-w:' +
+    tipW / 2 +
+    'px;--hc-pin-tip-h:' +
+    tipH +
+    'px">' +
+    '<div class="hc-merchant-pin-head">' +
+    inner +
+    '</div>' +
+    '<div class="hc-merchant-pin-tip" aria-hidden="true"></div>' +
+    '</div>'
+  );
+}
+
+function leafletMerchantPinIcon(L, mk, selected) {
+  return L.divIcon({
+    className: 'hc-merchant-pin-icon',
+    html: buildMerchantPinHtml(mk, !!selected),
+    iconSize: selected ? [44, 55] : [40, 50],
+    iconAnchor: selected ? [22, 55] : [20, 50],
+  });
+}
+
+function buildSelectedMerchantCardHtml(merchant, recommended) {
+  var name = (merchant && (merchant.name || merchant.merchantName)) || 'Store';
+  var location = formatMerchantCardLocation(merchant);
+  var logoUrl = resolveMerchantLogoUrl(merchant);
+  return (
+    '<button type="button" class="hc-map-merchant-card" data-hc-map-merchant-open="1">' +
+    '<span class="hc-map-merchant-card-logo">' +
+    (logoUrl
+      ? '<img src="' + escapeAttr(logoUrl) + '" alt="" />'
+      : '<span class="hc-map-merchant-card-logo-ph"></span>') +
+    '</span>' +
+    '<span class="hc-map-merchant-card-meta">' +
+    '<span class="hc-map-merchant-card-name">' +
+    escapeHtml(name) +
+    '</span>' +
+    (location
+      ? '<span class="hc-map-merchant-card-loc">' + escapeHtml(location) + '</span>'
+      : '') +
+    (recommended
+      ? '<span class="hc-map-merchant-card-rec">' +
+        '<img src="' +
+        escapeAttr(iconTransparentUrl) +
+        '" alt="" />' +
+        '<span>Recommended</span>' +
+        '</span>'
+      : '') +
+    '</span>' +
+    '</button>'
+  );
+}
+
+function hideSelectedMapMerchant(container) {
+  if (!container) return;
+  container._hcSelectedMapMerchant = null;
+  var slot = container.querySelector('#hc-offers-map-merchant-card');
+  if (slot) {
+    slot.style.display = 'none';
+    slot.hidden = true;
+    slot.innerHTML = '';
+  }
+  syncSelectedMerchantPinStyles(container, null);
+}
+
+function openMapMerchantFromCard(merchant) {
+  if (!merchant) return;
+  var offerId = merchant.offerId || merchant.offer_id || merchant.id;
+  var offerSource = merchant.offerSource || merchant.offer_source || '';
+  var offerType = merchant.offerType || merchant.offer_type || '';
+  if (offerSource === 'wildfire' || offerType === 'click' || offerType === 'click_sso') {
+    openFeaturedClickStore(merchant);
+    return;
+  }
+  if (offerId) {
+    try {
+      sessionStorage.setItem(
+        'hc_offer_detail_initial',
+        JSON.stringify({ offerId: String(offerId), offer: merchant })
+      );
+    } catch (_e) {}
+    window.location.hash = '#/offers/' + encodeURIComponent(offerId);
+  }
+}
+
+function showSelectedMapMerchant(container, merchant) {
+  if (!container || !merchant) return;
+  container._hcSelectedMapMerchant = merchant;
+  container._hcIgnoreMapDismissUntil = Date.now() + 400;
+  var slot = container.querySelector('#hc-offers-map-merchant-card');
+  if (!slot) return;
+  var recommended = isFeaturedMapMerchant(container, merchant);
+  slot.innerHTML = buildSelectedMerchantCardHtml(merchant, recommended);
+  slot.hidden = false;
+  slot.style.display = 'block';
+  var openBtn = slot.querySelector('[data-hc-map-merchant-open]');
+  if (openBtn) {
+    openBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      openMapMerchantFromCard(merchant);
+    });
+  }
+  syncSelectedMerchantPinStyles(container, merchant);
+}
+
+function shouldIgnoreMapDismiss(container) {
+  return !!(
+    container &&
+    container._hcIgnoreMapDismissUntil &&
+    Date.now() < container._hcIgnoreMapDismissUntil
+  );
+}
+
+function dismissSelectedMapMerchant(container) {
+  if (shouldIgnoreMapDismiss(container)) return;
+  hideSelectedMapMerchant(container);
+}
+
+function syncSelectedMerchantPinStyles(container, merchant) {
+  var selectedKey = merchant ? offersMapStoreKey(merchant) : '';
+  var leafletMarkers = container._hcLeafletMerchantMarkers || [];
+  leafletMarkers.forEach(function (entry) {
+    if (!entry || !entry.marker || !entry.mk) return;
+    var key = entry.mk.key || (entry.mk.merchant ? offersMapStoreKey(entry.mk.merchant) : '');
+    var selected = !!(selectedKey && key && String(selectedKey) === String(key));
+    try {
+      entry.marker.setIcon(leafletMerchantPinIcon(window.L, entry.mk, selected));
+    } catch (_e) {}
+  });
+  var anns = container._hcMkMerchantAnnotations || [];
+  anns.forEach(function (ann) {
+    if (!ann) return;
+    var key = ann._hcKey || '';
+    var selected = !!(selectedKey && key && String(selectedKey) === String(key));
+    var mk = ann._hcMarkerData;
+    if (!mk) return;
+    try {
+      var html = buildMerchantPinHtml(mk, selected);
+      var tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      var next = tmp.firstElementChild;
+      var el = ann.element;
+      if (el && next) {
+        el.className = next.className;
+        el.setAttribute('style', next.getAttribute('style') || '');
+        el.innerHTML = next.innerHTML;
+      }
+    } catch (_e2) {}
+  });
+}
+
+function buildMerchantMarkerDataItem(m, userLat, userLng) {
+  var p = pickMerchantLatLng(m);
+  if (!p) return null;
+  return {
+    lat: p.lat,
+    lng: p.lng,
+    name: m.name || m.merchantName || '',
+    subtitle: storeMapMerchantMapKitSubtitle(m, userLat, userLng),
+    logoUrl: resolveMerchantLogoUrl(m),
+    key: offersMapStoreKey(m),
+    merchant: m,
+  };
+}
+
+function createMapKitMerchantAnnotation(mapkit, mk, container) {
+  var Coord = mapkit.Coordinate;
+  var Ann = mapkit.Annotation;
+  var factory = function () {
+    var wrap = document.createElement('div');
+    wrap.innerHTML = buildMerchantPinHtml(mk, false);
+    var el = wrap.firstElementChild || wrap;
+    el.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (container) showSelectedMapMerchant(container, mk.merchant);
+    });
+    return el;
+  };
+  var ann = new Ann(new Coord(mk.lat, mk.lng), factory, {
+    anchorOffset: new DOMPoint(0, -50),
+    calloutEnabled: false,
+    animates: false,
+  });
+  ann._hcMerchant = mk.merchant;
+  ann._hcMarkerData = mk;
+  ann._hcKey = mk.key;
+  return ann;
+}
+
+function wireMapSelectionHandlers(container, mapMount) {
+  if (!container || container._hcMapSelectWired) return;
+  container._hcMapSelectWired = true;
+  if (mapMount) {
+    mapMount.addEventListener('click', function (e) {
+      if (e.target && e.target.closest && e.target.closest('.hc-merchant-pin, .hc-map-merchant-card, .hc-offers-map-merchant-card')) {
+        return;
+      }
+      dismissSelectedMapMerchant(container);
+    });
+  }
 }
 
 function offersMapLinkOnce(href, id) {
@@ -1354,33 +1906,40 @@ function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMar
       mapMount.classList.add('hc-offers-map-osm-fallback');
       var map = L.map(mapMount).setView([userLat, userLng], 12);
       container._hcLeafletMap = map;
+      container._hcLeafletMerchantMarkers = [];
+      container._hcMkMerchantAnnotations = [];
       L.maplibreGL({
         style: OFFERS_LEAFLET_MAPLIBRE_STYLE,
       }).addTo(map);
 
       var userIcon = leafletMapPinIcon(L, MAP_PIN_USER_COLOR);
-      var merchantIcon = leafletMapPinIcon(L, MAP_PIN_MERCHANT_COLOR);
       var userMarker = null;
       if (showUserMarker) {
         userMarker = L.marker([userLat, userLng], {
           icon: userIcon,
           zIndexOffset: 1000,
         }).addTo(map);
-        userMarker.bindPopup('<strong>' + escapeHtml('Your Location') + '</strong>');
       }
 
       var merchantLayers = [];
       merchantMarkerData.forEach(function (mk) {
-        var title = (mk.name || '').trim() || 'Partner store';
-        var sub = (mk.subtitle || '').trim();
-        var body =
-          '<strong>' +
-          escapeHtml(title) +
-          '</strong>' +
-          (sub ? '<br/>' + escapeHtml(sub).replace(/\n/g, '<br/>') : '');
-        var marker = L.marker([mk.lat, mk.lng], { icon: merchantIcon }).addTo(map);
-        marker.bindPopup(body);
+        var marker = L.marker([mk.lat, mk.lng], {
+          icon: leafletMerchantPinIcon(L, mk, false),
+        }).addTo(map);
+        marker.on('click', function (ev) {
+          if (ev && ev.originalEvent) {
+            L.DomEvent.stopPropagation(ev.originalEvent);
+            L.DomEvent.preventDefault(ev.originalEvent);
+          }
+          showSelectedMapMerchant(container, mk.merchant);
+        });
         merchantLayers.push(marker);
+        container._hcLeafletMerchantMarkers.push({ marker: marker, mk: mk });
+      });
+
+      wireMapSelectionHandlers(container, mapMount);
+      map.on('click', function () {
+        dismissSelectedMapMerchant(container);
       });
 
       var boundsGroup = (userMarker ? [userMarker] : []).concat(merchantLayers);
@@ -1507,12 +2066,13 @@ function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merc
 
   var userCoord = new Coord(userLat, userLng);
   var annotations = [];
+  var merchantAnnotations = [];
   if (showUserMarker) {
     annotations.push(
       new Mai(userCoord, {
         title: 'Your Location',
         color: MAP_PIN_USER_COLOR,
-        calloutEnabled: true,
+        calloutEnabled: false,
         titleVisibility: 'hidden',
         callout: calloutDel,
       }),
@@ -1520,20 +2080,28 @@ function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merc
   }
 
   merchantMarkerData.forEach(function (mk) {
-    var label = (mk.name || '').trim() || 'Partner store';
-    var sub = (mk.subtitle || '').trim();
-    annotations.push(
-      new Mai(new Coord(mk.lat, mk.lng), {
+    try {
+      var ann = createMapKitMerchantAnnotation(mapkit, mk, container);
+      annotations.push(ann);
+      merchantAnnotations.push(ann);
+    } catch (annErr) {
+      var label = (mk.name || '').trim() || 'Partner store';
+      var fallback = new Mai(new Coord(mk.lat, mk.lng), {
         title: label,
-        subtitle: sub,
+        subtitle: (mk.subtitle || '').trim(),
         color: MAP_PIN_MERCHANT_COLOR,
-        calloutEnabled: true,
+        calloutEnabled: false,
         titleVisibility: 'hidden',
         subtitleVisibility: 'hidden',
-        callout: calloutDel,
-      }),
-    );
+      });
+      fallback._hcMerchant = mk.merchant;
+      fallback._hcMarkerData = mk;
+      fallback._hcKey = mk.key;
+      annotations.push(fallback);
+      merchantAnnotations.push(fallback);
+    }
   });
+  container._hcMkMerchantAnnotations = merchantAnnotations;
 
   var regionBox = computeMapKitRegionLikeStoreMap(
     showUserMarker ? userLat : NaN,
@@ -1615,11 +2183,26 @@ function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merc
       return;
     }
     container._hcMkMap = map;
+    container._hcMkMerchantAnnotations = merchantAnnotations;
     try {
       map.addEventListener('error', onMapKitFallbackTrigger);
     } catch (e4) {}
     map.addAnnotations(annotations);
     console.log('[HC offers map] annotations:', annotations.length);
+    try {
+      map.addEventListener('select', function (event) {
+        var ann = event && event.annotation;
+        if (ann && ann._hcMerchant) {
+          showSelectedMapMerchant(container, ann._hcMerchant);
+        }
+      });
+      map.addEventListener('deselect', function () {
+        dismissSelectedMapMerchant(container);
+      });
+    } catch (selErr) {
+      console.warn('[HC offers map] select listeners failed', selErr);
+    }
+    wireMapSelectionHandlers(container, mapMount);
     scheduleMapKitTileReflow(map);
     window.setTimeout(function () {
       try {
@@ -1671,9 +2254,12 @@ function initOffersMap(container, cardlinked) {
   function setNoStoresMessage(hasLocation) {
     var textEl = container.querySelector('#hc-offers-no-stores-text');
     if (!textEl) return;
+    var canSearch = !!container.querySelector('#hc-offers-map-search-input');
     textEl.textContent = hasLocation
       ? 'There are no supported stores in your area.'
-      : 'Search for a city or zip code to discover nearby stores.';
+      : canSearch
+        ? 'Search for a city or zip code to discover nearby stores.'
+        : 'Enable location to discover nearby stores.';
   }
 
   function showNoStoresIfEmpty(list) {
@@ -1954,15 +2540,8 @@ function initOffersMap(container, cardlinked) {
     var merchants = Array.isArray(container._hcMapStores) ? container._hcMapStores : [];
     var merchantMarkerData = [];
     merchants.forEach(function (m) {
-      var p = pickMerchantLatLng(m);
-      if (p) {
-        merchantMarkerData.push({
-          lat: p.lat,
-          lng: p.lng,
-          name: m.name || m.merchantName || '',
-          subtitle: storeMapMerchantMapKitSubtitle(m, userLat, userLng),
-        });
-      }
+      var item = buildMerchantMarkerDataItem(m, userLat, userLng);
+      if (item) merchantMarkerData.push(item);
     });
 
     var refreshingMap = !!(container._hcLeafletMap || container._hcMkMap);

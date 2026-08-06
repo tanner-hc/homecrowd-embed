@@ -4,7 +4,7 @@ import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import { escapeHtml } from '../base-components/html.js';
 import { buildTiersModalHtml } from '../base-components/TiersModal.js';
-import { buildAppHeaderHtml, mountAppHeader } from '../base-components/AppHeader.js';
+import { buildAppHeaderHtml, attachAppHeader } from '../base-components/AppHeader.js';
 import { buildPointsEarnedBannerHtml } from '../base-components/PointsEarnedBanner.js';
 import { showPointsEarnedToast } from '../base-components/PointsEarnedToast.js';
 import {
@@ -613,7 +613,7 @@ async function fetchDashboardPayload() {
 }
 
 function bindHomeInteractions(container, ctx) {
-  mountAppHeader(container, { user: ctx.user });
+  attachAppHeader(container, { user: ctx.user });
 
   var confettiCleanup = null;
   if (ctx.showSetupComplete) {

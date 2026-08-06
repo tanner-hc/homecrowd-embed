@@ -27,7 +27,8 @@ import {
   buildWeeklyRewardContext,
   leaderboardContextToEmbedProduct,
 } from './weekly-reward.js';
-import { renderOffers } from './views/offers.js';
+import { renderOffers, renderStoresMap } from './views/offers.js';
+import { renderAllShops } from './views/all-shops.js';
 import { renderOfferDetail } from './views/offer-detail.js';
 import { renderRedemptionConfirmation } from './views/redemption-confirmation.js';
 import { renderRedemptionThanks, finalizeStripeThanksReturn } from './views/redemption-thanks.js';
@@ -835,7 +836,12 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
   var rewardsActive = pathOnly === '/rewards' ? ' active' : '';
   var contentActive =
     contentTabEnabled && pathOnly === '/content' ? ' active' : '';
-  var offersActive = pathOnly === '/offers' ? ' active' : '';
+  var offersActive =
+    pathOnly === '/offers' ||
+    pathOnly === '/offers/all-shops' ||
+    pathOnly === '/offers/map'
+      ? ' active'
+      : '';
   var profileActive =
     pathOnly === '/profile' ||
     pathOnly === '/cards' ||
@@ -1231,6 +1237,20 @@ function render(route) {
     return;
   }
 
+  // All shops catalog (Marketplace search / categories)
+  if (pathOnly === '/offers/all-shops') {
+    var allShopsEl = renderLayout(route);
+    renderAllShops(allShopsEl);
+    return;
+  }
+
+  // Full stores map (Marketplace "View map")
+  if (pathOnly === '/offers/map') {
+    var storesMapEl = renderLayout(route);
+    renderStoresMap(storesMapEl);
+    return;
+  }
+
   // Offer detail route: /offers/:id
   var offerMatch = pathOnly.match(/^\/offers\/(.+)$/);
   if (offerMatch) {
@@ -1341,12 +1361,19 @@ function renderLayout(route) {
     /^\/rewards\/[^/]+$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/confirm$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/thanks$/.test(pathOnly);
-  var isOfferDetailPage = /^\/offers\/[^/]+$/.test(pathOnly);
+  var isOfferDetailPage =
+    /^\/offers\/[^/]+$/.test(pathOnly) &&
+    pathOnly !== '/offers/all-shops' &&
+    pathOnly !== '/offers/map';
   var isContentDetailPage = /^\/content\/[^/]+$/.test(pathOnly);
   var isPreviewPage = pathOnly === '/preview';
   var isTravelPage = pathOnly === '/travel';
   var isHomePage = pathOnly === '/home';
-  var hideBrandLockup = isTravelPage || isHomePage;
+  var isOffersPage =
+    pathOnly === '/offers' || pathOnly === '/offers/all-shops' || pathOnly === '/offers/map';
+  var isMarketplacePage = pathOnly === '/offers';
+  var isStoresMapPage = pathOnly === '/offers/map';
+  var hideBrandLockup = isTravelPage || isHomePage || isOffersPage;
   var hideTabBar = isRewardDetailPage || isOfferDetailPage || isContentDetailPage || isPreviewPage;
   var flushTopContentClass =
     pathOnly === '/invite-friend' ||
@@ -1354,7 +1381,8 @@ function renderLayout(route) {
     pathOnly === '/upload-receipt' ||
     pathOnly === '/cards/link' ||
     isTravelPage ||
-    isHomePage
+    isHomePage ||
+    isOffersPage
       ? ' hc-content--flush-top'
       : '';
 
@@ -1368,6 +1396,8 @@ function renderLayout(route) {
       <main class="hc-content' +
     (isRewardDetailPage ? ' hc-content--reward-detail' : '') +
     (isTravelPage ? ' hc-content--travel' : '') +
+    (isMarketplacePage || isStoresMapPage ? ' hc-content--marketplace' : '') +
+    (isStoresMapPage ? ' hc-content--stores-map' : '') +
     (hideTabBar ? '' : ' hc-content--with-tab-bar') +
     flushTopContentClass +
     '">\

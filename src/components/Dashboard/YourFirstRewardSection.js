@@ -16,38 +16,53 @@ function normalizeMediaUrl(url) {
 
 function resolveRewardImage(reward) {
   if (!reward) return null;
-  if (reward.image_url) return normalizeMediaUrl(reward.image_url);
+  if (reward.image_url || reward.imageUrl) {
+    return normalizeMediaUrl(reward.image_url || reward.imageUrl);
+  }
   if (Array.isArray(reward.images) && reward.images.length > 0) {
     var primary = reward.images.find(function (img) {
-      return img.is_primary;
+      return img.is_primary || img.isPrimary;
     }) || reward.images[0];
     return normalizeMediaUrl(
-      (primary && (primary.image_path || primary.url || primary.image)) || null
+      (primary &&
+        (primary.image_path ||
+          primary.imagePath ||
+          primary.url ||
+          primary.image)) ||
+        null
     );
   }
-  return normalizeMediaUrl(reward.cover_image_url || reward.cover_image || null);
+  return normalizeMediaUrl(
+    reward.cover_image_url || reward.cover_image || null
+  );
+}
+
+function rewardPointsCost(reward) {
+  if (!reward) return 0;
+  var raw = reward.points_cost != null ? reward.points_cost : reward.pointsCost;
+  return Number(raw) || 0;
 }
 
 function isPointReward(reward) {
   if (!reward) return false;
-  var type = String(reward.redemption_type || '').toLowerCase();
+  var type = String(
+    reward.redemption_type || reward.redemptionType || ''
+  ).toLowerCase();
   if (type === 'raffle' || type === 'auction') return false;
-  if (reward.raffle_info) return false;
+  if (reward.raffle_info || reward.raffleInfo) return false;
+  if (reward.auction_info || reward.auctionInfo) return false;
   return true;
 }
 
 function pickDefaultReward(list) {
   var active = list.filter(function (r) {
-    return (
-      isPointReward(r) &&
-      r.is_active !== false &&
-      !r.is_locked &&
-      Number(r.points_cost) > 0
-    );
+    var locked = !!(r.is_locked || r.isLocked);
+    var activeFlag = r.is_active !== false && r.enabled !== false;
+    return isPointReward(r) && activeFlag && !locked && rewardPointsCost(r) > 0;
   });
   if (!active.length) return null;
   return active.slice().sort(function (a, b) {
-    return Number(a.points_cost) - Number(b.points_cost);
+    return rewardPointsCost(a) - rewardPointsCost(b);
   })[0];
 }
 
@@ -105,7 +120,7 @@ export function buildYourFirstRewardSectionHtml(props) {
   var reward = props.reward;
   if (!reward) return '';
 
-  var targetPoints = Number(reward.points_cost) || 0;
+  var targetPoints = rewardPointsCost(reward);
   var earned = Math.max(0, Number(props.currentPoints) || 0);
   var progress = targetPoints > 0 ? Math.min(1, earned / targetPoints) : 0;
   var imageUrl = resolveRewardImage(reward);
