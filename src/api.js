@@ -473,6 +473,26 @@ export async function getRewardsCatalog() {
   return request(EMBED_BASE + '/rewards/catalog/');
 }
 
+export async function getFirstRewards() {
+  return request(EMBED_BASE + '/rewards/first-rewards/');
+}
+
+export async function getFirstReward(rewardId) {
+  return request(
+    EMBED_BASE + '/rewards/first-rewards/' + encodeURIComponent(rewardId) + '/'
+  );
+}
+
+export async function redeemFirstReward(rewardId, payload) {
+  return request(
+    EMBED_BASE + '/rewards/first-rewards/' + encodeURIComponent(rewardId) + '/redeem/',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload || {}),
+    }
+  );
+}
+
 export async function getRewardDetail(rewardId) {
   return request('/api/rewards/rewards/' + encodeURIComponent(rewardId) + '/');
 }

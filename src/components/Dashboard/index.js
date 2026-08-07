@@ -16,6 +16,11 @@ export {
   isPointRewardItem,
 } from './YourFirstRewardSection.js';
 export {
+  buildPointsMilestonesCardHtml,
+  bindPointsMilestonesCard,
+  normalizeMilestones,
+} from './PointsMilestonesCard.js';
+export {
   buildHomeFeaturedStoresHtml,
   bindHomeFeaturedStores,
   normalizeFeaturedStores,

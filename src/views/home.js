@@ -1,11 +1,9 @@
 import * as api from '../api.js';
-import { computeSchoolCashback, pickSchoolName } from '../school-contribution.js';
 import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import { escapeHtml } from '../base-components/html.js';
 import { buildTiersModalHtml } from '../base-components/TiersModal.js';
 import { buildAppHeaderHtml, attachAppHeader } from '../base-components/AppHeader.js';
-import { buildPointsEarnedBannerHtml } from '../base-components/PointsEarnedBanner.js';
 import { showPointsEarnedToast } from '../base-components/PointsEarnedToast.js';
 import {
   buildOverallRewardContext,
@@ -26,13 +24,12 @@ import {
   buildSetupCompleteSectionHtml,
   mountSetupCompleteConfetti,
 } from '../components/Dashboard/SetupCompleteSection.js';
+import { isPointRewardItem } from '../components/Dashboard/YourFirstRewardSection.js';
 import {
-  buildYourFirstRewardSectionHtml,
-  bindYourFirstRewardSection,
-  pickFirstReward,
-  readSavedFirstRewardId,
-  isPointRewardItem,
-} from '../components/Dashboard/YourFirstRewardSection.js';
+  buildPointsMilestonesCardHtml,
+  bindPointsMilestonesCard,
+  normalizeMilestones,
+} from '../components/Dashboard/PointsMilestonesCard.js';
 import {
   buildHomeFeaturedStoresHtml,
   bindHomeFeaturedStores,
@@ -136,16 +133,6 @@ function normalizeCards(cardsData) {
   return Array.isArray(cards) ? cards : [];
 }
 
-function resolveSchoolPrimaryColor(user) {
-  var school = user && (user.active_school || user.activeSchool);
-  var raw = school && (school.primary_color || school.primaryColor);
-  if (raw && /^#?[0-9a-fA-F]{6}$/i.test(String(raw).replace('#', ''))) {
-    var s = String(raw).trim();
-    return s.charAt(0) === '#' ? s : '#' + s;
-  }
-  return '#001C44';
-}
-
 function mergeUserSchoolColor(primaryUser, profileUser) {
   if (!primaryUser) return profileUser;
   var school = primaryUser.active_school || primaryUser.activeSchool;
@@ -172,12 +159,6 @@ function resolveSchoolLogoUrl(user) {
   if (!school) return '';
   var url = school.image || school.banner_image || school.bannerImage || '';
   return typeof url === 'string' ? url.trim() : '';
-}
-
-function schoolFirstName(user) {
-  var name = pickSchoolName(user);
-  if (!name || name === 'your school') return undefined;
-  return String(name).split(' ')[0];
 }
 
 function formatTransactionDateHome(dateString) {
@@ -371,8 +352,6 @@ function buildHomeHtml(ctx) {
     (user && (user.current_points != null ? user.current_points : user.available_points)) ||
     0;
 
-  var hasTierConfig = Array.isArray(ctx.tierConfigTiers) && ctx.tierConfigTiers.length > 0;
-
   var setupHtml = '';
   if (showUnlockSetup) {
     setupHtml = buildUnlockSetupSectionHtml({
@@ -385,17 +364,17 @@ function buildHomeHtml(ctx) {
     setupHtml = buildSetupCompleteSectionHtml(setupCompletePoints);
   }
 
-  var firstRewardMarginClass =
+  var milestonesMarginClass =
     showUnlockSetup || showSetupComplete ? ' hc-home-section--tight' : ' hc-home-section--spaced';
 
-  var firstRewardHtml =
-    '<div class="hc-home-first-reward-wrap' +
-    firstRewardMarginClass +
-    '" id="hc-home-first-reward-wrap">' +
-    buildYourFirstRewardSectionHtml({
-      reward: ctx.firstReward,
-      currentPoints: availablePts,
-      setupIncomplete: showUnlockSetup,
+  var milestonesHtml =
+    '<div class="hc-home-milestones-wrap' +
+    milestonesMarginClass +
+    '" id="hc-home-milestones-wrap">' +
+    buildPointsMilestonesCardHtml({
+      points: lifetimePts,
+      milestones: ctx.milestones,
+      logoUrl: resolveSchoolLogoUrl(user),
       loading: ctx.rewardsLoading,
     }) +
     '</div>';
@@ -429,16 +408,8 @@ function buildHomeHtml(ctx) {
     }) +
     '<div class="hc-home-page-pad">' +
     buildWelcomeSectionHtml(user) +
-    buildPointsEarnedBannerHtml({
-      points: lifetimePts,
-      schoolAmount: ctx.schoolCashback,
-      schoolName: schoolFirstName(user),
-      logoUrl: resolveSchoolLogoUrl(user),
-      backgroundColor: resolveSchoolPrimaryColor(user),
-      clickable: hasTierConfig,
-    }) +
     (setupHtml ? '<div class="hc-home-setup-wrap">' + setupHtml + '</div>' : '') +
-    firstRewardHtml +
+    milestonesHtml +
     featuredHtml +
     buildRewardTilesHtml(ctx) +
     recentActivityHtml +
@@ -475,6 +446,9 @@ async function fetchDashboardPayload() {
     api.getRewardsCatalog().catch(function () {
       return null;
     }),
+    api.getFirstRewards().catch(function () {
+      return null;
+    }),
   ]);
 
   var freshUser = parallel[0];
@@ -486,6 +460,7 @@ async function fetchDashboardPayload() {
   var activityLogRes = parallel[6];
   var featuredRes = parallel[7];
   var rewardsCatalogRes = parallel[8];
+  var firstRewardsRes = parallel[9];
 
   var latestUser = mergeUserSchoolColor(freshUser, profileUser);
   try {
@@ -517,7 +492,6 @@ async function fetchDashboardPayload() {
     syncResult = null;
   }
 
-  var schoolCashback = computeSchoolCashback(oliveTransactionsRes);
   var rawTx = getTransactionsArray(oliveTransactionsRes).map(function (t) {
     return Object.assign({}, t, {
       transaction_date: pickTransactionDate(t),
@@ -585,7 +559,6 @@ async function fetchDashboardPayload() {
       (Array.isArray(rewardsCatalogRes) ? rewardsCatalogRes : []);
     rewardsList = (Array.isArray(rawRewards) ? rawRewards : []).filter(isPointRewardItem);
   }
-  var firstReward = pickFirstReward(rewardsList, readSavedFirstRewardId());
   var featuredStores = normalizeFeaturedStores(featuredRes);
 
   return {
@@ -596,14 +569,13 @@ async function fetchDashboardPayload() {
     showUnlockSetup: showUnlockSetup,
     showSetupComplete: showSetupComplete,
     setupRewardPoints: setupRewardPoints,
-    schoolCashback: schoolCashback,
     transactions: transactionsForList,
     leaderboardSectionActive: leaderboardSectionActive,
     weeklyReward: weeklyReward,
     overallReward: overallReward,
     tierConfigTiers: tierConfigTiers,
     pointsSummary: pointsSummary,
-    firstReward: firstReward,
+    milestones: normalizeMilestones(firstRewardsRes),
     rewardsList: rewardsList,
     rewardsLoading: false,
     featuredStores: featuredStores,
@@ -632,48 +604,17 @@ function bindHomeInteractions(container, ctx) {
     });
   }
 
-  function remountFirstReward(reward) {
-    var wrap = container.querySelector('#hc-home-first-reward-wrap');
-    if (!wrap) return;
-    var availablePts =
-      (ctx.pointsSummary &&
-        (ctx.pointsSummary.available_points != null
-          ? ctx.pointsSummary.available_points
-          : ctx.pointsSummary.availablePoints)) ||
-      (ctx.user &&
-        (ctx.user.current_points != null ? ctx.user.current_points : ctx.user.available_points)) ||
-      0;
-    wrap.innerHTML = buildYourFirstRewardSectionHtml({
-      reward: reward,
-      currentPoints: availablePts,
-      setupIncomplete: ctx.showUnlockSetup,
-    });
-    bindFirstReward(reward);
-  }
-
-  function bindFirstReward(currentReward) {
-    var root = container.querySelector('.hc-first-reward');
-    if (!root) return;
-    bindYourFirstRewardSection(root, {
-      rewards: ctx.rewardsList,
-      currentReward: currentReward,
-      onViewAll: function () {
-        navigate('/rewards');
+  var milestonesRoot = container.querySelector('.hc-milestones');
+  if (milestonesRoot) {
+    bindPointsMilestonesCard(milestonesRoot, {
+      onPressMilestone: function (id) {
+        navigate('/first-rewards/' + encodeURIComponent(id) + '?from=home');
       },
-      onPressReward: function (reward) {
-        if (reward && reward.id != null) {
-          navigate('/rewards/' + encodeURIComponent(reward.id));
-        } else {
-          navigate('/rewards');
-        }
-      },
-      onRewardChange: function (next) {
-        remountFirstReward(next);
+      onRedeem: function (id) {
+        navigate('/first-rewards/' + encodeURIComponent(id) + '/redeem?from=home');
       },
     });
   }
-
-  bindFirstReward(ctx.firstReward);
 
   var featuredRoot = container.querySelector('.hc-featured-stores');
   if (featuredRoot) {

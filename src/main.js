@@ -6,7 +6,12 @@ import * as analytics from './analytics.js';
 import { postToNative, onNativeMessage } from './bridge.js';
 import { syncExtensionEnabledFromNative, extensionFlagTrue } from './extension-status.js';
 import { navigate, getRoute, onRouteChange, startRouter, nextNavEpoch } from './router.js';
-import { applyBrandConfig, clearBrandConfig, renderBrandLockup } from './brand.js';
+import {
+  applyBrandConfig,
+  clearBrandConfig,
+  hasCustomHeaderLogo,
+  renderBrandLockup,
+} from './brand.js';
 import { renderLogin } from './views/login.js';
 import { renderGetStarted } from './views/get-started.js';
 import { renderFindYourSchool } from './views/find-your-school.js';
@@ -33,6 +38,8 @@ import { renderAllShops } from './views/all-shops.js';
 import { renderOfferDetail } from './views/offer-detail.js';
 import { renderRedemptionConfirmation } from './views/redemption-confirmation.js';
 import { renderRedemptionThanks, finalizeStripeThanksReturn } from './views/redemption-thanks.js';
+import { renderFirstRewardRedemption } from './views/first-reward-redemption.js';
+import { renderFirstRewardDetail } from './views/first-reward-detail.js';
 import { renderProfile } from './views/profile.js';
 import { renderContent } from './views/content.js';
 import { renderContentDetail } from './views/content-detail.js';
@@ -137,6 +144,29 @@ async function applySchoolConfig(nextSchoolId) {
   clearBrandConfig();
 }
 
+/**
+ * Brand config normally arrives with the host-supplied schoolId. A session
+ * opened without one (direct link, local dev) leaves it empty, so school embed
+ * appearance never applies even though the user's school has one. Backfill it
+ * from the authenticated user. Deliberately does not touch the module-level
+ * `schoolId`, which drives the partner/login flows.
+ *
+ * @returns {Promise<boolean>} whether a school logo became available
+ */
+async function ensureBrandConfigForUser(currentUser) {
+  if (hasCustomHeaderLogo()) return false;
+  var school = currentUser && (currentUser.active_school || currentUser.activeSchool);
+  var activeSchoolId = school && school.id;
+  if (!activeSchoolId) return false;
+  try {
+    var config = await api.fetchSchoolConfig(activeSchoolId);
+    applyBrandConfig(config, activeSchoolId);
+  } catch (_e) {
+    return false;
+  }
+  return hasCustomHeaderLogo();
+}
+
 function readPendingPasswordLink() {
   try {
     var raw = window.sessionStorage.getItem(pendingPasswordLinkStorageKey);
@@ -209,6 +239,11 @@ function completeLoginState(nextUser, tokenUsed) {
   scheduleDailyVisitCheck();
   scheduleExtensionStatusSync();
   refreshProfileUserForTabs();
+  // Logging in can be the first point a school is known, so pick up its brand
+  // config here too and repaint only if that actually changed the lockup.
+  ensureBrandConfigForUser(nextUser).then(function (applied) {
+    if (applied) render(getRoute());
+  });
 }
 
 function startSchoolEmailConfirmationPolling(confirmationId) {
@@ -677,6 +712,7 @@ async function init() {
   } else if (api.isAuthenticated()) {
     try {
       user = await api.fetchCurrentUser();
+      await ensureBrandConfigForUser(user);
       postToNative('homecrowd:login', { user: user });
       preloadMapKitForEmbed();
       scheduleDailyVisitCheck();
@@ -1090,6 +1126,31 @@ function render(route) {
 
   if (!contentTabEnabled && (pathOnly === '/content' || /^\/content\/[^/]+$/.test(pathOnly))) {
     navigate('/rewards');
+    return;
+  }
+
+  // Full-bleed screen: renders straight into appEl so it carries no app header
+  // or tab bar, the same way /account-created does. ?from= records where the
+  // ladder was tapped so claiming returns the user there.
+  var firstRewardReturnTo = /(?:\?|&)from=rewards(?:&|$)/.test(route) ? '/rewards' : '/home';
+
+  var firstRewardMatch = pathOnly.match(/^\/first-rewards\/([^/]+)\/redeem$/);
+  if (firstRewardMatch) {
+    appEl.innerHTML = '';
+    renderFirstRewardRedemption(appEl, firstRewardMatch[1], {
+      returnTo: firstRewardReturnTo,
+    });
+    return;
+  }
+
+  // Carries its own back/profile/points header and no tab bar, so it renders
+  // into appEl rather than the app shell.
+  var firstRewardDetailMatch = pathOnly.match(/^\/first-rewards\/([^/]+)$/);
+  if (firstRewardDetailMatch) {
+    appEl.innerHTML = '';
+    renderFirstRewardDetail(appEl, firstRewardDetailMatch[1], {
+      returnTo: firstRewardReturnTo,
+    });
     return;
   }
 

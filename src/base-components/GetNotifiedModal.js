@@ -1,10 +1,7 @@
 import { openBottomSheet } from './BottomSheetModal.js';
 import { escapeAttr, escapeHtml } from './html.js';
 import mailTwoUrl from '../assets/icons/mail_two.png';
-
-function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
-}
+import { isValidEmail } from '../contact-validation.js';
 
 function formHtml(error) {
   return (

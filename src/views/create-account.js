@@ -7,6 +7,7 @@ import headerUrl from '../assets/header.png';
 import googleIconUrl from '../assets/providers/googleIcon.png';
 import appleIconUrl from '../assets/providers/apple_icon_dark.png';
 import chevronLeftSvg from '../assets/icons/chevron-left.svg?raw';
+import { isValidEmail } from '../contact-validation.js';
 
 export var PENDING_SIGNUP_EMAIL_KEY = 'hc_embed_pending_signup_email';
 
@@ -28,10 +29,6 @@ export function clearPendingSignupEmail() {
   try {
     sessionStorage.removeItem(PENDING_SIGNUP_EMAIL_KEY);
   } catch (_e) { }
-}
-
-function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
 }
 
 function shouldShowApple() {

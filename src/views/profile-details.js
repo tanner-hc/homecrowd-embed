@@ -5,6 +5,7 @@ import NavHeader from '../base-components/NavHeader.js';
 import MainButton from '../base-components/MainButton.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
+import { formatPhoneNumber } from '../contact-validation.js';
 
 var US_STATES = [
   'Alabama',
@@ -58,23 +59,6 @@ var US_STATES = [
   'Wisconsin',
   'Wyoming',
 ];
-
-function formatPhoneNumber(value) {
-  var phoneNumber = String(value || '').replace(/[^\d]/g, '');
-  if (phoneNumber.length === 0) return '';
-  if (phoneNumber.length <= 3) return phoneNumber;
-  if (phoneNumber.length <= 6) {
-    return '(' + phoneNumber.slice(0, 3) + ') ' + phoneNumber.slice(3);
-  }
-  return (
-    '(' +
-    phoneNumber.slice(0, 3) +
-    ') ' +
-    phoneNumber.slice(3, 6) +
-    '-' +
-    phoneNumber.slice(6, 10)
-  );
-}
 
 function pickProfileField(u, snake, camel) {
   if (!u || typeof u !== 'object') return '';
