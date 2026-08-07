@@ -759,7 +759,7 @@ async function loadRewards(container, routeEpoch) {
     if (linkBtn) {
       linkBtn.onclick = function (ev) {
         ev.stopPropagation();
-        window.location.hash = '#/cards';
+        window.location.hash = '#/cards/link-intro';
       };
     }
   } catch (err) {

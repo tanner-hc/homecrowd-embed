@@ -981,7 +981,7 @@ function bindDetailEvents(
   if (linkBtn) {
     linkBtn.addEventListener('click', function (e) {
       e.stopPropagation();
-      window.location.hash = '#/cards';
+      window.location.hash = '#/cards/link-intro';
     });
   }
 

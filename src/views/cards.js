@@ -101,11 +101,11 @@ async function loadCards(container) {
 
     html += '<div class="hc-cards-add-section">';
     html += '<div class="hc-cards-card-type-row">';
-    html += '<a href="#/cards/link" class="hc-cards-card-type-btn" aria-label="Add Visa card">';
+    html += '<a href="#/cards/link-intro?type=visa" class="hc-cards-card-type-btn" aria-label="Add Visa card">';
     html += '<img src="' + visaLogoUrl + '" alt="" class="hc-cards-card-type-logo hc-cards-card-type-logo--visa" />';
     html += '<span class="hc-cards-card-type-text">Add visa</span>';
     html += '</a>';
-    html += '<a href="#/cards/link" class="hc-cards-card-type-btn" aria-label="Add Mastercard">';
+    html += '<a href="#/cards/link-intro?type=mastercard" class="hc-cards-card-type-btn" aria-label="Add Mastercard">';
     html += '<img src="' + mastercardLogoUrl + '" alt="" class="hc-cards-card-type-logo hc-cards-card-type-logo--mastercard" />';
     html += '<span class="hc-cards-card-type-text">Add Mastercard</span>';
     html += '</a>';

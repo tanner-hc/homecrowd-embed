@@ -437,7 +437,7 @@ function mountLinkCardGate(container, user, status) {
   var pts = getSetupRewardPoints().linkCard;
   slot.innerHTML = buildLinkCardUnlockBarHtml({ points: pts });
   bindLinkCardUnlockBar(slot, function () {
-    navigate('/cards/link');
+    navigate('/cards/link-intro');
   });
 
   var dismissedKey = 'hc_link_card_modal_dismissed';
@@ -460,7 +460,7 @@ function mountLinkCardGate(container, user, status) {
         try {
           sessionStorage.setItem(dismissedKey, '1');
         } catch (_e2) { }
-        navigate('/cards/link');
+        navigate('/cards/link-intro');
       },
     },
     secondaryButton: {
@@ -667,7 +667,7 @@ function initStoresBannerAndSchoolName(container) {
           if (btn) {
             btn.addEventListener('click', function (e) {
               e.stopPropagation();
-              window.location.hash = '#/cards';
+              window.location.hash = '#/cards/link-intro';
             });
           }
         }

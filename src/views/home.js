@@ -624,7 +624,7 @@ function bindHomeInteractions(container, ctx) {
   if (unlockRoot) {
     bindUnlockSetupSection(unlockRoot, {
       onPressLinkCard: function () {
-        navigate('/cards/link');
+        navigate('/cards/link-intro');
       },
       onPressSafari: function () {
         navigate('/browser-extension');

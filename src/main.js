@@ -19,6 +19,7 @@ import { renderHome } from './views/home.js';
 import { renderRewards } from './views/rewards.js';
 import { renderCards } from './views/cards.js';
 import { renderLinkCards } from './views/link-cards.js';
+import { renderLinkCardIntro } from './views/link-card-intro.js';
 import { renderRewardDetail } from './views/reward-detail.js';
 import { resolveCardLinkStatus } from './cardLinkStatus.js';
 import { showDailyLoginBonusModal } from './daily-login-bonus.js';
@@ -846,6 +847,7 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
     pathOnly === '/profile' ||
     pathOnly === '/cards' ||
     pathOnly === '/cards/link' ||
+    pathOnly === '/cards/link-intro' ||
     pathOnly === '/account-settings' ||
     pathOnly === '/profile-details' ||
     pathOnly === '/notification-settings' ||
@@ -1274,6 +1276,10 @@ function render(route) {
 
   if (pathOnly === '/home') {
     renderHome(contentEl);
+  } else if (pathOnly === '/cards/link-intro') {
+    var introQ =
+      String(route).indexOf('?') >= 0 ? String(route).slice(String(route).indexOf('?') + 1) : '';
+    renderLinkCardIntro(contentEl, { query: introQ });
   } else if (pathOnly === '/cards/link') {
     renderLinkCards(contentEl);
   } else if (pathOnly === '/cards') {
@@ -1373,13 +1379,23 @@ function renderLayout(route) {
     pathOnly === '/offers' || pathOnly === '/offers/all-shops' || pathOnly === '/offers/map';
   var isMarketplacePage = pathOnly === '/offers';
   var isStoresMapPage = pathOnly === '/offers/map';
-  var hideBrandLockup = isTravelPage || isHomePage || isOffersPage;
-  var hideTabBar = isRewardDetailPage || isOfferDetailPage || isContentDetailPage || isPreviewPage;
+  var isLinkCardIntroPage = pathOnly === '/cards/link-intro';
+  var isAddCardPage = pathOnly === '/cards/link';
+  var hideBrandLockup =
+    isTravelPage || isHomePage || isOffersPage || isLinkCardIntroPage || isAddCardPage;
+  var hideTabBar =
+    isRewardDetailPage ||
+    isOfferDetailPage ||
+    isContentDetailPage ||
+    isPreviewPage ||
+    isLinkCardIntroPage ||
+    isAddCardPage;
   var flushTopContentClass =
     pathOnly === '/invite-friend' ||
     pathOnly === '/support' ||
     pathOnly === '/upload-receipt' ||
     pathOnly === '/cards/link' ||
+    pathOnly === '/cards/link-intro' ||
     isTravelPage ||
     isHomePage ||
     isOffersPage

@@ -14421,3 +14421,703 @@ html.hc-embed--no-school-brand .hc-login-card {
   width: auto !important;
 }
 
+
+/* Link Card Intro — "This never costs you anything" */
+.hc-lci-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.hc-lci-nav {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 16px 8px;
+  flex-shrink: 0;
+}
+
+.hc-lci-back {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: #000;
+}
+
+.hc-lci-back svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.hc-lci-logo {
+  width: 132px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.hc-lci-nav-spacer {
+  width: 36px;
+  height: 36px;
+}
+
+.hc-lci-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hc-lci-scroll-inner {
+  padding: 28px 16px 24px;
+  box-sizing: border-box;
+}
+
+.hc-lci-title {
+  margin: 0 0 12px;
+  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
+  font-weight: 700;
+  font-size: 58px;
+  line-height: 0.9;
+  letter-spacing: 0;
+  color: #000;
+  text-align: center;
+}
+
+.hc-lci-subtitle {
+  margin: 0 0 36px;
+  padding: 0 20px;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 18px;
+  color: #666;
+  text-align: center;
+}
+
+.hc-lci-steps-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  min-height: 306px;
+  padding-left: 12px;
+  box-sizing: border-box;
+}
+
+.hc-lci-rail {
+  width: 29px;
+  border-radius: 54px;
+  background: var(--hc-app-primary, #00c8ff);
+  padding: 22px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.hc-lci-icon-slot {
+  width: 29px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hc-lci-icon-slot--spaced {
+  margin-bottom: 66px;
+}
+
+.hc-lci-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  width: 16px;
+  height: 16px;
+}
+
+.hc-lci-icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  color: #fff;
+  fill: currentColor;
+}
+
+.hc-lci-steps-text {
+  flex: 1;
+  margin-left: 16px;
+  padding-top: 22px;
+  box-sizing: border-box;
+}
+
+.hc-lci-step {
+  min-height: 16px;
+  will-change: opacity, transform;
+}
+
+.hc-lci-step--spaced {
+  height: 82px;
+  overflow: visible;
+}
+
+.hc-lci-step-title {
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 16px;
+  color: #000;
+  margin-bottom: 6px;
+}
+
+.hc-lci-step-desc {
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 14px;
+  color: #666;
+}
+
+.hc-lci-footer {
+  flex-shrink: 0;
+  padding: 12px 24px 16px;
+  background: #fff;
+  will-change: opacity, transform;
+}
+
+.hc-lci-cta {
+  display: flex;
+  width: 100%;
+  height: 53px;
+  border: none;
+  border-radius: 100px;
+  background: var(--hc-app-primary, #00c8ff);
+  color: #000;
+  font-family: 'Baikal-Bold', var(--hc-font);
+  font-size: 16px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-lci-cta:active {
+  opacity: 0.85;
+}
+
+/* Add card (LinkCardsScreen 1:1) */
+.hc-add-card-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: #fff;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.hc-add-card-page--success {
+  min-height: 100%;
+}
+
+.hc-add-card-nav {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 16px 8px;
+  flex-shrink: 0;
+}
+
+.hc-add-card-back {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  background: #f0f0f0;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  color: #666;
+}
+
+.hc-add-card-back svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.hc-add-card-logo {
+  width: 132px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.hc-add-card-nav-spacer {
+  width: 36px;
+  height: 36px;
+}
+
+.hc-add-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.hc-add-card-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 20px 24px;
+  box-sizing: border-box;
+}
+
+.hc-add-card-title {
+  margin: 0 0 8px;
+  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
+  font-weight: 700;
+  font-size: 36px;
+  line-height: 0.9;
+  color: #000;
+}
+
+.hc-add-card-subtitle {
+  margin: 0 0 24px;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-size: 15px;
+  line-height: 20px;
+  color: #666;
+}
+
+.hc-add-card-form {
+  margin: 0;
+}
+
+.hc-add-card-field {
+  margin-bottom: 16px;
+}
+
+.hc-add-card-field--half {
+  flex: 1;
+  min-width: 0;
+}
+
+.hc-add-card-label {
+  display: block;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  font-size: 14px;
+  color: #000;
+  margin-bottom: 8px;
+}
+
+.hc-add-card-input-wrap {
+  height: 52px;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  padding: 0 14px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.hc-add-card-input {
+  flex-grow: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-size: 15px;
+  line-height: 18px;
+  color: #000;
+  padding: 0;
+  height: 100%;
+}
+
+.hc-add-card-input--flex {
+  flex: 1;
+}
+
+.hc-add-card-input::placeholder {
+  color: #c0c0c0;
+}
+
+.hc-add-card-card-icon {
+  width: 24px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.hc-add-card-camera {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-add-card-camera img {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+.hc-add-card-row {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+}
+
+.hc-add-card-legal {
+  margin: 8px 0 0;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-size: 12px;
+  line-height: 16px;
+  color: #666;
+}
+
+.hc-add-card-legal-link {
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--hc-app-primary, #00c8ff);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.hc-add-card-footer {
+  flex-shrink: 0;
+  padding: 8px 16px 12px;
+  background: #fff;
+}
+
+.hc-add-card-cta {
+  display: flex;
+  width: 100%;
+  height: 53px;
+  border: none;
+  border-radius: 100px;
+  background: var(--hc-app-primary, #00c8ff);
+  color: #000;
+  font-family: 'Baikal-Bold', var(--hc-font);
+  font-size: 16px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-add-card-cta:active {
+  opacity: 0.85;
+}
+
+.hc-add-card-cta--disabled,
+.hc-add-card-cta:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.hc-add-card-cta-spinner,
+.hc-add-card-overlay-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  border-top-color: #000;
+  animation: hc-add-card-spin 0.85s linear infinite;
+  box-sizing: border-box;
+}
+
+.hc-add-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.hc-add-card-overlay[hidden] {
+  display: none !important;
+}
+
+.hc-add-card-overlay-box {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.hc-add-card-overlay-text {
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-size: 14px;
+  color: #666;
+}
+
+@keyframes hc-add-card-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.hc-add-card-scan-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #003355;
+}
+
+.hc-add-card-scan-icon svg {
+  width: 28px;
+  height: 20px;
+  display: block;
+}
+
+.hc-add-card-success {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+.hc-add-card-success-toast {
+  margin-top: 8px;
+  min-height: 0;
+}
+
+.hc-add-card-success-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px 40px;
+  box-sizing: border-box;
+}
+
+.hc-add-card-success-logo-stage {
+  position: relative;
+  width: 280px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.hc-add-card-success-logo-wrap {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hc-add-card-success-logo {
+  width: 148px;
+  height: 94px;
+  object-fit: contain;
+}
+
+.hc-add-card-success-confetti {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.hc-add-card-success-confetti svg {
+  width: 320px;
+  height: 320px;
+}
+
+.hc-add-card-success-title {
+  margin: 0 0 12px;
+  padding-top: 4px;
+  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
+  font-size: 48px;
+  line-height: 48px;
+  color: #000;
+  text-align: center;
+}
+
+.hc-add-card-success-subtitle {
+  margin: 0;
+  padding: 0 8px;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-size: 16px;
+  line-height: 22px;
+  color: #9a9a9a;
+  text-align: center;
+}
+
+.hc-add-card-success-actions {
+  padding-top: 8px;
+  padding-bottom: 12px;
+}
+
+/* Card scanner fullscreen (LinkCardsScreen modal) */
+.hc-card-scanner {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+
+.hc-card-scanner-camera {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+  background: #000;
+}
+
+.hc-card-scanner-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(1);
+}
+
+.hc-card-scanner-frame {
+  position: absolute;
+  left: 7%;
+  right: 7%;
+  top: 22%;
+  height: 0;
+  padding-bottom: 54%;
+  border: 2px solid #fff;
+  border-radius: 16px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.hc-card-scanner-hint {
+  position: absolute;
+  top: 14%;
+  left: 24px;
+  right: 24px;
+  text-align: center;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 16px;
+  line-height: 22px;
+  color: #fff;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.hc-card-scanner-status {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 18px;
+  text-align: center;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-size: 13px;
+  line-height: 18px;
+  color: rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.hc-card-scanner-sheet {
+  flex-shrink: 0;
+  background: #fff;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  padding: 28px 22px 16px;
+  box-sizing: border-box;
+}
+
+.hc-card-scanner-sheet-title {
+  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
+  font-size: 36px;
+  line-height: 36px;
+  color: #000;
+  text-align: center;
+  margin: 0 0 10px;
+  padding-top: 4px;
+}
+
+.hc-card-scanner-sheet-subtitle {
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-size: 14px;
+  line-height: 18px;
+  color: #9a9a9a;
+  text-align: center;
+  margin: 0 0 22px;
+}
+
+.hc-card-scanner-manual {
+  display: flex;
+  width: 100%;
+  height: 53px;
+  border-radius: 100px;
+  border: 1.5px solid var(--hc-app-primary, #00c8ff);
+  background: #fff;
+  color: #000;
+  font-family: 'Baikal-Bold', var(--hc-font);
+  font-size: 16px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-card-scanner-manual:active {
+  opacity: 0.85;
+}
+
+.hc-card-scanner-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hc-card-scanner-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
