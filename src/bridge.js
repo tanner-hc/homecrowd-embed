@@ -120,6 +120,13 @@ export function postToNative(type, payload) {
 export function onNativeMessage(type, fn) {
   if (!listeners[type]) listeners[type] = [];
   listeners[type].push(fn);
+  return function unsubscribe() {
+    var list = listeners[type];
+    if (!list) return;
+    listeners[type] = list.filter(function (item) {
+      return item !== fn;
+    });
+  };
 }
 
 export function requestNativeExtensionEnabled() {

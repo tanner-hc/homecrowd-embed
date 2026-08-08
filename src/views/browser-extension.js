@@ -1,6 +1,6 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
-import { postToNative } from '../bridge.js';
+import { postToNative, onNativeMessage, requestNativeExtensionEnabled } from '../bridge.js';
 import NavHeader from '../base-components/NavHeader.js';
 import ScreenTitle from '../base-components/ScreenTitle.js';
 import MainButton from '../base-components/MainButton.js';
@@ -10,12 +10,27 @@ import PointsPerDollarBanner from '../base-components/PointsPerDollarBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { renderPointMultiplierBadgeHtml } from '../pointMultiplier.js';
 import { showError } from '../base-components/toastApi.js';
+import { showPointsEarnedToast } from '../base-components/PointsEarnedToast.js';
 import extensionBodyImg from '../assets/images/extension-body.png';
 import safariThinUrl from '../assets/icons/safari-thin.png';
 import offerThinUrl from '../assets/icons/offer-thin.png';
 import safariIconRaw from '../assets/icons/safari.svg?raw';
-import { userExtensionEnabled, syncExtensionEnabledFromNative } from '../extension-status.js';
-import { syncSetupTaskRewards } from '../setup-rewards.js';
+import bagSvg from '../assets/icons/bag.svg?raw';
+import chevronLeftSvg from '../assets/icons/chevron-left.svg?raw';
+import safariBgUrl from '../assets/link_card/background.png';
+import presentIconUrl from '../assets/link_card/present.png';
+import hcIconUrl from '../assets/logos/icon.png';
+import {
+  userExtensionEnabled,
+  syncExtensionEnabledFromNative,
+  markUserExtensionEnabled,
+  extensionFlagTrue,
+} from '../extension-status.js';
+import {
+  syncSetupTaskRewards,
+  claimSetupTaskReward,
+  getSetupRewardPoints,
+} from '../setup-rewards.js';
 
 var EXTENSION_URL = 'https://app.gethomecrowd.com/extension-download/';
 
@@ -311,29 +326,223 @@ export async function mountBrowserExtensionInline(panelEl) {
   populatePopularOffers(popularEl);
 }
 
-export function renderBrowserExtension(container) {
-  container.innerHTML = LoadingSpinner({ text: 'Loading...' });
-  loadBrowserExtension(container);
+var SAFARI_POINTS_AWARDED_KEY = 'hc_setup_points_awarded_safariExtension';
+
+function resolveSafariRewardPoints(result) {
+  if (result && result.awarded && Number(result.points) > 0) {
+    return Number(result.points);
+  }
+  var fromResult =
+    Number(
+      (result && result.rewards && (result.rewards.safari_extension != null
+        ? result.rewards.safari_extension
+        : result.rewards.safariExtension)) ||
+        0
+    ) || 0;
+  if (fromResult > 0) return fromResult;
+  return Number(getSetupRewardPoints().safariExtension) || 0;
 }
 
-async function loadBrowserExtension(container) {
-  var embedUser;
+function openExtensionDownloadUrl() {
+  try {
+    postToNative('homecrowd:open-url', { url: EXTENSION_URL });
+  } catch (_e) {}
+  var child = null;
+  try {
+    child = window.open(EXTENSION_URL, '_blank', 'noopener,noreferrer');
+    if (child) {
+      try {
+        child.opener = null;
+      } catch (_op) {}
+    }
+  } catch (_wo) {}
+  if (!child && window.top && window.top !== window) {
+    try {
+      child = window.top.open(EXTENSION_URL, '_blank', 'noopener,noreferrer');
+      if (child) {
+        try {
+          child.opener = null;
+        } catch (_op2) {}
+      }
+    } catch (_wt) {}
+  }
+  if (!child) {
+    var a = document.createElement('a');
+    a.href = EXTENSION_URL;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+}
+
+function renderSafariSuccess(container, earnedPoints) {
+  var toastApi = null;
+  container.innerHTML =
+    '<div class="hc-safari-on hc-safari-on--success">' +
+    '<div class="hc-safari-on-success">' +
+    '<div class="hc-safari-on-success-toast" id="hc-safari-on-toast"></div>' +
+    '<div class="hc-safari-on-success-content">' +
+    '<img src="' +
+    escapeAttr(hcIconUrl) +
+    '" alt="" class="hc-safari-on-success-logo" data-safari-success-logo />' +
+    '<h1 class="hc-safari-on-success-title" data-safari-success-title>You\'re<br>Earning on<br>Safari</h1>' +
+    '<p class="hc-safari-on-success-subtitle" data-safari-success-subtitle>' +
+    'Your eligible everyday purchases will now earn points for your school.' +
+    '</p>' +
+    '</div>' +
+    '<div class="hc-safari-on-success-actions" data-safari-success-actions>' +
+    '<button type="button" class="hc-safari-on-cta" id="hc-safari-on-home">Go to Dashboard</button>' +
+    '</div>' +
+    '</div>' +
+    '</div>';
+
+  var toastWrap = container.querySelector('#hc-safari-on-toast');
+  if (earnedPoints && toastWrap) {
+    toastApi = showPointsEarnedToast(toastWrap, {
+      points: earnedPoints,
+      duration: 10000,
+      onHide: function () {
+        toastApi = null;
+      },
+    });
+  }
+
+  var homeBtn = container.querySelector('#hc-safari-on-home');
+  if (homeBtn) {
+    homeBtn.addEventListener('click', function () {
+      navigate('/home');
+    });
+  }
+
+  return function cleanup() {
+    if (toastApi && typeof toastApi.hide === 'function') toastApi.hide();
+  };
+}
+
+function renderSafariPrompt(container, onContinue) {
+  container.innerHTML =
+    '<div class="hc-safari-on hc-safari-on--prompt">' +
+    '<div class="hc-safari-on-bg" style="background-image:url(' +
+    escapeAttr(safariBgUrl) +
+    ')"></div>' +
+    '<div class="hc-safari-on-inner">' +
+    '<div class="hc-safari-on-nav">' +
+    '<button type="button" class="hc-safari-on-back" id="hc-safari-on-back" aria-label="Back">' +
+    chevronLeftSvg +
+    '</button>' +
+    '<div class="hc-safari-on-logo">HOMECROWD</div>' +
+    '<div class="hc-safari-on-nav-spacer" aria-hidden="true"></div>' +
+    '</div>' +
+    '<div class="hc-safari-on-bottom">' +
+    '<div class="hc-safari-on-card">' +
+    '<h1 class="hc-safari-on-title">Turn on HomeCrowd in Safari</h1>' +
+    '<p class="hc-safari-on-subtitle">' +
+    'Earn points for your school when you make qualifying purchases in Safari.' +
+    '</p>' +
+    '<div class="hc-safari-on-features">' +
+    '<div class="hc-safari-on-feature">' +
+    '<img src="' +
+    escapeAttr(presentIconUrl) +
+    '" alt="" class="hc-safari-on-feature-icon" width="28" height="28" />' +
+    '<div class="hc-safari-on-feature-text">' +
+    '<div class="hc-safari-on-feature-title">Earn in the background</div>' +
+    '<div class="hc-safari-on-feature-desc">Eligible Safari purchases add points for your school.</div>' +
+    '</div></div>' +
+    '<div class="hc-safari-on-feature">' +
+    '<span class="hc-safari-on-feature-icon-wrap" aria-hidden="true">' +
+    bagSvg +
+    '</span>' +
+    '<div class="hc-safari-on-feature-text">' +
+    '<div class="hc-safari-on-feature-title">Shop as usual</div>' +
+    '<div class="hc-safari-on-feature-desc">Keep shopping in Safari the way you already do.</div>' +
+    '</div></div>' +
+    '</div>' +
+    '<button type="button" class="hc-safari-on-cta" id="hc-safari-on-continue">Continue</button>' +
+    '</div></div></div></div>';
+
+  var backBtn = container.querySelector('#hc-safari-on-back');
+  if (backBtn) {
+    backBtn.addEventListener('click', function () {
+      if (window.history.length > 1) {
+        window.history.back();
+        return;
+      }
+      navigate('/profile');
+    });
+  }
+
+  var continueBtn = container.querySelector('#hc-safari-on-continue');
+  if (continueBtn) {
+    continueBtn.addEventListener('click', function () {
+      openExtensionDownloadUrl();
+      if (typeof onContinue === 'function') onContinue();
+    });
+  }
+}
+
+async function maybeClaimSafariReward() {
+  var awardedPoints = null;
+  try {
+    var already = null;
+    try {
+      already = localStorage.getItem(SAFARI_POINTS_AWARDED_KEY);
+    } catch (_ls) {}
+    if (already === '1') return null;
+
+    try {
+      localStorage.setItem(SAFARI_POINTS_AWARDED_KEY, 'pending');
+    } catch (_ls2) {}
+
+    var result = await claimSetupTaskReward('safariExtension');
+    var points = resolveSafariRewardPoints(result);
+    if (result && (result.awarded || result.already_claimed || result.alreadyClaimed)) {
+      try {
+        localStorage.setItem(SAFARI_POINTS_AWARDED_KEY, '1');
+      } catch (_ls3) {}
+      if (points > 0) awardedPoints = points;
+    } else {
+      try {
+        localStorage.removeItem(SAFARI_POINTS_AWARDED_KEY);
+      } catch (_ls4) {}
+    }
+  } catch (_claimErr) {
+    try {
+      localStorage.removeItem(SAFARI_POINTS_AWARDED_KEY);
+    } catch (_ls5) {}
+  }
+  return awardedPoints;
+}
+
+async function checkExtensionConnected() {
+  var embedUser = null;
   try {
     embedUser = await api.fetchCurrentUser();
-  } catch (err) {
-    container.innerHTML =
-      '<div class="hc-alert-error">' + escapeHtml(err.message || 'Failed to load') + '</div>';
-    return;
+  } catch (_e) {
+    embedUser = null;
   }
 
   try {
     embedUser = (await syncExtensionEnabledFromNative(embedUser)) || embedUser;
   } catch (_extSync) {}
 
+  if (!extensionFlagTrue(embedUser)) {
+    try {
+      var nativeEnabled = await requestNativeExtensionEnabled();
+      if (nativeEnabled === true && embedUser) {
+        try {
+          await api.updateUserProfile({ is_extension_enabled: true });
+        } catch (_upd) {}
+        embedUser = markUserExtensionEnabled(embedUser);
+      }
+    } catch (_native) {}
+  }
+
   var profileUser = null;
   try {
     profileUser = await api.getUserProfile();
-  } catch (_e) {
+  } catch (_e2) {
     profileUser = null;
   }
 
@@ -344,32 +553,174 @@ async function loadBrowserExtension(container) {
     syncResult = null;
   }
 
-  var enabled = userExtensionEnabled(embedUser, profileUser, syncResult);
-  var html = '';
-  html += '<div class="hc-browser-extension">';
-  html += '<div class="hc-account-settings-nav">';
-  html += NavHeader({
-    title: 'Browser Extension',
-    backButtonId: 'hc-be-back',
+  return {
+    enabled: userExtensionEnabled(embedUser, profileUser, syncResult),
+    embedUser: embedUser,
+    profileUser: profileUser,
+    syncResult: syncResult,
+  };
+}
+
+var activeSafariScreenCleanup = null;
+
+export function renderBrowserExtension(container) {
+  if (typeof activeSafariScreenCleanup === 'function') {
+    try {
+      activeSafariScreenCleanup();
+    } catch (_e) {}
+    activeSafariScreenCleanup = null;
+  }
+  container.innerHTML = LoadingSpinner({ text: 'Loading...' });
+  Promise.resolve(loadBrowserExtension(container)).then(function (cleanup) {
+    if (typeof cleanup === 'function') {
+      activeSafariScreenCleanup = cleanup;
+    }
   });
-  html += '</div>';
-  html += '<div class="hc-be-body">';
-  html += buildExtensionHeaderHtml();
-  html += buildExtensionContentHtml(enabled, 'hc-be-install');
-  html += '</div>';
-  html += '</div>';
+}
 
-  container.innerHTML = html;
+async function loadBrowserExtension(container) {
+  var shownSuccess = false;
+  var successCleanup = null;
+  var pollTimer = 0;
+  var watching = false;
+  var claimInFlight = false;
+  var disposed = false;
+  var unsubscribers = [];
 
-  var backBtn = document.getElementById('hc-be-back');
-  if (backBtn) {
-    backBtn.addEventListener('click', function () {
-      navigate('/profile');
+  function cleanupWatchers() {
+    disposed = true;
+    watching = false;
+    window.clearTimeout(pollTimer);
+    pollTimer = 0;
+    unsubscribers.forEach(function (fn) {
+      try {
+        fn();
+      } catch (_e) {}
+    });
+    unsubscribers = [];
+    if (typeof successCleanup === 'function') {
+      successCleanup();
+      successCleanup = null;
+    }
+  }
+
+  async function showSuccessIfNeeded() {
+    if (disposed || shownSuccess || !container.isConnected) return false;
+    if (claimInFlight) return false;
+    claimInFlight = true;
+    try {
+      var status = await checkExtensionConnected();
+      if (disposed || !container.isConnected) return false;
+      if (!status.enabled) return false;
+
+      shownSuccess = true;
+      watching = false;
+      window.clearTimeout(pollTimer);
+      var points = await maybeClaimSafariReward();
+      if (disposed || !container.isConnected) return false;
+      successCleanup = renderSafariSuccess(container, points);
+      return true;
+    } finally {
+      claimInFlight = false;
+    }
+  }
+
+  function schedulePoll(delayMs) {
+    window.clearTimeout(pollTimer);
+    if (disposed || shownSuccess || !watching) return;
+    pollTimer = window.setTimeout(async function () {
+      if (disposed || shownSuccess || !watching) return;
+      var showed = await showSuccessIfNeeded();
+      if (!showed && watching && !disposed) {
+        schedulePoll(2500);
+      }
+    }, delayMs);
+  }
+
+  function startWatching(aggressive) {
+    if (shownSuccess || disposed) return;
+    watching = true;
+    schedulePoll(aggressive ? 800 : 2000);
+  }
+
+  function onVisibility() {
+    if (disposed || shownSuccess) return;
+    if (document.visibilityState === 'visible') {
+      showSuccessIfNeeded().then(function (showed) {
+        if (!showed) startWatching(true);
+      });
+    }
+  }
+
+  function onWindowFocus() {
+    if (disposed || shownSuccess) return;
+    showSuccessIfNeeded().then(function (showed) {
+      if (!showed) startWatching(true);
     });
   }
 
-  bindExtensionInstallButton(document.getElementById('hc-be-install'));
-  var popularEl = container.querySelector('.hc-be-popular');
-  bindPopularOffers(popularEl);
-  populatePopularOffers(popularEl);
+  function onPageshow() {
+    if (disposed || shownSuccess) return;
+    showSuccessIfNeeded();
+  }
+
+  document.addEventListener('visibilitychange', onVisibility);
+  window.addEventListener('focus', onWindowFocus);
+  window.addEventListener('pageshow', onPageshow);
+  unsubscribers.push(function () {
+    document.removeEventListener('visibilitychange', onVisibility);
+  });
+  unsubscribers.push(function () {
+    window.removeEventListener('focus', onWindowFocus);
+  });
+  unsubscribers.push(function () {
+    window.removeEventListener('pageshow', onPageshow);
+  });
+
+  var stopNative = onNativeMessage('homecrowd:extension-status', function (payload) {
+    if (disposed || shownSuccess) return;
+    var enabled =
+      payload === true ||
+      (payload &&
+        (payload.enabled === true ||
+          payload.isEnabled === true ||
+          payload.is_extension_enabled === true));
+    if (!enabled) return;
+    showSuccessIfNeeded();
+  });
+  if (typeof stopNative === 'function') {
+    unsubscribers.push(stopNative);
+  }
+
+  container.addEventListener(
+    'hc:teardown',
+    function () {
+      cleanupWatchers();
+    },
+    { once: true }
+  );
+
+  var initial = await checkExtensionConnected();
+  if (!container.isConnected) {
+    cleanupWatchers();
+    return;
+  }
+
+  if (initial.enabled) {
+    shownSuccess = true;
+    var points = await maybeClaimSafariReward();
+    if (!container.isConnected) {
+      cleanupWatchers();
+      return;
+    }
+    successCleanup = renderSafariSuccess(container, points);
+    return;
+  }
+
+  renderSafariPrompt(container, function () {
+    startWatching(true);
+  });
+  startWatching(false);
+
+  return cleanupWatchers;
 }

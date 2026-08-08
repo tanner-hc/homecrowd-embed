@@ -2,13 +2,12 @@ import { escapeHtml } from '../../base-components/html.js';
 import checkmarkSvg from '../../assets/icons/checkmark.svg?raw';
 import { getDefaultSetupRewardPoints } from '../../setup-rewards.js';
 
-var STEPS = [
+var BASE_STEPS = [
   {
     key: 'profile',
     label: 'Create your profile',
     doneLabel: 'Profile created',
     pointsKey: 'profile',
-    number: 1,
     description: null,
     cta: null,
   },
@@ -17,7 +16,6 @@ var STEPS = [
     label: 'Activate Card Earning',
     doneLabel: 'Card Earning activated',
     pointsKey: 'linkCard',
-    number: 2,
     description: 'Takes about a minute. Your card number is never stored.',
     cta: 'Link my card',
   },
@@ -26,30 +24,43 @@ var STEPS = [
     label: 'Activate Safari Spending',
     doneLabel: 'Safari Spending activated',
     pointsKey: 'safariExtension',
-    number: 3,
     description: 'Takes about a minute. Earn points when you shop online.',
     cta: 'Activate',
   },
 ];
+
+function getSetupSteps(includeSafari) {
+  var steps = includeSafari
+    ? BASE_STEPS.slice()
+    : BASE_STEPS.filter(function (step) {
+        return step.key !== 'safariExtension';
+      });
+  return steps.map(function (step, index) {
+    return Object.assign({}, step, { number: index + 1 });
+  });
+}
 
 /**
  * @param {{
  *   profileDone?: boolean,
  *   linkCardDone?: boolean,
  *   safariDone?: boolean,
+ *   includeSafari?: boolean,
  *   rewardPoints?: { profile?: number, linkCard?: number, safariExtension?: number },
  * }} props
  */
 export function buildUnlockSetupSectionHtml(props) {
   props = props || {};
+  var includeSafari = props.includeSafari !== false;
   var points = props.rewardPoints || getDefaultSetupRewardPoints();
   var doneMap = {
     profile: props.profileDone !== false,
     linkCard: !!props.linkCardDone,
     safariExtension: !!props.safariDone,
   };
+  var steps = getSetupSteps(includeSafari);
 
-  var stepsHtml = STEPS.map(function (step) {
+  var stepsHtml = steps.map(function (step) {
     var done = !!doneMap[step.key];
     var stepPoints = points[step.pointsKey] != null ? points[step.pointsKey] : 0;
     var canExpand = !done && (step.key === 'linkCard' || step.key === 'safariExtension');

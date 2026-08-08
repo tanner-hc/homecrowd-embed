@@ -898,7 +898,7 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
     '">' +
     '<span class="hc-tab-icon-wrap">' +
     tabSvgInline(bagSvg) +
-    '</span><span class="hc-tab-label">Offers</span></a>';
+    '</span><span class="hc-tab-label">Shop</span></a>';
 
   if (contentTabEnabled) {
     html +=
@@ -1426,6 +1426,7 @@ function renderLayout(route) {
   var isStoresMapPage = pathOnly === '/offers/map';
   var isLinkCardIntroPage = pathOnly === '/cards/link-intro';
   var isAddCardPage = pathOnly === '/cards/link';
+  var isSafariOnPage = pathOnly === '/browser-extension';
   // Rewards now renders its own AppHeader, so the shell's lockup would sit
   // above it as a second header.
   var isRewardsPage = pathOnly === '/rewards';
@@ -1436,20 +1437,23 @@ function renderLayout(route) {
     isRewardsPage ||
     isPrizeDetailPage ||
     isLinkCardIntroPage ||
-    isAddCardPage;
+    isAddCardPage ||
+    isSafariOnPage;
   var hideTabBar =
     (isRewardDetailPage && !isPrizeDetailPage) ||
     isOfferDetailPage ||
     isContentDetailPage ||
     isPreviewPage ||
     isLinkCardIntroPage ||
-    isAddCardPage;
+    isAddCardPage ||
+    isSafariOnPage;
   var flushTopContentClass =
     pathOnly === '/invite-friend' ||
     pathOnly === '/support' ||
     pathOnly === '/upload-receipt' ||
     pathOnly === '/cards/link' ||
     pathOnly === '/cards/link-intro' ||
+    pathOnly === '/browser-extension' ||
     isTravelPage ||
     isHomePage ||
     isOffersPage ||
@@ -1469,6 +1473,7 @@ function renderLayout(route) {
     (isTravelPage ? ' hc-content--travel' : '') +
     (isMarketplacePage || isStoresMapPage ? ' hc-content--marketplace' : '') +
     (isStoresMapPage ? ' hc-content--stores-map' : '') +
+    (isSafariOnPage ? ' hc-content--safari-on' : '') +
     (hideTabBar ? '' : ' hc-content--with-tab-bar') +
     flushTopContentClass +
     '">\

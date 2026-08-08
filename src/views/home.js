@@ -19,6 +19,7 @@ import {
   getSetupRewardPoints,
   syncSetupTaskRewards,
 } from '../setup-rewards.js';
+import { isIOS } from '../platform.js';
 import { buildWelcomeSectionHtml } from '../components/Dashboard/WelcomeSection.js';
 import {
   buildUnlockSetupSectionHtml,
@@ -335,11 +336,12 @@ function buildHomeHtml(ctx) {
   var userTier = ctx.userTier;
   var showUnlockSetup = ctx.showUnlockSetup;
   var showSetupComplete = ctx.showSetupComplete;
+  var includeSafariSetup = ctx.includeSafariSetup !== false;
   var setupRewardPoints = ctx.setupRewardPoints || getSetupRewardPoints();
   var setupCompletePoints =
     (Number(setupRewardPoints.profile) || 0) +
     (Number(setupRewardPoints.linkCard) || 0) +
-    (Number(setupRewardPoints.safariExtension) || 0);
+    (includeSafariSetup ? Number(setupRewardPoints.safariExtension) || 0 : 0);
 
   var lifetimePts =
     pickLifetimePoints(user) ||
@@ -363,6 +365,7 @@ function buildHomeHtml(ctx) {
       profileDone: true,
       linkCardDone: ctx.linkCardDone,
       safariDone: ctx.safariDone,
+      includeSafari: includeSafariSetup,
       rewardPoints: setupRewardPoints,
     });
   } else if (showSetupComplete) {
@@ -514,7 +517,10 @@ async function fetchDashboardPayload() {
 
   var cards = normalizeCards(cardsData);
   var hasLinkedCard = userHasLinkedCard(latestUser, profileUser, cards, syncResult);
-  var hasSafari = userExtensionEnabled(latestUser, profileUser, syncResult);
+  var includeSafariSetup = isIOS();
+  var hasSafari = includeSafariSetup
+    ? userExtensionEnabled(latestUser, profileUser, syncResult)
+    : true;
 
   var showUnlockSetup = !hasLinkedCard || !hasSafari;
   var showSetupComplete = resolveShowSetupComplete(
@@ -560,6 +566,7 @@ async function fetchDashboardPayload() {
     userTier: pickUserTier(latestUser),
     linkCardDone: hasLinkedCard,
     safariDone: hasSafari,
+    includeSafariSetup: includeSafariSetup,
     showUnlockSetup: showUnlockSetup,
     showSetupComplete: showSetupComplete,
     setupRewardPoints: setupRewardPoints,
