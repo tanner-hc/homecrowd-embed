@@ -4,13 +4,27 @@ if (import.meta.env.DEV) {
 import * as api from './api.js';
 import * as analytics from './analytics.js';
 import { postToNative, onNativeMessage } from './bridge.js';
+import { syncExtensionEnabledFromNative, extensionFlagTrue } from './extension-status.js';
 import { navigate, getRoute, onRouteChange, startRouter, nextNavEpoch } from './router.js';
-import { applyBrandConfig, clearBrandConfig, renderBrandLockup } from './brand.js';
+import {
+  applyBrandConfig,
+  clearBrandConfig,
+  hasCustomHeaderLogo,
+  renderBrandLockup,
+} from './brand.js';
 import { renderLogin } from './views/login.js';
+import { renderGetStarted } from './views/get-started.js';
+import { renderFindYourSchool } from './views/find-your-school.js';
+import { renderYoureIn } from './views/youre-in.js';
+import { renderCreateAccount } from './views/create-account.js';
+import { renderEnterFullName } from './views/enter-full-name.js';
+import { renderEnterPassword } from './views/enter-password.js';
+import { renderAccountCreated } from './views/account-created.js';
 import { renderHome } from './views/home.js';
 import { renderRewards } from './views/rewards.js';
 import { renderCards } from './views/cards.js';
 import { renderLinkCards } from './views/link-cards.js';
+import { renderLinkCardIntro } from './views/link-card-intro.js';
 import { renderRewardDetail } from './views/reward-detail.js';
 import { resolveCardLinkStatus } from './cardLinkStatus.js';
 import { showDailyLoginBonusModal } from './daily-login-bonus.js';
@@ -19,10 +33,13 @@ import {
   buildWeeklyRewardContext,
   leaderboardContextToEmbedProduct,
 } from './weekly-reward.js';
-import { renderOffers } from './views/offers.js';
+import { renderOffers, renderStoresMap } from './views/offers.js';
+import { renderAllShops } from './views/all-shops.js';
 import { renderOfferDetail } from './views/offer-detail.js';
 import { renderRedemptionConfirmation } from './views/redemption-confirmation.js';
 import { renderRedemptionThanks, finalizeStripeThanksReturn } from './views/redemption-thanks.js';
+import { renderFirstRewardRedemption } from './views/first-reward-redemption.js';
+import { renderFirstRewardDetail } from './views/first-reward-detail.js';
 import { renderProfile } from './views/profile.js';
 import { renderContent } from './views/content.js';
 import { renderContentDetail } from './views/content-detail.js';
@@ -46,8 +63,9 @@ import { preloadMapKitForEmbed } from './mapkit-embed.js';
 import houseFilledSvg from './assets/icons/house-filled.svg?raw';
 import giftFilledSvg from './assets/icons/gift-filled.svg?raw';
 import bagSvg from './assets/icons/bag.svg?raw';
+
+import planeSvg from './assets/icons/plane-filled.svg?raw';
 import playFilledSvg from './assets/icons/play-filled.svg?raw';
-import personSvg from './assets/icons/person.svg?raw';
 
 var appEl = document.getElementById('app');
 var user = null;
@@ -127,6 +145,29 @@ async function applySchoolConfig(nextSchoolId) {
   clearBrandConfig();
 }
 
+/**
+ * Brand config normally arrives with the host-supplied schoolId. A session
+ * opened without one (direct link, local dev) leaves it empty, so school embed
+ * appearance never applies even though the user's school has one. Backfill it
+ * from the authenticated user. Deliberately does not touch the module-level
+ * `schoolId`, which drives the partner/login flows.
+ *
+ * @returns {Promise<boolean>} whether a school logo became available
+ */
+async function ensureBrandConfigForUser(currentUser) {
+  if (hasCustomHeaderLogo()) return false;
+  var school = currentUser && (currentUser.active_school || currentUser.activeSchool);
+  var activeSchoolId = school && school.id;
+  if (!activeSchoolId) return false;
+  try {
+    var config = await api.fetchSchoolConfig(activeSchoolId);
+    applyBrandConfig(config, activeSchoolId);
+  } catch (_e) {
+    return false;
+  }
+  return hasCustomHeaderLogo();
+}
+
 function readPendingPasswordLink() {
   try {
     var raw = window.sessionStorage.getItem(pendingPasswordLinkStorageKey);
@@ -197,7 +238,13 @@ function completeLoginState(nextUser, tokenUsed) {
   postToNative('homecrowd:login', { user: nextUser });
   preloadMapKitForEmbed();
   scheduleDailyVisitCheck();
+  scheduleExtensionStatusSync();
   refreshProfileUserForTabs();
+  // Logging in can be the first point a school is known, so pick up its brand
+  // config here too and repaint only if that actually changed the lockup.
+  ensureBrandConfigForUser(nextUser).then(function (applied) {
+    if (applied) render(getRoute());
+  });
 }
 
 function startSchoolEmailConfirmationPolling(confirmationId) {
@@ -275,6 +322,7 @@ async function applyAutologinToken(token, view, nextSchoolId) {
     postToNative('homecrowd:login', { user: user });
     preloadMapKitForEmbed();
     scheduleDailyVisitCheck();
+    scheduleExtensionStatusSync();
     navigate('/' + (view || initialView));
     return true;
   } catch (e) {
@@ -610,18 +658,36 @@ function scheduleDailyVisitCheck() {
   }, 2000);
 }
 
+function scheduleExtensionStatusSync() {
+  window.setTimeout(function () {
+    syncExtensionFlagIfNeeded();
+  }, 500);
+}
+
+async function syncExtensionFlagIfNeeded() {
+  if (!user || !api.isAuthenticated()) return;
+  try {
+    var next = await syncExtensionEnabledFromNative(user);
+    if (next && extensionFlagTrue(next)) {
+      user = next;
+    }
+  } catch (_e) {}
+}
+
 function setupDailyVisitForegroundCheck() {
   dailyVisitForegroundReady = true;
   document.addEventListener('visibilitychange', function () {
     console.log('🎯 [embed] visibilitychange:', document.visibilityState);
     if (document.visibilityState === 'visible' && user && dailyVisitForegroundReady) {
       checkDailyVisit();
+      syncExtensionFlagIfNeeded();
     }
   });
   window.addEventListener('focus', function () {
     console.log('🎯 [embed] window focus');
     if (user && dailyVisitForegroundReady) {
       checkDailyVisit();
+      syncExtensionFlagIfNeeded();
     }
   });
 }
@@ -647,9 +713,11 @@ async function init() {
   } else if (api.isAuthenticated()) {
     try {
       user = await api.fetchCurrentUser();
+      await ensureBrandConfigForUser(user);
       postToNative('homecrowd:login', { user: user });
       preloadMapKitForEmbed();
       scheduleDailyVisitCheck();
+      scheduleExtensionStatusSync();
     } catch (e) {
       api.clearTokens();
       user = null;
@@ -690,7 +758,7 @@ async function init() {
     }
     function finishLogout() {
       postToNative('homecrowd:logout');
-      navigate('/login');
+      navigate('/get-started');
       api.logout().catch(function () { });
     }
     if (schoolId) {
@@ -706,11 +774,12 @@ async function init() {
     if (partnerToken) {
       navigate('/preview');
     } else {
-      navigate('/login');
+      navigate('/get-started');
     }
   } else if (
     user &&
     (getRoute() === '/login' ||
+      getRoute() === '/get-started' ||
       getRoute() === '/' ||
       getRoute() === '/preview' ||
       getRoute() === '/school-selection' ||
@@ -730,6 +799,10 @@ async function init() {
   refreshProfileUserForTabs();
 }
 
+function firstRewardReturnTo(route) {
+  return /(?:\?|&)from=rewards(?:&|$)/.test(route) ? '/rewards' : '/home';
+}
+
 function routePathOnly(route) {
   var q = route.indexOf('?');
   return q >= 0 ? route.slice(0, q) : route;
@@ -737,12 +810,22 @@ function routePathOnly(route) {
 
 function isPublicAuthPath(pathOnly) {
   return (
+    pathOnly === '/get-started' ||
+    pathOnly === '/find-your-school' ||
+    pathOnly === '/youre-in' ||
+    pathOnly === '/create-account' ||
+    pathOnly === '/enter-full-name' ||
+    pathOnly === '/enter-password' ||
     pathOnly === '/login' ||
     pathOnly === '/preview' ||
     pathOnly === '/forgot-password' ||
     pathOnly === '/reset-password' ||
     /^\/reset-password\//.test(pathOnly)
   );
+}
+
+function isSignupOnboardingPath(pathOnly) {
+  return pathOnly === '/account-created';
 }
 
 function getActiveSchool(currentUser) {
@@ -793,27 +876,18 @@ function tabSvgInline(raw) {
 function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
   var homeActive = pathOnly === '/home' ? ' active' : '';
   var rewardsActive = pathOnly === '/rewards' ? ' active' : '';
+  var travelActive = pathOnly === '/travel' ? ' active' : '';
   var contentActive =
     contentTabEnabled && pathOnly === '/content' ? ' active' : '';
-  var offersActive = pathOnly === '/offers' ? ' active' : '';
-  var profileActive =
-    pathOnly === '/profile' ||
-    pathOnly === '/cards' ||
-    pathOnly === '/cards/link' ||
-    pathOnly === '/account-settings' ||
-    pathOnly === '/profile-details' ||
-    pathOnly === '/notification-settings' ||
-    pathOnly === '/security-settings' ||
-    pathOnly === '/change-password' ||
-    pathOnly === '/invite-friend' ||
-    pathOnly === '/activity-log' ||
-    pathOnly === '/browser-extension' ||
-    pathOnly === '/support' ||
-    pathOnly === '/upload-receipt' ||
-    pathOnly === '/travel'
+  var offersActive =
+    pathOnly === '/offers' ||
+    pathOnly === '/offers/all-shops' ||
+    pathOnly === '/offers/map' ||
+    (/^\/offers\/[^/]+$/.test(pathOnly) &&
+      pathOnly !== '/offers/all-shops' &&
+      pathOnly !== '/offers/map')
       ? ' active'
       : '';
-
   var html =
     '<nav class="hc-tab-bar" role="navigation" aria-label="Main">' +
     '<a href="#/home" class="hc-tab-link' +
@@ -827,7 +901,7 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
     '">' +
     '<span class="hc-tab-icon-wrap">' +
     tabSvgInline(bagSvg) +
-    '</span><span class="hc-tab-label">Offers</span></a>';
+    '</span><span class="hc-tab-label">Shop</span></a>';
 
   if (contentTabEnabled) {
     html +=
@@ -839,19 +913,20 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
       '</span><span class="hc-tab-label">Content</span></a>';
   }
 
+  // Profile lives in the app header's avatar button, so it is not repeated here.
   html +=
+    '<a href="#/travel" class="hc-tab-link' +
+    travelActive +
+    '">' +
+    '<span class="hc-tab-icon-wrap">' +
+    tabSvgInline(planeSvg) +
+    '</span><span class="hc-tab-label">Travel</span></a>' +
     '<a href="#/rewards" class="hc-tab-link' +
     rewardsActive +
     '">' +
     '<span class="hc-tab-icon-wrap">' +
     tabSvgInline(giftFilledSvg) +
     '</span><span class="hc-tab-label">Rewards</span></a>' +
-    '<a href="#/profile" class="hc-tab-link' +
-    profileActive +
-    '">' +
-    '<span class="hc-tab-icon-wrap">' +
-    tabSvgInline(personSvg) +
-    '</span><span class="hc-tab-label">Profile</span></a>' +
     '</nav>';
 
   return '<div class="hc-tab-bar-shell">' + html + '</div>';
@@ -870,13 +945,6 @@ function lockStaticChromeDrag() {
   });
 }
 
-function removeRewardsPointsOverlay() {
-  var el = document.getElementById('hc-rewards-points-overlay');
-  if (el && el.parentNode) {
-    el.parentNode.removeChild(el);
-  }
-}
-
 function cleanupOverlays() {
   var overlay = document.getElementById('hc-points-overlay-global');
   if (overlay) overlay.remove();
@@ -885,12 +953,11 @@ function cleanupOverlays() {
 function render(route) {
   var routeEpoch = nextNavEpoch();
   var pathOnly = routePathOnly(route);
-  removeRewardsPointsOverlay();
   if (!user && !isPublicAuthPath(pathOnly)) {
-    navigate(partnerToken ? '/preview' : '/login');
+    navigate(partnerToken ? '/preview' : '/get-started');
     return;
   }
-  if (user && !hasActiveSchool(user) && route !== '/school-selection') {
+  if (user && !hasActiveSchool(user) && route !== '/school-selection' && !isSignupOnboardingPath(pathOnly)) {
     navigate('/school-selection');
     return;
   }
@@ -898,14 +965,75 @@ function render(route) {
     navigate('/' + initialView);
     return;
   }
-  if (user && isPublicAuthPath(pathOnly)) {
+  if (user && isPublicAuthPath(pathOnly) && !isSignupOnboardingPath(pathOnly)) {
     navigate(hasActiveSchool(user) ? '/' + initialView : '/school-selection');
     return;
   }
 
-  if (route === '/login') {
+  if (pathOnly === '/get-started') {
+    appEl.innerHTML = '';
+    renderGetStarted(appEl);
+    return;
+  }
+
+  if (pathOnly === '/find-your-school') {
+    appEl.innerHTML = '';
+    renderFindYourSchool(appEl);
+    return;
+  }
+
+  if (pathOnly === '/youre-in') {
+    appEl.innerHTML = '';
+    renderYoureIn(appEl);
+    return;
+  }
+
+  if (pathOnly === '/create-account') {
+    appEl.innerHTML = '';
+    renderCreateAccount(appEl);
+    return;
+  }
+
+  if (pathOnly === '/enter-full-name') {
+    appEl.innerHTML = '';
+    renderEnterFullName(appEl);
+    return;
+  }
+
+  if (pathOnly === '/enter-password') {
+    appEl.innerHTML = '';
+    renderEnterPassword(appEl, async function (u) {
+      completeLoginState(u);
+      navigate('/account-created');
+    });
+    return;
+  }
+
+  if (pathOnly === '/account-created') {
+    if (!user) {
+      navigate('/get-started');
+      return;
+    }
+    appEl.innerHTML = '';
+    renderAccountCreated(appEl, {
+      user: user,
+      onContinue: function () {
+        navigate(hasActiveSchool(user) ? '/' + initialView : '/school-selection');
+      },
+    });
+    return;
+  }
+
+  if (route === '/login' || pathOnly === '/login') {
     var pendingLink = readPendingPasswordLink();
     var pendingEmail = readPendingLoginEmail();
+    var loginParams = new URLSearchParams(
+      String(route).indexOf('?') >= 0 ? String(route).slice(String(route).indexOf('?') + 1) : ''
+    );
+    var queryEmail = String(loginParams.get('email') || '').trim();
+    if (queryEmail && !pendingEmail) {
+      pendingEmail = queryEmail;
+    }
     var noticeText = pendingLink
       ? 'Account exists. Enter password to continue.'
       : '';
@@ -981,6 +1109,31 @@ function render(route) {
 
   if (!contentTabEnabled && (pathOnly === '/content' || /^\/content\/[^/]+$/.test(pathOnly))) {
     navigate('/rewards');
+    return;
+  }
+
+  // Full-bleed screen: renders straight into appEl so it carries no app header
+  // or tab bar, the same way /account-created does. The ladder is only reachable
+  // from the home screen, so claiming always returns the user there.
+  // ?from= records which screen the ladder was tapped on, so claiming returns
+  // the user there. Both /home and /rewards render the ladder.
+  var firstRewardMatch = pathOnly.match(/^\/first-rewards\/([^/]+)\/redeem$/);
+  if (firstRewardMatch) {
+    appEl.innerHTML = '';
+    renderFirstRewardRedemption(appEl, firstRewardMatch[1], {
+      returnTo: firstRewardReturnTo(route),
+    });
+    return;
+  }
+
+  // Carries its own back/profile/points header and no tab bar, so it renders
+  // into appEl rather than the app shell.
+  var firstRewardDetailMatch = pathOnly.match(/^\/first-rewards\/([^/]+)$/);
+  if (firstRewardDetailMatch) {
+    appEl.innerHTML = '';
+    renderFirstRewardDetail(appEl, firstRewardDetailMatch[1], {
+      returnTo: firstRewardReturnTo(route),
+    });
     return;
   }
 
@@ -1130,6 +1283,20 @@ function render(route) {
     return;
   }
 
+  // All shops catalog (Marketplace search / categories)
+  if (pathOnly === '/offers/all-shops') {
+    var allShopsEl = renderLayout(route);
+    renderAllShops(allShopsEl);
+    return;
+  }
+
+  // Full stores map (Marketplace "View map")
+  if (pathOnly === '/offers/map') {
+    var storesMapEl = renderLayout(route);
+    renderStoresMap(storesMapEl);
+    return;
+  }
+
   // Offer detail route: /offers/:id
   var offerMatch = pathOnly.match(/^\/offers\/(.+)$/);
   if (offerMatch) {
@@ -1153,6 +1320,10 @@ function render(route) {
 
   if (pathOnly === '/home') {
     renderHome(contentEl);
+  } else if (pathOnly === '/cards/link-intro') {
+    var introQ =
+      String(route).indexOf('?') >= 0 ? String(route).slice(String(route).indexOf('?') + 1) : '';
+    renderLinkCardIntro(contentEl, { query: introQ });
   } else if (pathOnly === '/cards/link') {
     renderLinkCards(contentEl);
   } else if (pathOnly === '/cards') {
@@ -1240,23 +1411,63 @@ function renderLayout(route) {
     /^\/rewards\/[^/]+$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/confirm$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/thanks$/.test(pathOnly);
-  var isOfferDetailPage = /^\/offers\/[^/]+$/.test(pathOnly);
+  // Weekly / season prize detail. It renders its own AppHeader and has no
+  // redemption footer, so it keeps the tab bar like the design shows.
+  var isPrizeDetailPage =
+    /^\/rewards\/[^/]+$/.test(pathOnly) && /(?:\?|&)(?:weekly|overall)=1(?:&|$)/.test(route);
+  var isOfferDetailPage =
+    /^\/offers\/[^/]+$/.test(pathOnly) &&
+    pathOnly !== '/offers/all-shops' &&
+    pathOnly !== '/offers/map';
   var isContentDetailPage = /^\/content\/[^/]+$/.test(pathOnly);
   var isPreviewPage = pathOnly === '/preview';
   var isTravelPage = pathOnly === '/travel';
-  var hideTabBar = isRewardDetailPage || isOfferDetailPage || isContentDetailPage || isPreviewPage;
+  var isHomePage = pathOnly === '/home';
+  var isOffersPage =
+    pathOnly === '/offers' || pathOnly === '/offers/all-shops' || pathOnly === '/offers/map';
+  var isMarketplacePage = pathOnly === '/offers';
+  var isStoresMapPage = pathOnly === '/offers/map';
+  var isLinkCardIntroPage = pathOnly === '/cards/link-intro';
+  var isAddCardPage = pathOnly === '/cards/link';
+  var isSafariOnPage = pathOnly === '/browser-extension';
+  // Rewards now renders its own AppHeader, so the shell's lockup would sit
+  // above it as a second header.
+  var isRewardsPage = pathOnly === '/rewards';
+  var hideBrandLockup =
+    isTravelPage ||
+    isHomePage ||
+    isOffersPage ||
+    isOfferDetailPage ||
+    isRewardsPage ||
+    isPrizeDetailPage ||
+    isLinkCardIntroPage ||
+    isAddCardPage ||
+    isSafariOnPage;
+  var hideTabBar =
+    (isRewardDetailPage && !isPrizeDetailPage) ||
+    isContentDetailPage ||
+    isPreviewPage ||
+    isLinkCardIntroPage ||
+    isAddCardPage ||
+    isSafariOnPage;
   var flushTopContentClass =
     pathOnly === '/invite-friend' ||
     pathOnly === '/support' ||
     pathOnly === '/upload-receipt' ||
     pathOnly === '/cards/link' ||
-    isTravelPage
+    pathOnly === '/cards/link-intro' ||
+    pathOnly === '/browser-extension' ||
+    isTravelPage ||
+    isHomePage ||
+    isOffersPage ||
+    isOfferDetailPage ||
+    isRewardsPage
       ? ' hc-content--flush-top'
       : '';
 
   var tabBarHtml = hideTabBar ? '' : buildBottomTabBarHtml(pathOnly, contentTabEnabled);
   var embedClassName = 'hc-embed' + (isPreviewPage ? ' hc-embed--email-selection' : '');
-  var brandLockupHtml = isTravelPage ? '' : renderBrandLockup();
+  var brandLockupHtml = hideBrandLockup ? '' : renderBrandLockup();
   appEl.innerHTML =
     '<div class="' +
     embedClassName +
@@ -1264,11 +1475,15 @@ function renderLayout(route) {
       <main class="hc-content' +
     (isRewardDetailPage ? ' hc-content--reward-detail' : '') +
     (isTravelPage ? ' hc-content--travel' : '') +
+    (isMarketplacePage || isStoresMapPage || isOfferDetailPage ? ' hc-content--marketplace' : '') +
+    (isOfferDetailPage ? ' hc-content--shop-detail' : '') +
+    (isStoresMapPage ? ' hc-content--stores-map' : '') +
+    (isSafariOnPage ? ' hc-content--safari-on' : '') +
     (hideTabBar ? '' : ' hc-content--with-tab-bar') +
     flushTopContentClass +
     '">\
         <div class="hc-content-brand' +
-    (isTravelPage ? ' hc-content-brand--hidden' : '') +
+    (hideBrandLockup ? ' hc-content-brand--hidden' : '') +
     '">\
           ' +
     brandLockupHtml +

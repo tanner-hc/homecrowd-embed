@@ -9,8 +9,8 @@ export function getPointMultiplierValue(item) {
 export function formatPointMultiplierLabel(value) {
   var normalized = Number(value);
   if (Number.isNaN(normalized) || normalized <= 1) return '';
-  if (Number.isInteger(normalized)) return normalized + 'x points';
-  return normalized.toFixed(2).replace(/\.?0+$/, '') + 'x points';
+  if (Number.isInteger(normalized)) return normalized + 'X';
+  return normalized.toFixed(2).replace(/\.?0+$/, '') + 'X';
 }
 
 export function renderPointMultiplierBadgeHtml(item, variant, compact) {

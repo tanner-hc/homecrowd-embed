@@ -12,6 +12,7 @@ import {
   pickUnshownWinnerAlert,
 } from './winnerAlert.js';
 import {
+  formatCompactCountdown,
   formatPeriodCountdown,
   formatPeriodEndLocal,
   parsePeriodEndTimestamp,
@@ -167,7 +168,11 @@ export function leaderboardContextToEmbedProduct(ctx) {
     is_locked: false,
     image_url: ctx.imageUrl,
     imageUrl: ctx.imageUrl,
-    images: [],
+    // The product carousel reads image_path off each entry; the context holds
+    // plain URLs.
+    images: (Array.isArray(ctx.images) ? ctx.images : []).map(function (url, index) {
+      return { image_path: url, order: index };
+    }),
   };
 }
 
@@ -373,6 +378,120 @@ function pickRewardImage(reward) {
   return primary ? normalizeMediaUrl(primary.image_path || primary.imagePath) : null;
 }
 
+/**
+ * Every image for a prize, in display order.
+ *
+ * Reads the gallery the leaderboard payload now returns as `image_urls`, and
+ * also accepts a list of image objects so a plain Reward document (whose images
+ * carry `image_path` and `order`) works through the same path. Falls back to
+ * whichever single cover field is present, so a prize with one image still
+ * yields one slide rather than none.
+ *
+ * @param {object} reward
+ * @param {string|null} [fallbackUrl] already-resolved single image
+ * @returns {string[]} deduped, normalized URLs
+ */
+function pickRewardImageUrls(reward, fallbackUrl) {
+  var urls = [];
+  var push = function (value) {
+    var url = normalizeMediaUrl(value);
+    if (url && urls.indexOf(url) === -1) urls.push(url);
+  };
+
+  if (reward && typeof reward === 'object') {
+    var flat = reward.image_urls || reward.imageUrls;
+    if (Array.isArray(flat)) flat.forEach(push);
+
+    if (!urls.length && Array.isArray(reward.images)) {
+      reward.images
+        .slice()
+        .sort(function (a, b) {
+          return ((a && a.order) || 0) - ((b && b.order) || 0);
+        })
+        .forEach(function (img) {
+          if (typeof img === 'string') return push(img);
+          if (!img) return;
+          push(img.image_url || img.imageUrl || img.image_path || img.imagePath);
+        });
+    }
+  }
+
+  if (fallbackUrl) push(fallbackUrl);
+  return urls;
+}
+
+function pickRewardLocation(reward) {
+  if (!reward || typeof reward !== 'object') return '';
+  return String(reward.location || reward.venue || reward.place || '').trim();
+}
+
+function pickRewardEventDate(reward) {
+  if (!reward || typeof reward !== 'object') return '';
+  return String(
+    reward.event_date ||
+      reward.eventDate ||
+      reward.event_datetime ||
+      reward.eventDatetime ||
+      reward.date ||
+      '',
+  ).trim();
+}
+
+/** "Saturday, September 12 at 3:30 PM" — the time is dropped for date-only values. */
+export function formatEventDateLabel(raw) {
+  if (!raw) return '';
+  var value = String(raw);
+  var parsed = new Date(value);
+  if (isNaN(parsed.getTime())) return '';
+  var dateLabel = parsed.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return dateLabel;
+  var timeLabel = parsed.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  return dateLabel + ' at ' + timeLabel;
+}
+
+function collectRewardDocExtras(rewardDoc) {
+  var extra = {};
+  var resolvedImage = pickRewardImage(rewardDoc);
+  if (resolvedImage) extra.resolved_image_url = resolvedImage;
+  var resolvedImages = pickRewardImageUrls(rewardDoc, null);
+  if (resolvedImages.length) extra.resolved_image_urls = resolvedImages;
+  if (rewardDoc.description && String(rewardDoc.description).trim()) {
+    extra.resolved_description = String(rewardDoc.description).trim();
+  }
+  if (rewardDoc.how_to_win && String(rewardDoc.how_to_win).trim()) {
+    extra.resolved_how_to_win = String(rewardDoc.how_to_win).trim();
+  }
+  if (rewardDoc.terms && String(rewardDoc.terms).trim()) {
+    extra.resolved_terms = String(rewardDoc.terms).trim();
+  }
+  if (rewardDoc.title && String(rewardDoc.title).trim()) {
+    extra.resolved_reward_title = String(rewardDoc.title).trim();
+  }
+  var location = pickRewardLocation(rewardDoc);
+  if (location) extra.resolved_location = location;
+  var eventDate = pickRewardEventDate(rewardDoc);
+  if (eventDate) extra.resolved_event_date = eventDate;
+  return extra;
+}
+
+/** Detail fields the prize screen shows but the leaderboard payload omits. */
+function buildPrizeDetailFields(prizeForMeta) {
+  var location = pickRewardLocation(prizeForMeta) || prizeForMeta.resolved_location || '';
+  var eventDate = pickRewardEventDate(prizeForMeta) || prizeForMeta.resolved_event_date || '';
+  return {
+    location: location,
+    eventDate: eventDate,
+    eventDateLabel: formatEventDateLabel(eventDate),
+  };
+}
+
 export async function buildWeeklyRewardContext(leaderboardRes) {
   var prize = pickPrize(leaderboardRes);
   if (!isWeeklyPrizeVisible(prize)) return null;
@@ -385,6 +504,7 @@ export async function buildWeeklyRewardContext(leaderboardRes) {
       description: '',
       rewardId: null,
       imageUrl: null,
+      images: [],
       terms: '',
       rows: pickRows(leaderboardRes),
       weekEndsAt: pickWeekEndsAt(leaderboardRes, null),
@@ -402,21 +522,7 @@ export async function buildWeeklyRewardContext(leaderboardRes) {
   if (rewardId) {
     try {
       var rewardDoc = await api.getRewardDetail(String(rewardId));
-      var mergeExtra = {};
-      var resolvedFromApi = pickRewardImage(rewardDoc);
-      if (resolvedFromApi) mergeExtra.resolved_image_url = resolvedFromApi;
-      if (rewardDoc.description && String(rewardDoc.description).trim()) {
-        mergeExtra.resolved_description = String(rewardDoc.description).trim();
-      }
-      if (rewardDoc.how_to_win && String(rewardDoc.how_to_win).trim()) {
-        mergeExtra.resolved_how_to_win = String(rewardDoc.how_to_win).trim();
-      }
-      if (rewardDoc.terms && String(rewardDoc.terms).trim()) {
-        mergeExtra.resolved_terms = String(rewardDoc.terms).trim();
-      }
-      if (rewardDoc.title && String(rewardDoc.title).trim()) {
-        mergeExtra.resolved_reward_title = String(rewardDoc.title).trim();
-      }
+      var mergeExtra = collectRewardDocExtras(rewardDoc);
       if (Object.keys(mergeExtra).length > 0) {
         prizeForMeta = Object.assign({}, prize, mergeExtra);
       }
@@ -433,6 +539,11 @@ export async function buildWeeklyRewardContext(leaderboardRes) {
       null,
   );
 
+  var images = pickRewardImageUrls(
+    prizeForMeta.resolved_image_urls ? { image_urls: prizeForMeta.resolved_image_urls } : prizeForMeta,
+    imageUrl,
+  );
+
   var rows = pickRows(leaderboardRes);
   var weekEndsAt = pickWeekEndsAt(leaderboardRes, prizeForMeta);
   var targetMs = resolveTargetMs(weekEndsAt, prizeForMeta);
@@ -444,7 +555,7 @@ export async function buildWeeklyRewardContext(leaderboardRes) {
   var imageUrlStr = imageUrl != null ? String(imageUrl).trim() : '';
   if (!rewardIdStr && !imageUrlStr) return null;
 
-  return {
+  return Object.assign(buildPrizeDetailFields(prizeForMeta), {
     title:
       prizeForMeta.resolved_reward_title ||
       prizeForMeta.title ||
@@ -476,6 +587,7 @@ export async function buildWeeklyRewardContext(leaderboardRes) {
     ).trim(),
     rewardId: rewardId,
     imageUrl: imageUrl,
+    images: images,
     terms: String(prizeForMeta.resolved_terms || prizeForMeta.terms || '').trim(),
     rows: rows,
     weekEndsAt: weekEndsAt,
@@ -488,7 +600,7 @@ export async function buildWeeklyRewardContext(leaderboardRes) {
     prizeId: prizeForMeta.id != null ? String(prizeForMeta.id) : null,
     weekEndDateOnly: prizeForMeta.week_end_date || prizeForMeta.weekEndDate || null,
     weekEndTime: prizeForMeta.week_end_time || prizeForMeta.weekEndTime || null,
-  };
+  });
 }
 
 export async function buildOverallRewardContext(leaderboardRes) {
@@ -503,6 +615,7 @@ export async function buildOverallRewardContext(leaderboardRes) {
       description: '',
       rewardId: null,
       imageUrl: null,
+      images: [],
       terms: '',
       rows: pickOverallRows(leaderboardRes),
       weekEndsAt: null,
@@ -520,21 +633,7 @@ export async function buildOverallRewardContext(leaderboardRes) {
   if (oRewardId) {
     try {
       var oRewardDoc = await api.getRewardDetail(String(oRewardId));
-      var oMergeExtra = {};
-      var oResolvedFromApi = pickRewardImage(oRewardDoc);
-      if (oResolvedFromApi) oMergeExtra.resolved_image_url = oResolvedFromApi;
-      if (oRewardDoc.description && String(oRewardDoc.description).trim()) {
-        oMergeExtra.resolved_description = String(oRewardDoc.description).trim();
-      }
-      if (oRewardDoc.how_to_win && String(oRewardDoc.how_to_win).trim()) {
-        oMergeExtra.resolved_how_to_win = String(oRewardDoc.how_to_win).trim();
-      }
-      if (oRewardDoc.terms && String(oRewardDoc.terms).trim()) {
-        oMergeExtra.resolved_terms = String(oRewardDoc.terms).trim();
-      }
-      if (oRewardDoc.title && String(oRewardDoc.title).trim()) {
-        oMergeExtra.resolved_reward_title = String(oRewardDoc.title).trim();
-      }
+      var oMergeExtra = collectRewardDocExtras(oRewardDoc);
       if (Object.keys(oMergeExtra).length > 0) {
         oPrizeForMeta = Object.assign({}, prize, oMergeExtra);
       }
@@ -551,6 +650,13 @@ export async function buildOverallRewardContext(leaderboardRes) {
       null,
   );
 
+  var oImages = pickRewardImageUrls(
+    oPrizeForMeta.resolved_image_urls
+      ? { image_urls: oPrizeForMeta.resolved_image_urls }
+      : oPrizeForMeta,
+    oImageUrl,
+  );
+
   var oRows = pickOverallRows(leaderboardRes);
   var oTargetMs = resolveOverallPeriodTargetMs(leaderboardRes, oPrizeForMeta);
   var oAfterCutoff = Number.isFinite(oTargetMs) && Date.now() >= oTargetMs;
@@ -561,7 +667,7 @@ export async function buildOverallRewardContext(leaderboardRes) {
   var oImageUrlStr = oImageUrl != null ? String(oImageUrl).trim() : '';
   if (!oRewardIdStr && !oImageUrlStr) return null;
 
-  return {
+  return Object.assign(buildPrizeDetailFields(oPrizeForMeta), {
     title:
       oPrizeForMeta.resolved_reward_title ||
       oPrizeForMeta.title ||
@@ -593,6 +699,7 @@ export async function buildOverallRewardContext(leaderboardRes) {
     ).trim(),
     rewardId: oRewardId,
     imageUrl: oImageUrl,
+    images: oImages,
     terms: String(oPrizeForMeta.resolved_terms || oPrizeForMeta.terms || '').trim(),
     rows: oRows,
     weekEndsAt: null,
@@ -606,7 +713,7 @@ export async function buildOverallRewardContext(leaderboardRes) {
     periodEndsAt: oPrizeForMeta.overall_ends_at || oPrizeForMeta.end_date || oPrizeForMeta.endDate || null,
     periodEndDateOnly: oPrizeForMeta.end_date || oPrizeForMeta.endDate || null,
     periodEndTime: oPrizeForMeta.end_time || oPrizeForMeta.endTime || null,
-  };
+  });
 }
 
 export function buildLeaderboardModalOptions(meta, leaderboardRes) {
@@ -969,17 +1076,25 @@ export function openWeeklyLeaderboardModal(options) {
   });
 }
 
+function resolveMetaTargetMs(meta) {
+  if (meta.targetMs != null) return meta.targetMs;
+  return parsePeriodEndTimestamp(
+    meta.periodEndsAt || meta.weekEndsAt,
+    meta.periodEndDateOnly || meta.weekEndDateOnly,
+    meta.periodEndTime || meta.weekEndTime,
+  );
+}
+
+/** Hero countdown on the prize detail screen — "6d 12h left". */
+export function buildPrizeCountdownLabel(meta) {
+  if (!meta) return '';
+  return formatCompactCountdown(resolveMetaTargetMs(meta), Date.now(), 'Ended');
+}
+
 export function buildWeeklyCountdownLabel(meta) {
   if (!meta) return '';
   var contextLabel = meta.periodKind === 'overall' ? 'Overall' : 'Weekly';
-  var targetMs =
-    meta.targetMs != null
-      ? meta.targetMs
-      : parsePeriodEndTimestamp(
-          meta.periodEndsAt || meta.weekEndsAt,
-          meta.periodEndDateOnly || meta.weekEndDateOnly,
-          meta.periodEndTime || meta.weekEndTime,
-        );
+  var targetMs = resolveMetaTargetMs(meta);
   return formatPeriodCountdown(targetMs, Date.now(), {
     contextLabel: contextLabel,
     endedText: contextLabel + ' period ended',

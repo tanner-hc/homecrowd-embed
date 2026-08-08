@@ -1,4 +1,11 @@
 import { escapeHtml, joinClasses } from './html.js';
+import searchSvg from '../assets/icons/search.svg?raw';
+
+function withCurrentColorStroke(svg) {
+  return String(svg || '')
+    .replace(/stroke="black"/gi, 'stroke="currentColor"')
+    .replace(/stroke='#000(?:000)?'/gi, 'stroke="currentColor"');
+}
 
 export default function SearchBar(props) {
   props = props || {};
@@ -22,7 +29,9 @@ export default function SearchBar(props) {
     '<div class="' +
     wrapClass +
     '">' +
-    '<span class="hc-bc-search-bar-icon" aria-hidden="true">⌕</span>' +
+    '<span class="hc-bc-search-bar-icon" aria-hidden="true">' +
+    withCurrentColorStroke(searchSvg) +
+    '</span>' +
     '<input type="search" class="hc-bc-search-bar-input" id="' +
     escapeHtml(id) +
     '" value="' +

@@ -3,10 +3,7 @@ import { getHeaderLogoUrl, renderPoweredByLockup } from '../brand.js';
 import Input from '../base-components/Input.js';
 import Button from '../base-components/Button.js';
 import { escapeHtml } from '../base-components/html.js';
-
-function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
+import { isValidEmail } from '../contact-validation.js';
 
 export function renderForgotPassword(container) {
   var logoUrl = getHeaderLogoUrl();

@@ -8,6 +8,14 @@ export { default as FilterList } from './FilterList.js';
 export { default as Card } from './Card.js';
 export { default as Button } from './Button.js';
 export { default as MainButton } from './MainButton.js';
+export {
+  default as CurvedLogoCarouselHtml,
+  mountCurvedLogoCarousel,
+} from './CurvedLogoCarousel.js';
+export { openBottomSheet } from './BottomSheetModal.js';
+export { openGetNotifiedModal } from './GetNotifiedModal.js';
+export { mountSignupFieldLayout } from './SignupFieldLayout.js';
+export { showPointsEarnedToast } from './PointsEarnedToast.js';
 export { default as SecondaryButton } from './SecondaryButton.js';
 export { default as SecondaryButtonWithSwitch } from './SecondaryButtonWithSwitch.js';
 export { default as Header } from './Header.js';

@@ -7,6 +7,7 @@ import { escapeHtml } from '../base-components/html.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
 import mailIconSvg from '../assets/icons/mail.svg?raw';
 import { getReferralReward } from '../referral-reward.js';
+import { isValidEmail } from '../contact-validation.js';
 
 function svgAddClass(svgRaw, className) {
   return String(svgRaw).replace(/^<svg\s/i, '<svg class="' + className + '" ');
@@ -99,10 +100,6 @@ function inviteHeroSubtitle(campaign) {
   return (
     "Enter your friend's email and we'll send them an invite. Rewards are awarded only after your friend verifies their email."
   );
-}
-
-function isValidEmail(s) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || '').trim());
 }
 
 export function renderInviteFriend(container) {

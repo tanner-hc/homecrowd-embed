@@ -1,3 +1,7 @@
+export function formatNumber(value) {
+  return (Number(value) || 0).toLocaleString('en-US');
+}
+
 export function formatDisplayNumber(n) {
   var x = Number(n) || 0;
   try {

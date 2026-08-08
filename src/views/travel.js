@@ -1,7 +1,7 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
-import NavHeader from '../base-components/NavHeader.js';
+import { buildAppHeaderHtml, attachAppHeader } from '../base-components/AppHeader.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 
 var travelResizeObserver = null;
@@ -55,19 +55,22 @@ export function renderTravel(container) {
   clearTravelResizeObserver();
   container.innerHTML =
     '<div class="hc-travel-view">' +
-    NavHeader({ title: 'Travel', backButtonId: 'hc-travel-back' }) +
+    // Same header the other tab destinations use: title left, profile and
+    // points right. attachAppHeader below fills in the user and balance.
+    buildAppHeaderHtml({ title: 'Travel' }) +
+    // Sits outside #hc-travel-body so it survives the iframe swap below.
+    '<div class="hc-travel-earn">' +
+    '<div class="hc-travel-earn-row">' +
+    '<span class="hc-travel-earn-label">Earn as you travel</span>' +
+    '<span class="hc-travel-earn-pts">1 point per $1 spent</span>' +
+    '</div>' +
+    '</div>' +
     '<div class="hc-travel-body" id="hc-travel-body">' +
     LoadingSpinner({ text: 'Loading Travel...' }) +
     '</div>' +
     '</div>';
 
-  var backBtn = container.querySelector('#hc-travel-back');
-  if (backBtn) {
-    backBtn.addEventListener('click', function () {
-      clearTravelResizeObserver();
-      navigate('/profile');
-    });
-  }
+  attachAppHeader(container);
 
   loadTravelFrame(container);
 }
