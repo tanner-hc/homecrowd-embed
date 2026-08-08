@@ -39,9 +39,10 @@ import {
   fetchBottomFeaturedMerchants,
 } from '../components/Marketplace/BottomFeaturedGrid.js';
 import {
-  buildShopByCategoryHtml,
-  bindShopByCategory,
-} from '../components/Marketplace/ShopByCategory.js';
+  buildPreferredPartnersCarouselHtml,
+  mountPreferredPartnersCarousel,
+  fetchPreferredPartners,
+} from '../components/Marketplace/PreferredPartnersCarousel.js';
 import { getSetupRewardPoints } from '../setup-rewards.js';
 import lockIconUrl from '../assets/icons/lock_icon.png';
 
@@ -169,6 +170,11 @@ function getActiveOfferLocation() {
 }
 
 export function renderOffers(container) {
+  if (container._hcPreferredPartnersApi && typeof container._hcPreferredPartnersApi.destroy === 'function') {
+    container._hcPreferredPartnersApi.destroy();
+    container._hcPreferredPartnersApi = null;
+  }
+
   container.innerHTML = buildMarketplaceShell();
 
   var carouselTapDedupe = { card: null, until: 0 };
@@ -179,6 +185,7 @@ export function renderOffers(container) {
   attachAppHeader(container, {});
   wireUpOffersCardClicks(container, carouselTapDedupe);
   wireMarketplaceInteractions(container);
+  populateMarketplacePreferredPartners(container, null, true);
 
   api
     .fetchCurrentUser()
@@ -192,6 +199,16 @@ export function renderOffers(container) {
       });
     })
     .catch(function () {});
+
+  fetchPreferredPartners()
+    .then(function (partners) {
+      if (!container.isConnected) return;
+      populateMarketplacePreferredPartners(container, partners, false);
+    })
+    .catch(function () {
+      if (!container.isConnected) return;
+      populateMarketplacePreferredPartners(container, [], false);
+    });
 
   api
     .getFeaturedOffers('click')
@@ -218,6 +235,14 @@ export function renderOffers(container) {
     .then(function (raw) {
       if (!container.isConnected) return;
       var cardlinked = pickOliveList(raw);
+      var grid = container.querySelector('#hc-stores-grid');
+      if (grid) {
+        var html = '';
+        cardlinked.forEach(function (m) {
+          html += renderMerchantCard(m);
+        });
+        grid.innerHTML = html;
+      }
       initOffersMap(container, cardlinked);
       container._hcStoresLoaded.grid = true;
       container._hcStoresGridHasItems = cardlinked.length > 0;
@@ -309,6 +334,7 @@ function buildMarketplaceShell() {
     }) +
     '</button>' +
     '</div>' +
+    '<div id="hc-marketplace-preferred-partners" class="hc-marketplace-preferred-partners"></div>' +
     '<div id="hc-marketplace-featured-shops" class="hc-marketplace-featured-shops"></div>' +
     '<div id="hc-marketplace-bottom-grid" class="hc-marketplace-bottom-grid"></div>' +
     '<div class="hc-marketplace-map-block">' +
@@ -318,8 +344,8 @@ function buildMarketplaceShell() {
     '</div>' +
     renderLocationMapSection({ includeSearch: false }) +
     '</div>' +
-    '<div id="hc-marketplace-categories" class="hc-marketplace-categories">' +
-    buildShopByCategoryHtml({ selectedId: 'all' }) +
+    '<div id="hc-stores-grid" class="hc-merchant-grid">' +
+    gridSkeletonHtml() +
     '</div>' +
     '<div class="hc-marketplace-bottom-space"></div>' +
     '</div>' +
@@ -342,15 +368,47 @@ function wireMarketplaceInteractions(container) {
       navigate('/offers/map');
     });
   }
+}
 
-  var categoriesRoot = container.querySelector('#hc-marketplace-categories');
-  if (categoriesRoot) {
-    bindShopByCategory(categoriesRoot, function (id) {
-      navigate(
-        '/offers/all-shops?categoryId=' + encodeURIComponent(id || 'all')
-      );
-    });
+function populateMarketplacePreferredPartners(container, partners, loading) {
+  var wrap = container.querySelector('#hc-marketplace-preferred-partners');
+  if (!wrap) return;
+
+  if (container._hcPreferredPartnersApi && typeof container._hcPreferredPartnersApi.destroy === 'function') {
+    container._hcPreferredPartnersApi.destroy();
+    container._hcPreferredPartnersApi = null;
   }
+
+  wrap.innerHTML = buildPreferredPartnersCarouselHtml({
+    partners: partners || [],
+    loading: !!loading,
+  });
+
+  if (loading) return;
+
+  var root = wrap.querySelector('[data-pp-root]');
+  if (!root) return;
+
+  container._hcPreferredPartnersApi = mountPreferredPartnersCarousel(root, {
+    onViewAll: function () {
+      navigate('/offers/all-shops?categoryId=all');
+    },
+    onPartnerPress: function (partner) {
+      if (!partner) return;
+      var offerId = partner.offer_id || partner.id;
+      if (!offerId) {
+        navigate('/offers/all-shops?categoryId=all');
+        return;
+      }
+      try {
+        sessionStorage.setItem(
+          'hc_offer_detail_initial',
+          JSON.stringify({ offerId: String(offerId), offer: partner })
+        );
+      } catch (_e) {}
+      window.location.hash = '#/offers/' + encodeURIComponent(offerId);
+    },
+  });
 }
 
 function populateMarketplaceFeaturedShops(container, stores) {
@@ -372,7 +430,18 @@ function populateMarketplaceFeaturedShops(container, stores) {
         navigate('/offers/all-shops?categoryId=all');
         return;
       }
-      openFeaturedClickStore(store);
+      var offerId = store.offer_id || store.id;
+      if (!offerId) {
+        navigate('/offers/all-shops?categoryId=all');
+        return;
+      }
+      try {
+        sessionStorage.setItem(
+          'hc_offer_detail_initial',
+          JSON.stringify({ offerId: String(offerId), offer: store })
+        );
+      } catch (_e) {}
+      window.location.hash = '#/offers/' + encodeURIComponent(offerId);
     },
   });
 }
@@ -1332,7 +1401,14 @@ function handleLiveMapRegionChange(container, center, spanLatDeg) {
   }, OFFERS_MAP_PAN_DEBOUNCE_MS);
 }
 
-var OFFERS_LEAFLET_MAPLIBRE_STYLE = 'https://tiles.openfreemap.org/styles/positron';
+var OFFERS_MAPTILER_KEY = 'WADYe8GJ68RPlAoT3jNC';
+var OFFERS_LEAFLET_MAPLIBRE_STYLE =
+  'https://api.maptiler.com/maps/base-v4/style.json?key=' + OFFERS_MAPTILER_KEY;
+
+function getOffersMapLibreStyleUrl() {
+  return OFFERS_LEAFLET_MAPLIBRE_STYLE;
+}
+
 var offersLeafletMapLibreLoadPromise = null;
 
 function destroyOffersMapInstance(container) {
@@ -1909,7 +1985,7 @@ function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMar
       container._hcLeafletMerchantMarkers = [];
       container._hcMkMerchantAnnotations = [];
       L.maplibreGL({
-        style: OFFERS_LEAFLET_MAPLIBRE_STYLE,
+        style: getOffersMapLibreStyleUrl(),
       }).addTo(map);
 
       var userIcon = leafletMapPinIcon(L, MAP_PIN_USER_COLOR);

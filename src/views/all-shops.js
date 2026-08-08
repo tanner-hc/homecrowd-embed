@@ -91,7 +91,11 @@ function normalizeWildfireShop(item, shopChannel) {
 }
 
 function normalizeFeaturedShop(item) {
-  var isCardlinked = item.offer_type === 'cardlinked' || item.offerType === 'cardlinked';
+  var offerType = String(item.offer_type || item.offerType || '').toLowerCase();
+  var isCardlinked =
+    offerType === 'cardlinked' ||
+    offerType === 'card_linked' ||
+    offerType === 'card-linked';
   return Object.assign({}, item, {
     listKey:
       'featured-' +
@@ -100,6 +104,7 @@ function normalizeFeaturedShop(item) {
       (item.id != null ? item.id : item.name),
     shopChannel: isCardlinked ? 'in_person' : 'in_app',
     offerType: isCardlinked ? 'cardlinked' : 'click',
+    isFeatured: true,
     name: item.name || item.merchantName || '',
     logoUrl:
       item.large_logo_url ||
@@ -218,30 +223,50 @@ function buildShopRowHtml(shop) {
   );
 }
 
+function isFeaturedShop(shop) {
+  if (!shop) return false;
+  if (shop.isFeatured) return true;
+  if (shop.top_featured || shop.bottom_featured) return true;
+  return String(shop.listKey || '').indexOf('featured-') === 0;
+}
+
 function filterShops(shops, categoryId, query, topRatedOnly) {
   var q = String(query || '')
     .trim()
     .toLowerCase();
   var list = shops.filter(function (shop) {
+    if (topRatedOnly && !isFeaturedShop(shop)) return false;
     if (!merchantMatchesShopCategory(shop, categoryId)) return false;
     if (!q) return true;
     return getMerchantHaystack(shop).indexOf(q) >= 0;
   });
   if (topRatedOnly) {
-    list = list
-      .filter(function (m) {
-        return !!getPointMultiplierValue(m);
-      })
-      .slice()
-      .sort(function (a, b) {
-        return (getPointMultiplierValue(b) || 0) - (getPointMultiplierValue(a) || 0);
-      });
+    list = list.slice().sort(function (a, b) {
+      var aTop = a.top_featured ? 1 : 0;
+      var bTop = b.top_featured ? 1 : 0;
+      if (bTop !== aTop) return bTop - aTop;
+      var aOrder = Number(a.top_order != null ? a.top_order : a.topOrder) || 0;
+      var bOrder = Number(b.top_order != null ? b.top_order : b.topOrder) || 0;
+      if (bOrder !== aOrder) return bOrder - aOrder;
+      return (getPointMultiplierValue(b) || 0) - (getPointMultiplierValue(a) || 0);
+    });
   }
   return list;
 }
 
 function openShop(shop) {
   if (!shop) return;
+  var offerId = shop.offer_id || shop.offerId || shop.id;
+  if (offerId) {
+    try {
+      sessionStorage.setItem(
+        'hc_offer_detail_initial',
+        JSON.stringify({ offerId: String(offerId), offer: shop })
+      );
+    } catch (_e) {}
+    window.location.hash = '#/offers/' + encodeURIComponent(offerId);
+    return;
+  }
   if (
     shop.offerSource === 'wildfire' ||
     shop.shopChannel === 'online' ||
@@ -257,11 +282,7 @@ function openShop(shop) {
       } else {
         showWebviewOverlay(url, { title: shop.name || 'Offer' });
       }
-      return;
     }
-  }
-  if (shop.offer_id || shop.id) {
-    window.location.hash = '#/offers/' + encodeURIComponent(shop.offer_id || shop.id);
   }
 }
 
@@ -431,7 +452,8 @@ export function renderAllShops(container) {
         return m && m.is_active !== false;
       })
       .map(normalizeFeaturedShop);
-    allShops = dedupeShops([].concat(olive, featured, wildfire));
+    // Featured first so Top Rated keeps the featured flags after dedupe.
+    allShops = dedupeShops([].concat(featured, olive, wildfire));
     renderList();
   });
 }

@@ -882,7 +882,10 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
   var offersActive =
     pathOnly === '/offers' ||
     pathOnly === '/offers/all-shops' ||
-    pathOnly === '/offers/map'
+    pathOnly === '/offers/map' ||
+    (/^\/offers\/[^/]+$/.test(pathOnly) &&
+      pathOnly !== '/offers/all-shops' &&
+      pathOnly !== '/offers/map')
       ? ' active'
       : '';
   var html =
@@ -1434,6 +1437,7 @@ function renderLayout(route) {
     isTravelPage ||
     isHomePage ||
     isOffersPage ||
+    isOfferDetailPage ||
     isRewardsPage ||
     isPrizeDetailPage ||
     isLinkCardIntroPage ||
@@ -1441,7 +1445,6 @@ function renderLayout(route) {
     isSafariOnPage;
   var hideTabBar =
     (isRewardDetailPage && !isPrizeDetailPage) ||
-    isOfferDetailPage ||
     isContentDetailPage ||
     isPreviewPage ||
     isLinkCardIntroPage ||
@@ -1457,6 +1460,7 @@ function renderLayout(route) {
     isTravelPage ||
     isHomePage ||
     isOffersPage ||
+    isOfferDetailPage ||
     isRewardsPage
       ? ' hc-content--flush-top'
       : '';
@@ -1471,7 +1475,8 @@ function renderLayout(route) {
       <main class="hc-content' +
     (isRewardDetailPage ? ' hc-content--reward-detail' : '') +
     (isTravelPage ? ' hc-content--travel' : '') +
-    (isMarketplacePage || isStoresMapPage ? ' hc-content--marketplace' : '') +
+    (isMarketplacePage || isStoresMapPage || isOfferDetailPage ? ' hc-content--marketplace' : '') +
+    (isOfferDetailPage ? ' hc-content--shop-detail' : '') +
     (isStoresMapPage ? ' hc-content--stores-map' : '') +
     (isSafariOnPage ? ' hc-content--safari-on' : '') +
     (hideTabBar ? '' : ' hc-content--with-tab-bar') +

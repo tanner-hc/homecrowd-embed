@@ -1,17 +1,39 @@
 import * as api from '../api.js';
 import * as analytics from '../analytics.js';
-import { postToNative } from '../bridge.js';
+import { hasNativeBridge, postToNative } from '../bridge.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
+import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
-import Button from '../base-components/Button.js';
-import NavHeader from '../base-components/NavHeader.js';
+import { buildAppHeaderHtml, attachAppHeader } from '../base-components/AppHeader.js';
+import { openBottomSheet } from '../base-components/BottomSheetModal.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
-import mastercardLogoUrl from '../assets/mastercard-logo.png';
-import visaLogoUrl from '../assets/visa-logo.png';
+import cardFilledSvg from '../assets/icons/card-filled.svg?raw';
+import storeSvg from '../assets/icons/store.svg?raw';
+import crossIconUrl from '../assets/icons/cross.png';
+import checkmarkSvg from '../assets/icons/checkmark.svg?raw';
+
+var PREFERRED_CARD_KEY = 'hc_preferred_card_id';
 
 export function renderOfferDetail(container, offerId) {
-  container.innerHTML = LoadingSpinner({ text: 'Loading offer...' });
-  loadOfferDetail(container, offerId);
+  container.innerHTML =
+    '<div class="hc-shop-detail">' +
+    buildAppHeaderHtml({ showBack: true }) +
+    '<div class="hc-shop-detail-body">' +
+    LoadingSpinner({ text: 'Loading shop...' }) +
+    '</div></div>';
+
+  attachAppHeader(container, {
+    showBack: true,
+    onBackPress: function () {
+      if (window.history.length > 1) {
+        window.history.back();
+        return;
+      }
+      navigate('/offers');
+    },
+  });
+
+  loadShopDetail(container, offerId);
 }
 
 function consumeInitialOffer(offerId) {
@@ -24,269 +46,709 @@ function consumeInitialOffer(offerId) {
     var savedId = parsed.offerId != null ? String(parsed.offerId) : '';
     if (savedId && offerId && savedId !== String(offerId)) return null;
     return parsed.offer && typeof parsed.offer === 'object' ? parsed.offer : null;
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
 
-async function loadOfferDetail(container, offerId) {
+function getPreferredCardId() {
+  try {
+    return localStorage.getItem(PREFERRED_CARD_KEY) || '';
+  } catch (_e) {
+    return '';
+  }
+}
+
+function setPreferredCardId(cardId) {
+  try {
+    if (cardId == null || cardId === '') {
+      localStorage.removeItem(PREFERRED_CARD_KEY);
+      return;
+    }
+    localStorage.setItem(PREFERRED_CARD_KEY, String(cardId));
+  } catch (_e) {}
+}
+
+function listActiveCards(cards) {
+  var list = Array.isArray(cards) ? cards.slice() : [];
+  var active = list.filter(function (c) {
+    return c && String(c.status || '').toLowerCase() === 'active';
+  });
+  return active.length ? active : list.filter(Boolean);
+}
+
+function pickDisplayCard(cards) {
+  var active = listActiveCards(cards);
+  if (!active.length) return null;
+  var preferredId = getPreferredCardId();
+  if (preferredId) {
+    var matched = active.find(function (c) {
+      return String(c.id) === String(preferredId);
+    });
+    if (matched) return matched;
+  }
+  return active[0];
+}
+
+function pickLogo(offer) {
+  if (!offer) return '';
+  return (
+    offer.logoUrl ||
+    offer.logo ||
+    offer.large_logo_url ||
+    offer.small_logo_url ||
+    offer.largeLogoUrl ||
+    offer.smallLogoUrl ||
+    ''
+  );
+}
+
+function pickName(offer) {
+  return (offer && (offer.name || offer.merchantName || offer.merchant_name)) || 'Store';
+}
+
+function pickCategories(offer) {
+  if (!offer) return '';
+  if (offer.summary && String(offer.summary).trim()) {
+    var first = String(offer.summary).split(/\n/)[0].trim();
+    if (first.length <= 80) return first;
+  }
+  if (Array.isArray(offer.categories) && offer.categories.length) {
+    return offer.categories.join(', ');
+  }
+  if (offer.category_name) return String(offer.category_name);
+  if (offer.category) return String(offer.category);
+  if (offer.shopCategoryLabel) return String(offer.shopCategoryLabel);
+  var channel = String(offer.shopChannel || offer.channel || '').toLowerCase();
+  if (channel === 'online' || channel === 'in_app') return 'Online shopping';
+  if (isClickOffer(offer)) return 'Online shopping';
+  return 'In-person shopping';
+}
+
+function isNewOffer(offer) {
+  return !!(
+    offer &&
+    (offer.is_new || offer.isNew || offer.new || offer.badge === 'new')
+  );
+}
+
+function isClickOffer(offer) {
+  if (!offer) return false;
+  var t = String(offer.offerType || offer.offer_type || '').toLowerCase();
+  return t === 'click' || t === 'click_sso' || t === 'online';
+}
+
+function isWildfireOffer(offer) {
+  if (!offer) return false;
+  if (isClickOffer(offer)) return true;
+  var source = String(offer.offerSource || offer.offer_source || '').toLowerCase();
+  if (source === 'wildfire') return true;
+  return !!(offer.wildfireMerchantId || offer.wildfire_merchant_id);
+}
+
+function pickWildfireMerchantId(offer) {
+  if (!offer) return '';
+  return (
+    offer.wildfireMerchantId ||
+    offer.wildfire_merchant_id ||
+    offer.merchantId ||
+    offer.merchant_id ||
+    (isWildfireOffer(offer) ? offer.offer_id || offer.offerId || '' : '') ||
+    ''
+  );
+}
+
+function pickOliveOfferId(offer) {
+  if (!offer || isWildfireOffer(offer)) return '';
+  return offer.offer_id || offer.offerId || offer.id || '';
+}
+
+function cardBrandLabel(card) {
+  var raw = String(
+    (card && (card.brand || card.scheme || card.network || card.card_brand || card.type)) || ''
+  ).toLowerCase();
+  if (raw.indexOf('master') >= 0 || raw === 'mc') return 'Mastercard';
+  if (raw.indexOf('amex') >= 0 || raw.indexOf('american') >= 0) return 'Amex';
+  if (raw.indexOf('discover') >= 0) return 'Discover';
+  if (raw.indexOf('visa') >= 0 || !raw) return 'Visa';
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+function pickAvatar(user) {
+  if (!user) return '';
+  return (
+    user.avatar_url ||
+    user.avatarUrl ||
+    user.profile_image ||
+    user.profileImage ||
+    ''
+  );
+}
+
+function buildLinkedCardHtml(card, avatarUri) {
+  if (card && card.last4) {
+    return (
+      '<div class="hc-shop-detail-card-slot" data-shop-card-slot>' +
+      '<div class="hc-shop-detail-card-banner">' +
+      '<div class="hc-shop-detail-card-banner-main">' +
+      '<span class="hc-shop-detail-card-icon" aria-hidden="true">' +
+      cardFilledSvg +
+      '</span>' +
+      '<div class="hc-shop-detail-card-copy">' +
+      '<div class="hc-shop-detail-card-title">Use ' +
+      escapeHtml(cardBrandLabel(card)) +
+      ' •••• ' +
+      escapeHtml(String(card.last4)) +
+      '</div>' +
+      '<div class="hc-shop-detail-card-sub">Pay with this linked card to earn points</div>' +
+      '</div>' +
+      '<button type="button" class="hc-shop-detail-card-cta" data-shop-manage-card>Manage</button>' +
+      '</div>' +
+      (avatarUri
+        ? '<img src="' +
+          escapeAttr(avatarUri) +
+          '" alt="" class="hc-shop-detail-card-avatar" />'
+        : '') +
+      '</div></div>'
+    );
+  }
+
+  return (
+    '<div class="hc-shop-detail-card-slot" data-shop-card-slot>' +
+    '<div class="hc-shop-detail-card-banner">' +
+    '<div class="hc-shop-detail-card-banner-main">' +
+    '<span class="hc-shop-detail-card-icon" aria-hidden="true">' +
+    cardFilledSvg +
+    '</span>' +
+    '<div class="hc-shop-detail-card-copy">' +
+    '<div class="hc-shop-detail-card-title">Link a card to earn</div>' +
+    '<div class="hc-shop-detail-card-sub">Pay with a linked card to earn points</div>' +
+    '</div>' +
+    '<button type="button" class="hc-shop-detail-card-cta" data-shop-link-card>Link</button>' +
+    '</div>' +
+    (avatarUri
+      ? '<img src="' +
+        escapeAttr(avatarUri) +
+        '" alt="" class="hc-shop-detail-card-avatar" />'
+      : '') +
+    '</div></div>'
+  );
+}
+
+function buildCardPickerBodyHtml(cards, selectedId) {
+  var rows = (cards || [])
+    .map(function (card) {
+      var selected = String(card.id) === String(selectedId);
+      var label =
+        cardBrandLabel(card) +
+        ' •••• ' +
+        String(card.last4 || '') +
+        (card.nickname ? ' · ' + card.nickname : '');
+      return (
+        '<button type="button" class="hc-shop-card-pick' +
+        (selected ? ' hc-shop-card-pick--selected' : '') +
+        '" data-shop-pick-card="' +
+        escapeAttr(String(card.id)) +
+        '">' +
+        '<span class="hc-shop-card-pick-icon" aria-hidden="true">' +
+        cardFilledSvg +
+        '</span>' +
+        '<span class="hc-shop-card-pick-label">' +
+        escapeHtml(label) +
+        '</span>' +
+        (selected
+          ? '<span class="hc-shop-card-pick-check" aria-hidden="true">' +
+            checkmarkSvg +
+            '</span>'
+          : '') +
+        '</button>'
+      );
+    })
+    .join('');
+
+  return (
+    '<div class="hc-shop-card-picker">' +
+    rows +
+    '<button type="button" class="hc-shop-card-pick hc-shop-card-pick--add" data-shop-pick-add>' +
+    '<span class="hc-shop-card-pick-label">Add another card</span>' +
+    '</button>' +
+    '</div>'
+  );
+}
+
+function buildShopDetailHtml(offer, card, user) {
+  var name = pickName(offer);
+  var logo = pickLogo(offer);
+  var categories = pickCategories(offer);
+  var showNew = isNewOffer(offer);
+  var avatarUri = pickAvatar(user);
+  var initials = name
+    .split(/\s+/)
+    .map(function (w) {
+      return w[0] || '';
+    })
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  return (
+    '<div class="hc-shop-detail-scroll">' +
+    '<div class="hc-shop-detail-hero">' +
+    '<div class="hc-shop-detail-logo-wrap">' +
+    (logo
+      ? '<img src="' +
+        escapeAttr(logo) +
+        '" alt="" class="hc-shop-detail-logo" />'
+      : '<span class="hc-shop-detail-logo-ph">' + escapeHtml(initials || '?') + '</span>') +
+    '</div>' +
+    '<h1 class="hc-shop-detail-name">' +
+    escapeHtml(name) +
+    '</h1>' +
+    (categories
+      ? '<p class="hc-shop-detail-cats">' + escapeHtml(categories) + '</p>'
+      : '') +
+    (showNew ? '<span class="hc-shop-detail-new">New</span>' : '') +
+    '</div>' +
+    buildLinkedCardHtml(card, avatarUri) +
+    '<div class="hc-shop-detail-tips">' +
+    '<div class="hc-shop-detail-tip">' +
+    '<span class="hc-shop-detail-tip-icon" aria-hidden="true">' +
+    '<img src="' +
+    escapeAttr(crossIconUrl) +
+    '" alt="" class="hc-shop-detail-tip-icon-img" />' +
+    '</span>' +
+    '<div class="hc-shop-detail-tip-copy">' +
+    '<div class="hc-shop-detail-tip-title">Some purchases won&rsquo;t earn points</div>' +
+    '<div class="hc-shop-detail-tip-sub">Certain product categories and purchases using promo codes may not qualify.</div>' +
+    '</div></div>' +
+    '<div class="hc-shop-detail-tip">' +
+    '<span class="hc-shop-detail-tip-icon" aria-hidden="true">' +
+    storeSvg +
+    '</span>' +
+    '<div class="hc-shop-detail-tip-copy">' +
+    '<div class="hc-shop-detail-tip-title">Shopping in the app or store?</div>' +
+    '<div class="hc-shop-detail-tip-sub">Use your linked card to earn points.</div>' +
+    '</div></div>' +
+    '</div>' +
+    '</div>' +
+    '<div class="hc-shop-detail-footer">' +
+    '<button type="button" class="hc-shop-detail-shop-btn" data-shop-now>Shop now</button>' +
+    '</div>'
+  );
+}
+
+async function loadShopDetail(container, offerId) {
+  var body = container.querySelector('.hc-shop-detail-body');
+  if (!body) return;
+
   try {
     var initialOffer = consumeInitialOffer(offerId);
     var offer = null;
     var canFetchById = offerId && offerId !== 'featured' && offerId !== 'unknown';
-    if (canFetchById) {
-      try {
-        var fetched = await api.getOfferDetails(offerId);
-        offer = Object.assign({}, initialOffer || {}, fetched || {});
-      } catch (_e) {
-        offer = initialOffer;
-      }
+    var oliveOfferId =
+      (initialOffer && (initialOffer.offer_id || initialOffer.offerId)) || '';
+    if (oliveOfferId && String(oliveOfferId) === String(offerId)) {
+      oliveOfferId = '';
+    }
+
+    var parallel = await Promise.all([
+      canFetchById
+        ? api.getOfferDetails(offerId).catch(function (err) {
+            console.warn(
+              '[HC shop-now] getOfferDetails(routeId) failed',
+              offerId,
+              err && err.message ? err.message : err
+            );
+            return null;
+          })
+        : Promise.resolve(null),
+      oliveOfferId
+        ? api.getOfferDetails(oliveOfferId).catch(function (err) {
+            console.warn(
+              '[HC shop-now] getOfferDetails(offer_id) failed',
+              oliveOfferId,
+              err && err.message ? err.message : err
+            );
+            return null;
+          })
+        : Promise.resolve(null),
+      api.getCards().catch(function () {
+        return [];
+      }),
+      api.fetchCurrentUser().catch(function () {
+        return null;
+      }),
+    ]);
+
+    var fetched = parallel[0] || parallel[1];
+    var cards = parallel[2];
+    var user = parallel[3];
+
+    if (fetched) {
+      offer = Object.assign({}, initialOffer || {}, fetched);
     } else {
       offer = initialOffer;
     }
+
     if (!offer) {
-      throw new Error('Offer not found');
+      throw new Error('Shop not found');
     }
 
-    var html = '';
-
-    html += NavHeader({
-      title: 'Offers',
-      backButtonId: 'hc-back-btn',
+    var card = pickDisplayCard(cards);
+    console.log('[HC shop-now] detail loaded', {
+      name: offer.name || offer.merchantName,
+      id: offer.id,
+      offer_id: offer.offer_id,
+      offerId: offer.offerId,
+      offer_type: offer.offer_type || offer.offerType,
+      website: offer.website,
+      hasInitial: !!initialOffer,
+      hasFetched: !!fetched,
     });
-
-    // Brand section — logo + name
-    var logoUrl = offer.logoUrl || offer.logo || '';
-    var name = offer.name || offer.merchantName || 'Unknown';
-
-    html += '<div class="hc-offer-brand">';
-    if (logoUrl) {
-      html += '<div class="hc-offer-logo-wrap"><img class="hc-offer-logo" src="' + escapeAttr(logoUrl) + '" alt="' + escapeAttr(name) + '" /></div>';
-    } else {
-      var initials = name.split(' ').map(function (w) { return w[0] || ''; }).join('').slice(0, 2).toUpperCase();
-      html += '<div class="hc-offer-logo-wrap"><div class="hc-offer-logo-initials">' + escapeHtml(initials) + '</div></div>';
-    }
-    html += '<div class="hc-offer-brand-name">' + escapeHtml(name) + '</div>';
-    html += '</div>';
-
-    html += '<div class="hc-offer-cashback-section">';
-    html += '<div class="hc-offer-cashback-kicker">YOU\'LL EARN</div>';
-    html += '<div class="hc-offer-cashback-value">1 point for every $1 spent</div>';
-    html += '<div class="hc-offer-cashback-subtitle">ON ELIGIBLE PURCHASES</div>';
-    html +=
-      '<div class="hc-offer-cashback-note">' +
-      escapeHtml(getSchoolCashbackText(offer)) +
-      '</div>';
-    html += '</div>';
-
-    var locationText = getLocationText(offer);
-    html += '<div class="hc-offer-info-section">';
-    html += '<div class="hc-offer-info-title">WHERE TO SHOP</div>';
-    html += '<div class="hc-offer-info-value">' + escapeHtml(locationText) + '</div>';
-    html += '</div>';
-
-    // Important terms
-    html += '<div class="hc-offer-info-section">';
-    html += '<div class="hc-offer-info-title">IMPORTANT TERMS</div>';
-    html +=
-      '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Valid Days:</span><span class="hc-offer-term-value">' +
-      escapeHtml(getDaysOfWeek(offer.daysAvailability)) +
-      '</span></div>';
-    html +=
-      '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Redemption Limit:</span><span class="hc-offer-term-value">' +
-      escapeHtml(getRedemptionLimitText(offer)) +
-      '</span></div>';
-
-    // Minimum purchase
-    if (offer.purchaseAmount) {
-      html += '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Minimum purchase</span><span class="hc-offer-term-value">$' + Number(offer.purchaseAmount).toFixed(2) + '</span></div>';
-    }
-
-    html +=
-      '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Offer Expires:</span><span class="hc-offer-term-value">' +
-      escapeHtml(getExpiryText(offer)) +
-      '</span></div>';
-
-    // Payment methods
-    var schemes = getPaymentMethods(offer);
-    html += '<div class="hc-offer-term-row"><span class="hc-offer-term-label">Payment</span><span class="hc-offer-term-value">' + renderPaymentMethods(schemes) + '</span></div>';
-
-    html += '</div>';
-
-    // Description
-    var description = offer.description || offer.qualifier || offer.tile || '';
-    if (description) {
-      html += '<div class="hc-offer-info-section">';
-      html += '<div class="hc-offer-info-title">DESCRIPTION</div>';
-      html += '<div class="hc-offer-desc-text">' + escapeHtml(description) + '</div>';
-      html += '</div>';
-    }
-
-    // Shop button
-    var shopUrl = offer.website || offer.offerPublisherAffiliateLinkUrl || '';
-    if (shopUrl || offer.offerType === 'click' || offer.offerType === 'click_sso') {
-      html += '<div style="height:80px"></div>';
-      html += '<div class="hc-offer-bottom">';
-      html += Button({
-        id: 'hc-shop-btn',
-        title: 'Shop Now',
-        variant: 'primary',
-        className: 'hc-btn-large',
-      });
-      html += '</div>';
-    }
-
-    container.innerHTML = html;
+    body.innerHTML = buildShopDetailHtml(offer, card, user);
 
     analytics.trackEmbedOfferDetailView(offer);
-
-    // Back button
-    document.getElementById('hc-back-btn').addEventListener('click', function () {
-      window.location.hash = '#/offers';
+    bindShopDetailActions(container, {
+      offer: offer,
+      cards: listActiveCards(cards),
+      user: user,
+      selectedCard: card,
     });
+  } catch (err) {
+    body.innerHTML =
+      '<div class="hc-shop-detail-error">' +
+      escapeHtml((err && err.message) || 'Failed to load shop') +
+      '</div>';
+  }
+}
 
-    // Shop button
-    var shopBtn = document.getElementById('hc-shop-btn');
-    if (shopBtn) {
-      shopBtn.addEventListener('click', async function () {
-        shopBtn.disabled = true;
-        shopBtn.textContent = 'Opening...';
+function openExternalUrl(url, title) {
+  console.log('[HC shop-now] openExternalUrl start', { url: url, title: title || '' });
+  if (!url) {
+    console.warn('[HC shop-now] openExternalUrl aborted: empty url');
+    return;
+  }
+  if (url.indexOf('http') !== 0) url = 'https://' + url;
+
+  if (hasNativeBridge()) {
+    console.log('[HC shop-now] notify native bridge', url);
+    try {
+      postToNative('homecrowd:open-url', { url: url, title: title || '' });
+    } catch (e1) {
+      console.warn('[HC shop-now] open-url post failed', e1);
+    }
+    try {
+      postToNative('homecrowd:open-merchant-webview', { url: url, title: title || '' });
+    } catch (e2) {
+      console.warn('[HC shop-now] open-merchant-webview post failed', e2);
+    }
+  }
+
+  console.log('[HC shop-now] top-level navigate', url);
+  showFullscreenSpinner();
+  window.location.href = url;
+}
+
+var fullscreenSpinnerEl = null;
+function showFullscreenSpinner() {
+  if (fullscreenSpinnerEl) return;
+  fullscreenSpinnerEl = document.createElement('div');
+  fullscreenSpinnerEl.className = 'hc-route-spinner-overlay';
+  fullscreenSpinnerEl.innerHTML = LoadingSpinner({ text: 'Opening...' });
+  document.body.appendChild(fullscreenSpinnerEl);
+}
+function hideFullscreenSpinner() {
+  if (fullscreenSpinnerEl) {
+    fullscreenSpinnerEl.remove();
+    fullscreenSpinnerEl = null;
+  }
+}
+
+function pickShopWebsite(offer) {
+  if (!offer) return '';
+  var store = offer.stores && offer.stores[0];
+  return (
+    offer.website ||
+    offer.offerPublisherAffiliateLinkUrl ||
+    offer.redemptionInstructionUrl ||
+    (store && store.website) ||
+    ''
+  );
+}
+
+function pickStoreLatLng(offer) {
+  if (!offer) return null;
+  var store = offer.stores && offer.stores[0];
+  var lat = Number(
+    offer.latitude != null
+      ? offer.latitude
+      : offer.lat != null
+        ? offer.lat
+        : store && (store.latitude != null ? store.latitude : store.lat)
+  );
+  var lng = Number(
+    offer.longitude != null
+      ? offer.longitude
+      : offer.lng != null
+        ? offer.lng
+        : store && (store.longitude != null ? store.longitude : store.lng)
+  );
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat: lat, lng: lng };
+}
+
+function pickStoreMapsQuery(offer) {
+  if (!offer) return '';
+  var store = offer.stores && offer.stores[0];
+  var address = offer.address || (store && store.address) || '';
+  if (address) return String(address).trim();
+  var name = pickName(offer);
+  var city = offer.city || (store && store.city) || '';
+  var state = offer.state || (store && store.state) || '';
+  var loc = [city, state].filter(Boolean).join(', ');
+  if (name && loc) return name + ' ' + loc;
+  if (loc) return loc;
+  return name !== 'Store' ? name : '';
+}
+
+function buildStoreMapsUrl(offer) {
+  var point = pickStoreLatLng(offer);
+  if (point) {
+    return (
+      'https://www.google.com/maps/search/?api=1&query=' +
+      encodeURIComponent(point.lat + ',' + point.lng)
+    );
+  }
+  var query = pickStoreMapsQuery(offer);
+  if (!query) return '';
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query);
+}
+
+async function handleShopNow(offer, btn) {
+  console.log('[HC shop-now] click', {
+    hasOffer: !!offer,
+    hasBtn: !!btn,
+    name: offer && (offer.name || offer.merchantName),
+    id: offer && offer.id,
+    offer_id: offer && offer.offer_id,
+    offerId: offer && offer.offerId,
+    offer_type: offer && (offer.offer_type || offer.offerType),
+    offer_source: offer && (offer.offer_source || offer.offerSource),
+    website: offer && offer.website,
+    wildfireMerchantId: offer && (offer.wildfireMerchantId || offer.wildfire_merchant_id),
+    isClick: isClickOffer(offer),
+    isWildfire: isWildfireOffer(offer),
+    keys: offer ? Object.keys(offer) : [],
+  });
+
+  if (!offer || !btn) {
+    console.warn('[HC shop-now] aborted: missing offer or button');
+    return;
+  }
+  var original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Opening...';
+
+  try {
+    if (isWildfireOffer(offer)) {
+      var merchantId = pickWildfireMerchantId(offer);
+      var hasToken = !!api.getAccessToken();
+      var wildfireUrl = merchantId ? api.buildWildfireRedirectUrl(merchantId) : null;
+      console.log('[HC shop-now] wildfire branch', {
+        merchantId: merchantId,
+        hasToken: hasToken,
+        hasTokenUrl: !!wildfireUrl,
+        wildfireUrl: wildfireUrl,
+      });
+      if (wildfireUrl) {
         try {
-          // Try to get tracking URL first
-          var trackResult = await api.trackOfferClick(offer.offerId || offer.id).catch(function () { return null; });
-          var url = (trackResult && trackResult.tracking_url) || shopUrl;
-          var flowUsed = trackResult && trackResult.tracking_url ? 'olive_tracking' : 'direct_or_fallback';
           analytics.trackEmbedOfferLinkClick(
             Object.assign({}, analytics.offerEmbedPayload(offer), {
-              entry_point: 'embed_offer_detail_shop',
-              flow: flowUsed,
-            }),
+              entry_point: 'embed_shop_detail_shop_now',
+              flow: 'wildfire_redirect',
+            })
           );
-          if (url) {
-            if (url.indexOf('http') !== 0) url = 'https://' + url;
-            openExternalUrl(url);
-          }
-        } catch (err) {
-          if (shopUrl) openExternalUrl(shopUrl);
+        } catch (analyticsErr) {
+          console.warn('[HC shop-now] analytics error', analyticsErr);
         }
-        shopBtn.disabled = false;
-        shopBtn.textContent = 'Shop Now';
+        openExternalUrl(wildfireUrl, pickName(offer));
+        return;
+      }
+      console.warn('[HC shop-now] wildfire: no redirect url', {
+        merchantId: merchantId,
+        hasToken: hasToken,
       });
+      if (!hasToken) {
+        window.alert('Please log in to open this store.');
+        return;
+      }
+      if (!merchantId) {
+        window.alert('Unable to open this store right now. Please try again.');
+        return;
+      }
     }
+
+    var oliveId = pickOliveOfferId(offer);
+    console.log('[HC shop-now] olive track id', oliveId);
+    if (oliveId && isClickOffer(offer)) {
+      var trackResult = await api.trackOfferClick(oliveId).catch(function (err) {
+        console.warn('[HC shop-now] trackOfferClick error', err && err.message ? err.message : err);
+        return null;
+      });
+      console.log('[HC shop-now] trackOfferClick result', trackResult);
+      var trackUrl =
+        trackResult && (trackResult.tracking_url || trackResult.trackingUrl);
+      if (trackUrl) {
+        console.log('[HC shop-now] using olive tracking url', trackUrl);
+        analytics.trackEmbedOfferLinkClick(
+          Object.assign({}, analytics.offerEmbedPayload(offer), {
+            entry_point: 'embed_shop_detail_shop_now',
+            flow: 'olive_tracking',
+          })
+        );
+        openExternalUrl(trackUrl, pickName(offer));
+        return;
+      }
+    }
+
+    var shopUrl = pickShopWebsite(offer);
+    if (!shopUrl && oliveId) {
+      console.log('[HC shop-now] fetching offer details for website', oliveId);
+      var details = await api.getOfferDetails(oliveId).catch(function (err) {
+        console.warn(
+          '[HC shop-now] getOfferDetails on shop-now failed',
+          err && err.message ? err.message : err
+        );
+        return null;
+      });
+      if (details) {
+        Object.assign(offer, details);
+        shopUrl = pickShopWebsite(offer);
+        console.log('[HC shop-now] details website', shopUrl || '(empty)', details);
+      }
+    }
+
+    console.log('[HC shop-now] website', shopUrl || '(empty)');
+    if (shopUrl) {
+      analytics.trackEmbedOfferLinkClick(
+        Object.assign({}, analytics.offerEmbedPayload(offer), {
+          entry_point: 'embed_shop_detail_shop_now',
+          flow: 'direct_or_fallback',
+        })
+      );
+      openExternalUrl(shopUrl, pickName(offer));
+      return;
+    }
+
+    var mapsUrl = buildStoreMapsUrl(offer);
+    console.log('[HC shop-now] maps url', mapsUrl || '(empty)');
+    if (mapsUrl) {
+      analytics.trackEmbedOfferLinkClick(
+        Object.assign({}, analytics.offerEmbedPayload(offer), {
+          entry_point: 'embed_shop_detail_shop_now',
+          flow: 'store_maps',
+        })
+      );
+      openExternalUrl(mapsUrl, pickName(offer));
+      return;
+    }
+
+    console.error('[HC shop-now] no openable url found for offer', offer);
+    window.alert('Unable to open this store right now. Please try again.');
   } catch (err) {
-    container.innerHTML = NavHeader({ title: 'Offers', backButtonId: 'hc-back-btn' }) + '<div class="hc-alert-error">Failed to load offer: ' + escapeHtml(err.message) + '</div>';
-    var backBtn = document.getElementById('hc-back-btn');
-    if (backBtn) backBtn.addEventListener('click', function () { window.location.hash = '#/offers'; });
+    console.error('[HC shop-now] unexpected error', err);
+    window.alert('Unable to open this store right now. Please try again.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original || 'Shop now';
   }
 }
 
-function openExternalUrl(url) {
-  postToNative('homecrowd:open-url', { url: url });
-  showWebviewOverlay(url);
+function refreshLinkedCardBanner(container, state) {
+  var slot = container.querySelector('[data-shop-card-slot]');
+  if (!slot) return;
+  var html = buildLinkedCardHtml(state.selectedCard, pickAvatar(state.user));
+  slot.outerHTML = html;
+  bindCardBannerActions(container, state);
 }
 
-function getCashbackDisplay(offer) {
-  if (offer.reward) {
-    if (offer.reward.type === 'percentage' && offer.reward.value) {
-      var text = offer.reward.value + '% back';
-      if (offer.reward.maxValue) text += ' (up to $' + offer.reward.maxValue + ')';
-      return text;
-    }
-    if (offer.reward.type === 'fixed' && offer.reward.value) {
-      return '$' + offer.reward.value + ' back';
-    }
-  }
-  if (offer.cashback) {
-    return offer.cashback + '% back';
-  }
-  return null;
-}
-
-function getLocationText(offer) {
-  if (offer.isOnline || offer.reach === 'online_only') return 'Online';
-  if (offer.stores && offer.stores.length > 0) {
-    var s = offer.stores[0];
-    var parts = [s.address, s.city, s.state].filter(Boolean);
-    if (offer.stores.length > 1) return parts.join(', ') + ' + ' + (offer.stores.length - 1) + ' more';
-    return parts.join(', ');
-  }
-  if (offer.address || offer.city) {
-    return [offer.address, offer.city, offer.state].filter(Boolean).join(', ');
-  }
-  return 'In-Store Locations';
-}
-
-function getPaymentMethods(offer) {
-  var schemes = offer.supportedSchemes;
-  if (!schemes && offer.stores && offer.stores.length > 0) {
-    schemes = offer.stores[0].supportedSchemes;
-  }
-  if (schemes && schemes.length > 0) {
-    return schemes.join(', ');
-  }
-  return null;
-}
-
-function renderPaymentMethods(schemes) {
-  if (!schemes) {
-    return '<span class="hc-offer-payment-text">Store did not specify</span>';
-  }
-  var list = Array.isArray(schemes) ? schemes : String(schemes).split(',');
-  var html = '<span class="hc-offer-payment-methods">';
-  list.forEach(function (scheme) {
-    var name = String(scheme || '').trim();
-    var lowerName = name.toLowerCase();
-    if (!name) return;
-    if (lowerName === 'visa') {
-      html += '<img class="hc-offer-payment-logo" src="' + escapeAttr(visaLogoUrl) + '" alt="Visa" />';
-      return;
-    }
-    if (lowerName.indexOf('master') >= 0) {
-      html += '<img class="hc-offer-payment-logo" src="' + escapeAttr(mastercardLogoUrl) + '" alt="Mastercard" />';
-      return;
-    }
-    html += '<span class="hc-offer-payment-text">' + escapeHtml(name) + '</span>';
+function openCardPicker(container, state) {
+  var cards = state.cards || [];
+  var selectedId = state.selectedCard && state.selectedCard.id;
+  var sheet = openBottomSheet({
+    title: 'Choose a card',
+    bodyHtml: buildCardPickerBodyHtml(cards, selectedId),
+    secondaryButton: {
+      label: 'Manage cards',
+      onPress: function () {
+        navigate('/cards');
+      },
+    },
   });
-  html += '</span>';
-  return html;
-}
 
-function getDaysOfWeek(days) {
-  var names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  if (!days || days.length === 0) return 'Every day';
-  if (days.length === 7) return 'Every day';
-  var weekdays = [1, 2, 3, 4, 5];
-  var weekend = [0, 6];
-  if (days.length === 5 && weekdays.every(function (d) { return days.indexOf(d) >= 0; })) return 'Weekdays';
-  if (days.length === 2 && weekend.every(function (d) { return days.indexOf(d) >= 0; })) return 'Weekends';
-  return days.map(function (d) { return names[d]; }).join(', ');
-}
+  var root = sheet && sheet.root;
+  if (!root) return;
 
-function getRedemptionLimitText(offer) {
-  if (!offer || !offer.redeemLimitPerUser) return 'Unlimited redemptions';
-  var limit = Number(offer.redeemLimitPerUser);
-  if (!Number.isFinite(limit) || limit <= 0) return 'Unlimited redemptions';
-  var text = limit + 'x';
-  if (offer.redeemLimitPerUserInterval) {
-    text += ' per ' + offer.redeemLimitPerUserInterval;
+  root.querySelectorAll('[data-shop-pick-card]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.getAttribute('data-shop-pick-card');
+      var next = cards.find(function (c) {
+        return String(c.id) === String(id);
+      });
+      if (!next) return;
+      setPreferredCardId(next.id);
+      state.selectedCard = next;
+      refreshLinkedCardBanner(container, state);
+      if (typeof sheet.close === 'function') sheet.close();
+    });
+  });
+
+  var addBtn = root.querySelector('[data-shop-pick-add]');
+  if (addBtn) {
+    addBtn.addEventListener('click', function () {
+      if (typeof sheet.close === 'function') {
+        sheet.close(function () {
+          navigate('/cards/link-intro');
+        });
+      } else {
+        navigate('/cards/link-intro');
+      }
+    });
   }
-  return text;
 }
 
-function getExpiryText(offer) {
-  if (!offer || !offer.endDate) return 'No expiration date';
-  var d = new Date(offer.endDate);
-  if (isNaN(d.getTime())) return 'No expiration date';
-  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-}
-
-function getSchoolCashbackText(offer) {
-  if (offer && offer.cashback != null && String(offer.cashback).trim() !== '') {
-    return String(offer.cashback) + '% of your purchase goes to your school';
+function bindCardBannerActions(container, state) {
+  var manageBtn = container.querySelector('[data-shop-manage-card]');
+  if (manageBtn) {
+    manageBtn.addEventListener('click', function () {
+      if ((state.cards || []).length) {
+        openCardPicker(container, state);
+        return;
+      }
+      navigate('/cards');
+    });
   }
-  if (offer && offer.reward && offer.reward.value != null && String(offer.reward.value).trim() !== '') {
-    return String(offer.reward.value) + '% of you’re ';
+  var linkBtn = container.querySelector('[data-shop-link-card]');
+  if (linkBtn) {
+    linkBtn.addEventListener('click', function () {
+      navigate('/cards/link-intro');
+    });
   }
-  return '5% of your purchase goes to your school';
 }
 
+function bindShopDetailActions(container, state) {
+  state = state || {};
+  bindCardBannerActions(container, state);
+  var shopBtn = container.querySelector('[data-shop-now]');
+  console.log('[HC shop-now] bind button', {
+    found: !!shopBtn,
+    hasOffer: !!(state && state.offer),
+    offerName: state && state.offer && (state.offer.name || state.offer.merchantName),
+  });
+  if (shopBtn) {
+    shopBtn.addEventListener('click', function () {
+      console.log('[HC shop-now] button clicked');
+      handleShopNow(state.offer, shopBtn);
+    });
+  }
+}
