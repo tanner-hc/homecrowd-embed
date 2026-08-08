@@ -11,4 +11,9 @@ export function isIOS() {
   return false;
 }
 
-export default { isIOS };
+export function isAndroid() {
+  if (typeof navigator === 'undefined') return false;
+  return /Android/i.test(String(navigator.userAgent || ''));
+}
+
+export default { isIOS, isAndroid };
