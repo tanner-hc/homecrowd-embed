@@ -48,8 +48,10 @@ export function setEmbedContext(context) {
 export function setTokens(access, refresh) {
   accessToken = access;
   refreshToken = refresh || null;
-  sessionStorage.setItem('hc_access_token', access);
-  if (refresh) sessionStorage.setItem('hc_refresh_token', refresh);
+  localStorage.setItem('hc_access_token', access);
+  if (refresh) localStorage.setItem('hc_refresh_token', refresh);
+  sessionStorage.removeItem('hc_access_token');
+  sessionStorage.removeItem('hc_refresh_token');
 }
 
 export function setImpersonation(userId) {
@@ -85,7 +87,9 @@ function assertImpersonationReadOnly(options, userId) {
 
 export function getAccessToken() {
   if (!accessToken) {
-    accessToken = sessionStorage.getItem('hc_access_token');
+    accessToken =
+      localStorage.getItem('hc_access_token') ||
+      sessionStorage.getItem('hc_access_token');
   }
   return accessToken;
 }
@@ -94,6 +98,8 @@ export function clearTokens() {
   accessToken = null;
   refreshToken = null;
   impersonateUserId = null;
+  localStorage.removeItem('hc_access_token');
+  localStorage.removeItem('hc_refresh_token');
   sessionStorage.removeItem('hc_access_token');
   sessionStorage.removeItem('hc_refresh_token');
   sessionStorage.removeItem('hc_impersonate_user_id');
@@ -104,7 +110,10 @@ export function isAuthenticated() {
 }
 
 async function refreshAccessToken() {
-  var rt = refreshToken || sessionStorage.getItem('hc_refresh_token');
+  var rt =
+    refreshToken ||
+    localStorage.getItem('hc_refresh_token') ||
+    sessionStorage.getItem('hc_refresh_token');
   if (!rt) return false;
 
   try {
@@ -115,7 +124,7 @@ async function refreshAccessToken() {
     });
     if (!res.ok) return false;
     var data = await res.json();
-    setTokens(data.access, rt);
+    setTokens(data.access, data.refresh || rt);
     return true;
   } catch (e) {
     return false;
