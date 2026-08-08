@@ -63,6 +63,8 @@ import { preloadMapKitForEmbed } from './mapkit-embed.js';
 import houseFilledSvg from './assets/icons/house-filled.svg?raw';
 import giftFilledSvg from './assets/icons/gift-filled.svg?raw';
 import bagSvg from './assets/icons/bag.svg?raw';
+
+import planeSvg from './assets/icons/plane-filled.svg?raw';
 import playFilledSvg from './assets/icons/play-filled.svg?raw';
 
 var appEl = document.getElementById('app');
@@ -874,6 +876,7 @@ function tabSvgInline(raw) {
 function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
   var homeActive = pathOnly === '/home' ? ' active' : '';
   var rewardsActive = pathOnly === '/rewards' ? ' active' : '';
+  var travelActive = pathOnly === '/travel' ? ' active' : '';
   var contentActive =
     contentTabEnabled && pathOnly === '/content' ? ' active' : '';
   var offersActive =
@@ -909,6 +912,12 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
 
   // Profile lives in the app header's avatar button, so it is not repeated here.
   html +=
+    '<a href="#/travel" class="hc-tab-link' +
+    travelActive +
+    '">' +
+    '<span class="hc-tab-icon-wrap">' +
+    tabSvgInline(planeSvg) +
+    '</span><span class="hc-tab-label">Travel</span></a>' +
     '<a href="#/rewards" class="hc-tab-link' +
     rewardsActive +
     '">' +

@@ -464,7 +464,9 @@ html.hc-embed--no-school-brand .hc-embed--email-selection {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  justify-content: space-around;
+  /* Figma 1216:15512: fixed 72px tab items centred as a group, not spread to
+     the edges — space-around with flexible items pushed them much too far apart. */
+  justify-content: center;
   width: 100%;
   max-width: 600px;
   margin: 0 auto;
@@ -476,7 +478,10 @@ html.hc-embed--no-school-brand .hc-embed--email-selection {
 }
 
 .hc-tab-link {
-  flex: 1;
+  /* w-[72px] in the design; allowed to shrink so five tabs still fit narrow
+     screens, but never to grow and spread the row out. */
+  flex: 0 1 72px;
+  max-width: 72px;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -10993,6 +10998,47 @@ html.hc-embed--no-school-brand .hc-login-card {
   overflow: hidden;
 }
 
+/* Earn-rate row above the booking frame. Built on the same card idiom as the
+   home setup steps (.hc-unlock-setup-card): Gray 1 #F8F8F8 at a 12px radius
+   with 20px padding, a 24px tinted icon badge, a 16px Baikal-Medium label, and
+   the green #677A29 points accent. flex-shrink keeps the iframe from squeezing
+   it out of the column. */
+.hc-travel-earn {
+  flex-shrink: 0;
+}
+
+/* Spans the full width, like the booking iframe below it, so the two read as
+   one surface. Full-bleed means no corner radius — rounded corners against the
+   viewport edge leave slivers of the page showing through. */
+.hc-travel-earn-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  background: #f8f8f8;
+  padding: 16px var(--hc-spacing-lg);
+  box-sizing: border-box;
+}
+
+.hc-travel-earn-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  line-height: 16px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+}
+
+.hc-travel-earn-pts {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1.1;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #677a29;
+}
+
 .hc-travel-body {
   position: relative;
   flex: 1 1 auto;
@@ -11038,7 +11084,9 @@ html.hc-embed--no-school-brand .hc-login-card {
   padding-bottom: 0;
 }
 
-.hc-content.hc-content--travel .hc-bc-nav-header {
+/* Travel is a flex column ending in the full-height iframe, so the header has
+   to hold its intrinsic height instead of being squeezed. */
+.hc-content.hc-content--travel .hc-app-header {
   flex: 0 0 auto;
 }
 
@@ -15456,6 +15504,7 @@ html.hc-embed--no-school-brand .hc-login-card {
   /* The design ellipsises a long title rather than letting the row grow. */
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
