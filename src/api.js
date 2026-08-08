@@ -650,6 +650,22 @@ export async function getWildfireOffers(page, pageSize, query) {
   return request('/api/wildfire/offers/?' + params);
 }
 
+export async function getWildfireMerchantDetail(merchantId) {
+  var params = 'merchant_id=' + encodeURIComponent(merchantId);
+  if (wildfireAppId) {
+    params += '&wildfire_app_id=' + encodeURIComponent(wildfireAppId);
+  }
+  return request('/api/wildfire/merchant/?' + params);
+}
+
+export async function trackWildfireClick(merchantId) {
+  var params = 'merchant_id=' + encodeURIComponent(merchantId);
+  if (wildfireAppId) {
+    params += '&wildfire_app_id=' + encodeURIComponent(wildfireAppId);
+  }
+  return request('/api/wildfire/track-click/?' + params);
+}
+
 export function buildWildfireRedirectUrl(merchantId) {
   var token = getAccessToken();
   if (!token) return null;
@@ -661,9 +677,18 @@ export function buildWildfireRedirectUrl(merchantId) {
   return baseUrl + '/api/wildfire/redirect/?' + params;
 }
 
-export async function getFeaturedOffers(offerType) {
-  var params = offerType ? '?offer_type=' + offerType : '';
-  return request('/api/merchant/featured-offers/' + params);
+export async function getFeaturedOffers(offerType, extraParams) {
+  var params = new URLSearchParams();
+  if (offerType) params.set('offer_type', offerType);
+  if (extraParams && typeof extraParams === 'object') {
+    Object.keys(extraParams).forEach(function (key) {
+      var val = extraParams[key];
+      if (val === undefined || val === null || val === '') return;
+      params.set(key, String(val));
+    });
+  }
+  var qs = params.toString();
+  return request('/api/merchant/featured-offers/' + (qs ? '?' + qs : ''));
 }
 
 export async function checkEmbeddable(url) {

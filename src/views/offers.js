@@ -215,7 +215,10 @@ export function renderOffers(container) {
     .getFeaturedOffers('click')
     .then(function (raw) {
       if (!container.isConnected) return;
-      populateMarketplaceFeaturedShops(container, normalizeFeaturedStores(raw));
+      populateMarketplaceFeaturedShops(
+        container,
+        normalizeFeaturedStores(raw, { onlineOnly: true })
+      );
     })
     .catch(function () {
       if (!container.isConnected) return;
@@ -287,6 +290,8 @@ export function renderStoresMap(container) {
     },
   });
 
+  container._hcPendingMapSelect = consumePendingMapMerchantSelection();
+
   api
     .getFeaturedOffers('card_linked')
     .then(function (raw) {
@@ -307,11 +312,24 @@ export function renderStoresMap(container) {
   getOffersWithLocationRetry(1, 50, null)
     .then(function (raw) {
       if (!container.isConnected) return;
-      initOffersMap(container, pickOliveList(raw));
+      var list = pickOliveList(raw);
+      var pendingMerchant =
+        container._hcPendingMapSelect &&
+        flattenOfferMerchantForMap(container._hcPendingMapSelect.merchant);
+      if (pendingMerchant && pickMerchantLatLng(pendingMerchant)) {
+        list = [pendingMerchant].concat(list || []);
+      }
+      initOffersMap(container, list);
     })
     .catch(function () {
       if (!container.isConnected) return;
-      initOffersMap(container, []);
+      var pendingMerchant =
+        container._hcPendingMapSelect &&
+        flattenOfferMerchantForMap(container._hcPendingMapSelect.merchant);
+      initOffersMap(
+        container,
+        pendingMerchant && pickMerchantLatLng(pendingMerchant) ? [pendingMerchant] : []
+      );
     });
 }
 
@@ -323,17 +341,6 @@ function buildMarketplaceShell() {
     '<div class="hc-marketplace-hero">' +
     '<div class="hc-marketplace-hero-title">Shop and earn points</div>' +
     '<div class="hc-marketplace-hero-sub">Pay like you always do, you earn points and support your team!</div>' +
-    '</div>' +
-    '<div class="hc-marketplace-search-wrap">' +
-    '<button type="button" class="hc-marketplace-search-hit" id="hc-marketplace-search-hit" aria-label="Search shops">' +
-    SearchBar({
-      id: 'hc-marketplace-search-fake',
-      placeholder: 'Search anything',
-      value: '',
-      disabled: true,
-      className: 'hc-marketplace-search-bar',
-    }) +
-    '</button>' +
     '</div>' +
     '<div id="hc-marketplace-preferred-partners" class="hc-marketplace-preferred-partners"></div>' +
     '<div id="hc-marketplace-featured-shops" class="hc-marketplace-featured-shops"></div>' +
@@ -356,13 +363,6 @@ function buildMarketplaceShell() {
 }
 
 function wireMarketplaceInteractions(container) {
-  var searchHit = container.querySelector('#hc-marketplace-search-hit');
-  if (searchHit) {
-    searchHit.addEventListener('click', function () {
-      navigate('/offers/all-shops?autoFocusSearch=1&categoryId=all');
-    });
-  }
-
   var viewMap = container.querySelector('#hc-marketplace-view-map');
   if (viewMap) {
     viewMap.addEventListener('click', function () {
@@ -431,18 +431,36 @@ function populateMarketplaceFeaturedShops(container, stores) {
         navigate('/offers/all-shops?categoryId=all');
         return;
       }
-      var offerId = store.offer_id || store.id;
-      if (!offerId) {
+      var merchantId =
+        store.wildfireMerchantId ||
+        store.wildfire_merchant_id ||
+        store.offer_id ||
+        store.offerId;
+      var offerPayload = Object.assign({}, store, {
+        offer_type: 'click',
+        offerType: 'click',
+        offerSource: 'wildfire',
+        offer_source: 'wildfire',
+        wildfireMerchantId: merchantId,
+        wildfire_merchant_id: merchantId,
+        offer_id: merchantId || store.offer_id,
+      });
+      var routeId = merchantId || store.offer_id || store.id;
+      if (!routeId) {
         navigate('/offers/all-shops?categoryId=all');
         return;
       }
       try {
         sessionStorage.setItem(
           'hc_offer_detail_initial',
-          JSON.stringify({ offerId: String(offerId), offer: store })
+          JSON.stringify({
+            offerId: String(routeId),
+            offer: offerPayload,
+            preloadWildlink: true,
+          })
         );
       } catch (_e) {}
-      window.location.hash = '#/offers/' + encodeURIComponent(offerId);
+      window.location.hash = '#/offers/' + encodeURIComponent(routeId);
     },
   });
 }
@@ -1085,6 +1103,10 @@ var OFFERS_LOCATION_PROMPT_DEFAULT =
   'Enable location to discover nearby stores and exclusive local deals';
 var OFFERS_LOCATION_PROMPT_DENIED =
   'Location access is blocked. Allow location in your browser settings, then reopen the HomeCrowd embed and tap Enable Location again.';
+var OFFERS_LOCATION_PROMPT_SYSTEM_BLOCKED =
+  'Your browser could not access location even though the site permission is granted. Check that Location Services are enabled for your browser in the system settings, then try again.';
+var OFFERS_LOCATION_PROMPT_GENERIC =
+  'Unable to get your location. Please try again.';
 
 var OFFERS_DEFAULT_MAP_LAT = 39.8283;
 var OFFERS_DEFAULT_MAP_LNG = -98.5795;
@@ -2132,6 +2154,106 @@ function notifyMapRenderDone(container) {
       console.warn('[HC offers map] render done callback failed', e);
     }
   }
+  applyPendingMapMerchantSelection(container);
+}
+
+function consumePendingMapMerchantSelection() {
+  try {
+    var raw = sessionStorage.getItem('hc_map_select_merchant');
+    if (!raw) return null;
+    sessionStorage.removeItem('hc_map_select_merchant');
+    var parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
+  } catch (_e) {
+    return null;
+  }
+}
+
+function flattenOfferMerchantForMap(merchant) {
+  if (!merchant || typeof merchant !== 'object') return null;
+  var store = merchant.stores && merchant.stores[0];
+  var out = Object.assign({}, merchant);
+  if (store && typeof store === 'object') {
+    if (out.latitude == null && store.latitude != null) out.latitude = store.latitude;
+    if (out.longitude == null && store.longitude != null) out.longitude = store.longitude;
+    if (out.lat == null && store.lat != null) out.lat = store.lat;
+    if (out.lng == null && store.lng != null) out.lng = store.lng;
+    if (!out.address && store.address) out.address = store.address;
+    if (!out.city && store.city) out.city = store.city;
+    if (!out.state && store.state) out.state = store.state;
+    if (!out.name && store.name) out.name = store.name;
+    if (out.id == null && store.id != null) out.id = store.id;
+  }
+  return out;
+}
+
+function merchantMatchesMapSelection(m, selection) {
+  if (!m || !selection) return false;
+  var wanted = flattenOfferMerchantForMap(selection.merchant) || selection.merchant || {};
+  var ids = [
+    selection.offerId,
+    wanted.offer_id,
+    wanted.offerId,
+    wanted.id,
+    wanted.storeId,
+  ]
+    .filter(function (v) {
+      return v != null && String(v).trim() !== '';
+    })
+    .map(function (v) {
+      return String(v).trim();
+    });
+  var candidates = [m.id, m.storeId, m.offer_id, m.offerId]
+    .filter(function (v) {
+      return v != null && String(v).trim() !== '';
+    })
+    .map(function (v) {
+      return String(v).trim();
+    });
+  for (var i = 0; i < candidates.length; i++) {
+    if (ids.indexOf(candidates[i]) >= 0) return true;
+  }
+  var n1 = normalizeMerchantMapName(m.name || m.merchantName);
+  var n2 = normalizeMerchantMapName(wanted.name || wanted.merchantName);
+  if (!n1 || !n2 || n1 !== n2) return false;
+  var p1 = pickMerchantLatLng(m);
+  var p2 = pickMerchantLatLng(wanted);
+  if (p1 && p2) {
+    return Math.abs(p1.lat - p2.lat) < 0.002 && Math.abs(p1.lng - p2.lng) < 0.002;
+  }
+  return true;
+}
+
+function applyPendingMapMerchantSelection(container) {
+  if (!container || !container._hcPendingMapSelect) return;
+  var selection = container._hcPendingMapSelect;
+  container._hcPendingMapSelect = null;
+  var wanted = flattenOfferMerchantForMap(selection.merchant) || selection.merchant;
+  var stores = container._hcMapStores || [];
+  var match = null;
+  for (var i = 0; i < stores.length; i++) {
+    if (merchantMatchesMapSelection(stores[i], selection)) {
+      match = stores[i];
+      break;
+    }
+  }
+  if (!match && wanted && pickMerchantLatLng(wanted)) {
+    mergeOffersMapStores(container, [wanted]);
+    addMerchantPinsToLiveMap(container, [wanted]);
+    match = wanted;
+  }
+  if (!match) {
+    console.warn('[HC offers map] pending merchant not found on map', selection);
+    return;
+  }
+  showSelectedMapMerchant(container, match);
+  var loc = pickMerchantLatLng(match);
+  if (loc) {
+    window.setTimeout(function () {
+      focusOffersMap(container, loc.lat, loc.lng);
+    }, 80);
+  }
 }
 
 function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker) {
@@ -2838,7 +2960,15 @@ function initOffersMap(container, cardlinked) {
   function showMapWithDefaultCenter() {
     hasUserMapLocation = false;
     showMapUI();
-    renderMap(OFFERS_DEFAULT_MAP_LAT, OFFERS_DEFAULT_MAP_LNG, false);
+    var pendingMerchant =
+      container._hcPendingMapSelect &&
+      flattenOfferMerchantForMap(container._hcPendingMapSelect.merchant);
+    var pendingPoint = pendingMerchant && pickMerchantLatLng(pendingMerchant);
+    if (pendingPoint) {
+      renderMap(pendingPoint.lat, pendingPoint.lng, false);
+    } else {
+      renderMap(OFFERS_DEFAULT_MAP_LAT, OFFERS_DEFAULT_MAP_LNG, false);
+    }
     showNoStoresIfEmpty(container._hcCardlinkedStores);
   }
 
@@ -2947,13 +3077,17 @@ function initOffersMap(container, cardlinked) {
       },
       function (err) {
         setMyLocationLoading(false);
-        setMapShellLoading(false);
-        restoreStoresGridFromCache();
-        if (err && err.code === 1) {
-          window.alert(OFFERS_LOCATION_PROMPT_DENIED);
+        var stored = getStoredOfferLocation();
+        if (stored) {
+          applyFreshLocation(stored.latitude, stored.longitude, { persist: false })
+            .catch(function () {
+              setMapShellLoading(false);
+            });
           return;
         }
-        window.alert('Unable to get your location. Please try again.');
+        setMapShellLoading(false);
+        restoreStoresGridFromCache();
+        alertGeolocationFailure(err);
       },
     );
   }
@@ -2965,6 +3099,43 @@ function initOffersMap(container, cardlinked) {
       oldInput.parentNode.replaceChild(fresh, oldInput);
     }
     bindSearch('hc-search-stores', 'hc-stores-grid', list);
+  }
+
+  function alertGeolocationFailure(err) {
+    var code = err && err.code;
+    var message = err && err.message;
+    try {
+      console.warn('[HC offers geo] getCurrentPosition failed', code, message);
+    } catch (e) {}
+    function show(state) {
+      if (code === 1 && state === 'denied') {
+        window.alert(OFFERS_LOCATION_PROMPT_DENIED);
+        return;
+      }
+      if (code === 1 && state === 'granted') {
+        window.alert(OFFERS_LOCATION_PROMPT_SYSTEM_BLOCKED);
+        return;
+      }
+      if (code === 1 && !state) {
+        window.alert(OFFERS_LOCATION_PROMPT_DENIED);
+        return;
+      }
+      window.alert(OFFERS_LOCATION_PROMPT_GENERIC);
+    }
+    if (navigator.permissions && typeof navigator.permissions.query === 'function') {
+      try {
+        navigator.permissions
+          .query({ name: 'geolocation' })
+          .then(function (status) {
+            show(status && status.state);
+          })
+          .catch(function () {
+            show(null);
+          });
+        return;
+      } catch (e) {}
+    }
+    show(null);
   }
 
   function requestOfferGeolocation(options, onSuccess, onError) {
@@ -3009,28 +3180,22 @@ function initOffersMap(container, cardlinked) {
         navigator.permissions
           .query({ name: 'geolocation' })
           .then(function (status) {
-            if (status && status.state === 'granted') {
-              requestGrantedLocation();
+            if (status && status.state === 'denied') {
+              applyStoredLocationFallback().then(function (usedStored) {
+                if (!usedStored) showMapWithDefaultCenter();
+              });
               return;
             }
-            applyStoredLocationFallback().then(function (usedStored) {
-              if (!usedStored) showMapWithDefaultCenter();
-            });
+            requestGrantedLocation();
           })
           .catch(function () {
-            applyStoredLocationFallback().then(function (usedStored) {
-              if (!usedStored) showMapWithDefaultCenter();
-            });
+            requestGrantedLocation();
           });
       } catch (e) {
-        applyStoredLocationFallback().then(function (usedStored) {
-          if (!usedStored) showMapWithDefaultCenter();
-        });
+        requestGrantedLocation();
       }
     } else {
-      applyStoredLocationFallback().then(function (usedStored) {
-        if (!usedStored) showMapWithDefaultCenter();
-      });
+      requestGrantedLocation();
     }
   }
 
@@ -3055,12 +3220,10 @@ function initOffersMap(container, cardlinked) {
         },
         function (err) {
           btn.disabled = false;
-          if (err && err.code === 1) {
-            showMapWithDefaultCenter();
-            window.alert(OFFERS_LOCATION_PROMPT_DENIED);
-            return;
-          }
           showMapWithDefaultCenter();
+          if (err && err.code === 1) {
+            alertGeolocationFailure(err);
+          }
         },
       );
     });

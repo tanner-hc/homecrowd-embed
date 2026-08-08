@@ -559,7 +559,7 @@ async function fetchDashboardPayload() {
       ? profileSchool.tier_config.tiers
       : [];
 
-  var featuredStores = normalizeFeaturedStores(featuredRes);
+  var featuredStores = normalizeFeaturedStores(featuredRes, { onlineOnly: true });
 
   return {
     user: latestUser,

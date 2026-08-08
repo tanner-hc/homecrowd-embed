@@ -35,41 +35,41 @@ export function normalizePreferredPartner(item, channel) {
     offerType: item.offer_type || (resolvedChannel === 'online' ? 'click' : 'card_linked'),
     channel: resolvedChannel,
     badgeLabel: resolvedChannel === 'online' ? 'Online' : 'In-person',
-    topOrder: Number(item.top_order != null ? item.top_order : item.topOrder) || 0,
+    preferredOrder:
+      Number(
+        item.preferred_order != null
+          ? item.preferred_order
+          : item.preferredOrder != null
+            ? item.preferredOrder
+            : item.top_order != null
+              ? item.top_order
+              : item.topOrder
+      ) || 0,
     raw: item,
   };
 }
 
 /**
- * Merge top-featured online (click) + in-person (card_linked) merchants.
- * @param {*} clickRaw
- * @param {*} cardlinkedRaw
+ * Normalize preferred-partner featured offers (is_preferred_partner).
+ * @param {*} raw
  */
-export function normalizePreferredPartners(clickRaw, cardlinkedRaw) {
-  var online = pickList(clickRaw)
-    .filter(function (m) {
-      return m && m.is_active !== false && m.top_featured;
-    })
-    .map(function (m) {
-      return normalizePreferredPartner(m, 'online');
-    })
-    .filter(Boolean);
-
-  var inPerson = pickList(cardlinkedRaw)
-    .filter(function (m) {
-      return m && m.is_active !== false && m.top_featured;
-    })
-    .map(function (m) {
-      return normalizePreferredPartner(m, 'in_person');
-    })
-    .filter(Boolean);
-
+export function normalizePreferredPartners(raw) {
   var seen = {};
   var merged = [];
-  []
-    .concat(online, inPerson)
+  pickList(raw)
+    .filter(function (m) {
+      return (
+        m &&
+        m.is_active !== false &&
+        (m.is_preferred_partner === true || m.isPreferredPartner === true)
+      );
+    })
+    .map(function (m) {
+      return normalizePreferredPartner(m);
+    })
+    .filter(Boolean)
     .sort(function (a, b) {
-      return (b.topOrder || 0) - (a.topOrder || 0);
+      return (b.preferredOrder || 0) - (a.preferredOrder || 0);
     })
     .forEach(function (item) {
       var key = item.id != null ? String(item.id) : item.name;
@@ -81,15 +81,10 @@ export function normalizePreferredPartners(clickRaw, cardlinkedRaw) {
 }
 
 export async function fetchPreferredPartners() {
-  var results = await Promise.all([
-    api.getFeaturedOffers('click').catch(function () {
-      return [];
-    }),
-    api.getFeaturedOffers('card_linked').catch(function () {
-      return [];
-    }),
-  ]);
-  return normalizePreferredPartners(results[0], results[1]);
+  var raw = await api.getFeaturedOffers(null, { is_preferred_partner: true }).catch(function () {
+    return [];
+  });
+  return normalizePreferredPartners(raw);
 }
 
 function pickSubtitle(partner) {

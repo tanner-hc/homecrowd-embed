@@ -4879,11 +4879,29 @@ html.hc-embed--no-school-brand .hc-login-card {
 }
 
 .hc-shop-detail-cats {
-  margin: 0 0 12px;
+  margin: 8px 0 0;
+  padding: 0;
+  border: none;
+  background: transparent;
   font-family: 'Baikal-Regular', var(--hc-font);
   font-size: 14px;
-  line-height: 18px;
-  color: #9a9a9a;
+  line-height: 20px;
+  color: #6b6b6b;
+  text-align: center;
+  max-width: 100%;
+}
+
+button.hc-shop-detail-cats--expandable {
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-shop-detail-cats-more {
+  font-family: 'Baikal-Bold', var(--hc-font);
+  font-weight: 700;
+  color: #111;
 }
 
 .hc-shop-detail-new {
@@ -5047,6 +5065,24 @@ html.hc-embed--no-school-brand .hc-login-card {
   font-size: 13px;
   line-height: 18px;
   color: #6b6b6b;
+}
+
+.hc-shop-detail-exclusions {
+  margin: 0;
+  padding: 0 0 0 18px;
+  list-style: disc;
+}
+
+.hc-shop-detail-exclusions li {
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-size: 13px;
+  line-height: 18px;
+  color: #6b6b6b;
+  margin: 0 0 6px;
+}
+
+.hc-shop-detail-exclusions li:last-child {
+  margin-bottom: 0;
 }
 
 .hc-shop-detail-footer {

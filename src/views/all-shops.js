@@ -5,11 +5,6 @@ import { buildAppHeaderHtml, attachAppHeader } from '../base-components/AppHeade
 import SearchBar from '../base-components/SearchBar.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { getPointMultiplierValue } from '../pointMultiplier.js';
-import {
-  SHOP_CATEGORIES,
-  merchantMatchesShopCategory,
-} from '../components/Marketplace/ShopByCategory.js';
-import { openCategoryPickerModal } from '../components/Marketplace/CategoryPickerModal.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
 import { hasNativeBridge, postToNative } from '../bridge.js';
 import starSvg from '../assets/icons/star.svg?raw';
@@ -230,13 +225,12 @@ function isFeaturedShop(shop) {
   return String(shop.listKey || '').indexOf('featured-') === 0;
 }
 
-function filterShops(shops, categoryId, query, topRatedOnly) {
+function filterShops(shops, query, topRatedOnly) {
   var q = String(query || '')
     .trim()
     .toLowerCase();
   var list = shops.filter(function (shop) {
     if (topRatedOnly && !isFeaturedShop(shop)) return false;
-    if (!merchantMatchesShopCategory(shop, categoryId)) return false;
     if (!q) return true;
     return getMerchantHaystack(shop).indexOf(q) >= 0;
   });
@@ -288,30 +282,13 @@ function openShop(shop) {
 
 export function renderAllShops(container) {
   var params = parseRouteParams();
-  var categoryId = params.categoryId || 'all';
   var autoFocus = params.autoFocusSearch === '1' || params.autoFocusSearch === 'true';
   var topRatedOnly = false;
   var allShops = [];
-  var categoryPicker = null;
-
-  function selectedCategory() {
-    return (
-      SHOP_CATEGORIES.find(function (c) {
-        return c.id === categoryId;
-      }) || SHOP_CATEGORIES[0]
-    );
-  }
 
   function buildFiltersHtml() {
-    var cat = selectedCategory();
     return (
       '<div class="hc-all-shops-filters">' +
-      '<button type="button" class="hc-all-shops-cat-pill" id="hc-all-shops-cat-pill">' +
-      '<span class="hc-all-shops-cat-pill-text">' +
-      escapeHtml(cat.label) +
-      '</span>' +
-      '<span class="hc-all-shops-cat-pill-chevron" aria-hidden="true">▾</span>' +
-      '</button>' +
       '<button type="button" class="hc-all-shops-top-rated' +
       (topRatedOnly ? ' hc-all-shops-top-rated--active' : '') +
       '" id="hc-all-shops-top-rated">' +
@@ -353,30 +330,6 @@ export function renderAllShops(container) {
   }
 
   function bindFilters() {
-    var catPill = container.querySelector('#hc-all-shops-cat-pill');
-    if (catPill) {
-      catPill.addEventListener('click', function () {
-        if (categoryPicker) {
-          categoryPicker.close();
-          categoryPicker = null;
-        }
-        categoryPicker = openCategoryPickerModal({
-          selectedId: categoryId,
-          onApply: function (id) {
-            categoryId = id || 'all';
-            var slot = container.querySelector('#hc-all-shops-filters-slot');
-            if (slot) {
-              slot.innerHTML = buildFiltersHtml();
-              bindFilters();
-            }
-            renderList();
-          },
-          onClose: function () {
-            categoryPicker = null;
-          },
-        });
-      });
-    }
     var topRatedBtn = container.querySelector('#hc-all-shops-top-rated');
     if (topRatedBtn) {
       topRatedBtn.addEventListener('click', function () {
@@ -397,7 +350,6 @@ export function renderAllShops(container) {
     if (!bodyEl) return;
     var filtered = filterShops(
       allShops,
-      categoryId,
       searchEl ? searchEl.value : '',
       topRatedOnly
     );

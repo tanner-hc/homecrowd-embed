@@ -2,44 +2,24 @@ import { escapeAttr, escapeHtml } from '../../base-components/html.js';
 import { renderPointMultiplierBadgeHtml } from '../../pointMultiplier.js';
 import cardFilledSvg from '../../assets/icons/card-filled.svg?raw';
 
-var BRAND_COLORS = {
-  'best buy': '#0046BE',
-  alo: '#F3F3F3',
-  ulta: '#F68026',
-  'ulta beauty': '#F68026',
-  walgreens: '#E31837',
-  target: '#CC0000',
-  nike: '#111111',
-  adidas: '#000000',
-  amazon: '#232F3E',
-  apple: '#000000',
-  starbucks: '#00704A',
-  mcdonald: '#FFBC0D',
-  "mcdonald's": '#FFBC0D',
-  walmart: '#0071CE',
-  cvs: '#CC0000',
-  'home depot': '#F96302',
-  costco: '#E31837',
-};
+var FEATURED_STORE_TILE_BG = '#FFFFFF';
 
-function getBrandColor(name) {
-  if (!name) return '#F2F2F2';
-  var key = String(name).trim().toLowerCase();
-  if (BRAND_COLORS[key]) return BRAND_COLORS[key];
-  var match = Object.keys(BRAND_COLORS).find(function (brand) {
-    return key.indexOf(brand) >= 0;
-  });
-  return match ? BRAND_COLORS[match] : '#F2F2F2';
-}
-
-export function normalizeFeaturedStores(response) {
+export function normalizeFeaturedStores(response, options) {
+  options = options || {};
+  var onlineOnly = options.onlineOnly !== false;
   var data;
   if (response && response.results) data = response.results;
   else if (Array.isArray(response)) data = response;
   else data = [];
 
   var active = data.filter(function (m) {
-    return m.is_active !== false;
+    if (!m || m.is_active === false) return false;
+    if (m.is_preferred_partner) return false;
+    if (onlineOnly) {
+      var t = String(m.offer_type || m.offerType || '').toLowerCase();
+      if (t && t !== 'click' && t !== 'click_sso' && t !== 'online') return false;
+    }
+    return true;
   });
   var topFeatured = active
     .filter(function (m) {
@@ -58,13 +38,25 @@ export function normalizeFeaturedStores(response) {
 
   var seen = {};
   var merged = [];
-  [].concat(topFeatured, bottomFeatured, active).forEach(function (item) {
+  [].concat(topFeatured, bottomFeatured).forEach(function (item) {
     var key = item.id != null ? String(item.id) : item.name;
     if (!key || seen[key]) return;
     var logoUri = item.small_logo_url || item.large_logo_url;
     if (!logoUri) return;
     seen[key] = true;
-    merged.push(item);
+    merged.push(
+      Object.assign({}, item, {
+        offer_type: item.offer_type || 'click',
+        offerType: item.offerType || item.offer_type || 'click',
+        offerSource: item.offerSource || item.offer_source || 'wildfire',
+        wildfireMerchantId:
+          item.wildfireMerchantId ||
+          item.wildfire_merchant_id ||
+          item.offer_id ||
+          item.offerId ||
+          null,
+      })
+    );
   });
   return merged;
 }
@@ -102,13 +94,12 @@ export function buildHomeFeaturedStoresHtml(props) {
       stores
         .map(function (item) {
           var logoUri = item.small_logo_url || item.large_logo_url;
-          var brandColor = getBrandColor(item.name);
           return (
             '<button type="button" class="hc-featured-store" data-featured-store-id="' +
             escapeAttr(String(item.id || '')) +
             '">' +
             '<span class="hc-featured-store-tile" style="background:' +
-            escapeAttr(brandColor) +
+            escapeAttr(FEATURED_STORE_TILE_BG) +
             '">' +
             '<span class="hc-featured-store-logo-clip">' +
             '<img src="' +
