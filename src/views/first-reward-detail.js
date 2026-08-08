@@ -1,6 +1,7 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
 import { escapeAttr, escapeHtml } from '../base-components/html.js';
+import { formatNumber } from '../formatNumber.js';
 import { normalizeMilestones } from '../components/Dashboard/PointsMilestonesCard.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import personSvg from '../assets/icons/person.svg?raw';
@@ -8,10 +9,6 @@ import chevronLeftSvg from '../assets/icons/chevron-left.svg?raw';
 import giftSvg from '../assets/icon-gift-outline.svg?raw';
 import locationSvg from '../assets/icon-location.svg?raw';
 import unlockSvg from '../assets/icon-unlock.svg?raw';
-
-function formatNumber(value) {
-  return (Number(value) || 0).toLocaleString('en-US');
-}
 
 function buildHeaderHtml(availablePoints) {
   return (
@@ -200,7 +197,7 @@ function buildUnavailableHtml(message, availablePoints) {
  */
 export async function renderFirstRewardDetail(container, rewardId, options) {
   options = options || {};
-  var returnTo = options.returnTo === '/rewards' ? '/rewards' : '/home';
+  var returnTo = options.returnTo || '/home';
   container.innerHTML = LoadingSpinner({ text: 'Loading reward...' });
 
   var milestone = null;

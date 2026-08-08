@@ -1,6 +1,7 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
 import { escapeAttr, escapeHtml } from '../base-components/html.js';
+import { formatNumber } from '../formatNumber.js';
 import { normalizeMilestones } from '../components/Dashboard/PointsMilestonesCard.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import { showSuccess } from '../base-components/toastApi.js';
@@ -12,10 +13,6 @@ import glowUrl from '../assets/reward-glow.png';
 
 var METHOD_SMS = 'sms';
 var METHOD_EMAIL = 'email';
-
-function formatNumber(value) {
-  return (Number(value) || 0).toLocaleString('en-US');
-}
 
 /**
  * The school's embed header logo when the program has one, otherwise the
@@ -121,7 +118,7 @@ function buildUnavailableHtml(message) {
  */
 export async function renderFirstRewardRedemption(container, rewardId, options) {
   options = options || {};
-  var returnTo = options.returnTo === '/rewards' ? '/rewards' : '/home';
+  var returnTo = options.returnTo || '/home';
   container.innerHTML = LoadingSpinner({ text: 'Loading reward...' });
 
   var milestone = null;

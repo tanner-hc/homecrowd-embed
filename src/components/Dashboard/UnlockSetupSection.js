@@ -28,7 +28,7 @@ var STEPS = [
     pointsKey: 'safariExtension',
     number: 3,
     description: 'Takes about a minute. Earn points when you shop online.',
-    cta: 'Enable Safari',
+    cta: 'Activate',
   },
 ];
 
@@ -104,8 +104,9 @@ export function buildUnlockSetupSectionHtml(props) {
   }).join('');
 
   return (
+    // The heading lives in the welcome block above this list now, so the two
+    // don't stack.
     '<div class="hc-unlock-setup">' +
-    '<div class="hc-unlock-setup-title">Start earning points</div>' +
     '<div class="hc-unlock-setup-list">' +
     stepsHtml +
     '</div>' +

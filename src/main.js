@@ -64,7 +64,6 @@ import houseFilledSvg from './assets/icons/house-filled.svg?raw';
 import giftFilledSvg from './assets/icons/gift-filled.svg?raw';
 import bagSvg from './assets/icons/bag.svg?raw';
 import playFilledSvg from './assets/icons/play-filled.svg?raw';
-import personSvg from './assets/icons/person.svg?raw';
 
 var appEl = document.getElementById('app');
 var user = null;
@@ -798,6 +797,10 @@ async function init() {
   refreshProfileUserForTabs();
 }
 
+function firstRewardReturnTo(route) {
+  return /(?:\?|&)from=rewards(?:&|$)/.test(route) ? '/rewards' : '/home';
+}
+
 function routePathOnly(route) {
   var q = route.indexOf('?');
   return q >= 0 ? route.slice(0, q) : route;
@@ -879,25 +882,6 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
     pathOnly === '/offers/map'
       ? ' active'
       : '';
-  var profileActive =
-    pathOnly === '/profile' ||
-    pathOnly === '/cards' ||
-    pathOnly === '/cards/link' ||
-    pathOnly === '/cards/link-intro' ||
-    pathOnly === '/account-settings' ||
-    pathOnly === '/profile-details' ||
-    pathOnly === '/notification-settings' ||
-    pathOnly === '/security-settings' ||
-    pathOnly === '/change-password' ||
-    pathOnly === '/invite-friend' ||
-    pathOnly === '/activity-log' ||
-    pathOnly === '/browser-extension' ||
-    pathOnly === '/support' ||
-    pathOnly === '/upload-receipt' ||
-    pathOnly === '/travel'
-      ? ' active'
-      : '';
-
   var html =
     '<nav class="hc-tab-bar" role="navigation" aria-label="Main">' +
     '<a href="#/home" class="hc-tab-link' +
@@ -923,6 +907,7 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
       '</span><span class="hc-tab-label">Content</span></a>';
   }
 
+  // Profile lives in the app header's avatar button, so it is not repeated here.
   html +=
     '<a href="#/rewards" class="hc-tab-link' +
     rewardsActive +
@@ -930,12 +915,6 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
     '<span class="hc-tab-icon-wrap">' +
     tabSvgInline(giftFilledSvg) +
     '</span><span class="hc-tab-label">Rewards</span></a>' +
-    '<a href="#/profile" class="hc-tab-link' +
-    profileActive +
-    '">' +
-    '<span class="hc-tab-icon-wrap">' +
-    tabSvgInline(personSvg) +
-    '</span><span class="hc-tab-label">Profile</span></a>' +
     '</nav>';
 
   return '<div class="hc-tab-bar-shell">' + html + '</div>';
@@ -954,13 +933,6 @@ function lockStaticChromeDrag() {
   });
 }
 
-function removeRewardsPointsOverlay() {
-  var el = document.getElementById('hc-rewards-points-overlay');
-  if (el && el.parentNode) {
-    el.parentNode.removeChild(el);
-  }
-}
-
 function cleanupOverlays() {
   var overlay = document.getElementById('hc-points-overlay-global');
   if (overlay) overlay.remove();
@@ -969,7 +941,6 @@ function cleanupOverlays() {
 function render(route) {
   var routeEpoch = nextNavEpoch();
   var pathOnly = routePathOnly(route);
-  removeRewardsPointsOverlay();
   if (!user && !isPublicAuthPath(pathOnly)) {
     navigate(partnerToken ? '/preview' : '/get-started');
     return;
@@ -1130,15 +1101,15 @@ function render(route) {
   }
 
   // Full-bleed screen: renders straight into appEl so it carries no app header
-  // or tab bar, the same way /account-created does. ?from= records where the
-  // ladder was tapped so claiming returns the user there.
-  var firstRewardReturnTo = /(?:\?|&)from=rewards(?:&|$)/.test(route) ? '/rewards' : '/home';
-
+  // or tab bar, the same way /account-created does. The ladder is only reachable
+  // from the home screen, so claiming always returns the user there.
+  // ?from= records which screen the ladder was tapped on, so claiming returns
+  // the user there. Both /home and /rewards render the ladder.
   var firstRewardMatch = pathOnly.match(/^\/first-rewards\/([^/]+)\/redeem$/);
   if (firstRewardMatch) {
     appEl.innerHTML = '';
     renderFirstRewardRedemption(appEl, firstRewardMatch[1], {
-      returnTo: firstRewardReturnTo,
+      returnTo: firstRewardReturnTo(route),
     });
     return;
   }
@@ -1149,7 +1120,7 @@ function render(route) {
   if (firstRewardDetailMatch) {
     appEl.innerHTML = '';
     renderFirstRewardDetail(appEl, firstRewardDetailMatch[1], {
-      returnTo: firstRewardReturnTo,
+      returnTo: firstRewardReturnTo(route),
     });
     return;
   }
@@ -1428,6 +1399,10 @@ function renderLayout(route) {
     /^\/rewards\/[^/]+$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/confirm$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/thanks$/.test(pathOnly);
+  // Weekly / season prize detail. It renders its own AppHeader and has no
+  // redemption footer, so it keeps the tab bar like the design shows.
+  var isPrizeDetailPage =
+    /^\/rewards\/[^/]+$/.test(pathOnly) && /(?:\?|&)(?:weekly|overall)=1(?:&|$)/.test(route);
   var isOfferDetailPage =
     /^\/offers\/[^/]+$/.test(pathOnly) &&
     pathOnly !== '/offers/all-shops' &&
@@ -1442,10 +1417,19 @@ function renderLayout(route) {
   var isStoresMapPage = pathOnly === '/offers/map';
   var isLinkCardIntroPage = pathOnly === '/cards/link-intro';
   var isAddCardPage = pathOnly === '/cards/link';
+  // Rewards now renders its own AppHeader, so the shell's lockup would sit
+  // above it as a second header.
+  var isRewardsPage = pathOnly === '/rewards';
   var hideBrandLockup =
-    isTravelPage || isHomePage || isOffersPage || isLinkCardIntroPage || isAddCardPage;
+    isTravelPage ||
+    isHomePage ||
+    isOffersPage ||
+    isRewardsPage ||
+    isPrizeDetailPage ||
+    isLinkCardIntroPage ||
+    isAddCardPage;
   var hideTabBar =
-    isRewardDetailPage ||
+    (isRewardDetailPage && !isPrizeDetailPage) ||
     isOfferDetailPage ||
     isContentDetailPage ||
     isPreviewPage ||
@@ -1459,7 +1443,8 @@ function renderLayout(route) {
     pathOnly === '/cards/link-intro' ||
     isTravelPage ||
     isHomePage ||
-    isOffersPage
+    isOffersPage ||
+    isRewardsPage
       ? ' hc-content--flush-top'
       : '';
 

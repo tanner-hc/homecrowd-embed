@@ -1,29 +1,28 @@
 import * as api from '../api.js';
 import * as analytics from '../analytics.js';
-import { resolveCardLinkStatus } from '../cardLinkStatus.js';
-import { formatDisplayNumber } from '../formatNumber.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
-import ScreenTitle from '../base-components/ScreenTitle.js';
-import EmptyState from '../base-components/EmptyState.js';
-import Button from '../base-components/Button.js';
-import { buildRewardsLinkCardBanner } from '../rewardsLinkCardBanner.js';
-import { escapeHtml, escapeAttr } from '../base-components/html.js';
+import { buildAppHeaderHtml, attachAppHeader } from '../base-components/AppHeader.js';
+import { buildPurchasesFootnoteHtml } from '../purchasesFootnote.js';
+import { escapeHtml } from '../base-components/html.js';
 import { getNavEpoch } from '../router.js';
 import {
   buildOverallRewardContext,
+  buildPrizeCountdownLabel,
   buildWeeklyCountdownLabel,
-  buildWeeklyRewardHomeTileHtml,
   buildWeeklyRewardContext,
 } from '../weekly-reward.js';
-import { getRewardEndDate, getRewardStartDate, isRewardBeforeStart } from '../rewardStartLock.js';
+import {
+  buildPrizeCardHtml,
+  bindPrizeCards,
+  bindPrizeCardCountdowns,
+} from '../components/Rewards/PrizeCard.js';
+import { buildRewardSectionsHtml } from '../components/Rewards/RewardListRow.js';
+import {
+  buildPointsMilestonesCardHtml,
+  bindPointsMilestonesCard,
+  normalizeMilestones,
+} from '../components/Dashboard/PointsMilestonesCard.js';
 var weeklyCountdownCleanup = null;
-
-function removeFloatingPointsOverlay() {
-  var el = document.getElementById('hc-rewards-points-overlay');
-  if (el && el.parentNode) {
-    el.parentNode.removeChild(el);
-  }
-}
 
 export function renderRewards(container, routeEpoch) {
   container.innerHTML = LoadingSpinner({
@@ -130,6 +129,120 @@ function normalizeReward(r) {
   };
 }
 
+/* Ported from the mobile app's utils/rewardStartLock so the embed orders and
+   gates rewards on the same fields it does. */
+function getRewardStartDate(r) {
+  return (
+    (r && r.raffle_info && r.raffle_info.start_date) ||
+    (r && r.auction_info && r.auction_info.start_date) ||
+    null
+  );
+}
+
+function getRewardEndDate(r) {
+  return (
+    (r && r.raffle_info && r.raffle_info.drawing_date) ||
+    (r && r.auction_info && r.auction_info.end_date) ||
+    null
+  );
+}
+
+/**
+ * A bare YYYY-MM-DD parses as UTC midnight, which lands on the previous day in
+ * any timezone behind UTC — "Sep 25" would label itself "Thursday, Sep 24". Read
+ * those as local calendar days; leave real timestamps alone.
+ */
+function parseRewardDate(dateStr) {
+  if (!dateStr) return null;
+  var parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr));
+  if (parts) {
+    return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]));
+  }
+  var d = new Date(dateStr);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/** A date-only value closes at the end of that day, not at its midnight. */
+function parseDateEndOfDay(dateStr) {
+  var d = parseRewardDate(dateStr);
+  if (!d) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr))) {
+    d.setHours(23, 59, 59, 999);
+  }
+  return d;
+}
+
+/** "Friday, Sep 25" — the same heading mobile puts above each day's rewards. */
+function formatSectionDate(dateStr) {
+  var d = parseRewardDate(dateStr);
+  if (!d) return null;
+  return d.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+/**
+ * Adapted from the mobile organizeRewardsByDate. Rewards group under the day
+ * they open, soonest first; ones carrying no date at all collect under
+ * "Available" at the end. Anything whose raffle or auction has already closed is
+ * dropped — it can no longer be entered, so it is not offered here.
+ *
+ * @returns {Array<{ title: string, rows: Array<object> }>}
+ */
+function groupRewardsByDate(rewards, nowMs) {
+  var byDay = {};
+  var order = [];
+  var noDate = [];
+
+  rewards.forEach(function (r) {
+    var closedAt = parseDateEndOfDay(getRewardEndDate(r));
+    if (closedAt && closedAt.getTime() < nowMs) return;
+
+    var startDate = getRewardStartDate(r);
+    var openKey = formatSectionDate(startDate);
+    if (!openKey) {
+      noDate.push(r);
+      return;
+    }
+    if (!byDay[openKey]) {
+      byDay[openKey] = {
+        title: openKey,
+        rawMs: parseRewardDate(startDate).getTime(),
+        rows: [],
+      };
+      order.push(byDay[openKey]);
+    }
+    byDay[openKey].rows.push(r);
+  });
+
+  var sections = order.sort(function (a, b) {
+    return a.rawMs - b.rawMs;
+  });
+  if (noDate.length) {
+    sections = sections.concat([{ title: 'Available', rows: noDate }]);
+  }
+  return sections;
+}
+
+/**
+ * Whether the Redeem chip reads as an available action. Matches the detail
+ * screen's canRedeemPts/canEnterRaffle: a raffle entry costs the reward's
+ * points_cost, so one comparison covers both. Auctions take a bid rather than a
+ * redemption, so they never light up here.
+ */
+function isRewardRedeemable(r, availablePoints, nowMs) {
+  if (!r || r.is_locked) return false;
+  if (r.redemption_type === 'auction') return false;
+  if (availablePoints < (r.points_cost || 0)) return false;
+  if (r.redemption_type === 'raffle') {
+    var drawing = parseDateEndOfDay(getRewardEndDate(r));
+    if (drawing && drawing.getTime() < nowMs) return false;
+  }
+  return true;
+}
+
 function getRewardImageUrl(item, getImageUrl) {
   if (item.image_url) {
     return getImageUrl(item.image_url);
@@ -147,262 +260,6 @@ function getRewardImageUrl(item, getImageUrl) {
     return getImageUrl(primaryImage.image_path || primaryImage.imagePath);
   }
   return null;
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return null;
-  var date = new Date(dateStr);
-  var options = { weekday: 'long', month: 'short', day: 'numeric' };
-  return date.toLocaleDateString('en-US', options);
-}
-
-function isRewardCompleted(reward, now) {
-  now = now || new Date();
-  var redemptionType = reward.redemption_type;
-  var isEventType = redemptionType === 'raffle' || redemptionType === 'auction';
-  if (isEventType) {
-    var endDate = getRewardEndDate(reward);
-    if (endDate) {
-      return new Date(endDate) < now;
-    }
-    return !reward.is_active;
-  }
-  return !reward.is_active;
-}
-
-function organizeRewardsSections(rewards) {
-  var now = new Date();
-  var activeUpcoming = {};
-  var activeNoDate = [];
-  var completed = [];
-
-  rewards.forEach(function (reward) {
-    if (isRewardCompleted(reward, now)) {
-      var endDate = getRewardEndDate(reward);
-      completed.push(Object.assign({}, reward, { eventDate: endDate || null }));
-      return;
-    }
-
-    var sortDate = getRewardStartDate(reward);
-    if (!sortDate) {
-      activeNoDate.push(reward);
-      return;
-    }
-
-    var dateKey = formatDate(sortDate);
-    if (!activeUpcoming[dateKey]) {
-      activeUpcoming[dateKey] = {
-        title: dateKey,
-        data: [],
-        rawDate: sortDate,
-      };
-    }
-    activeUpcoming[dateKey].data.push(Object.assign({}, reward, { eventDate: sortDate }));
-  });
-
-  var activeSections = [];
-  var upcomingSections = Object.values(activeUpcoming).sort(function (a, b) {
-    return new Date(a.rawDate) - new Date(b.rawDate);
-  });
-  upcomingSections.forEach(function (s) {
-    activeSections.push(s);
-  });
-
-  if (activeNoDate.length > 0) {
-    activeSections.push({
-      title: 'More Rewards',
-      data: activeNoDate,
-      isAlwaysAvailable: true,
-    });
-  }
-
-  var completedSections = [];
-  if (completed.length > 0) {
-    var sortedCompleted = completed.sort(function (a, b) {
-      var aDate = a.eventDate ? new Date(a.eventDate) : new Date(0);
-      var bDate = b.eventDate ? new Date(b.eventDate) : new Date(0);
-      return bDate - aDate;
-    });
-    completedSections.push({
-      title: 'Completed',
-      data: sortedCompleted,
-      isPast: true,
-    });
-  }
-
-  return {
-    activeSections: activeSections,
-    completedSections: completedSections,
-  };
-}
-
-function buildRewardsSectionsHtml(
-  sections,
-  cardLinkStatus,
-  isEarlyRelease,
-  getImageUrl,
-  emptyState,
-) {
-  if (!sections.length) {
-    return EmptyState(emptyState);
-  }
-
-  var html = '';
-  sections.forEach(function (section) {
-    html += '<div class="hc-rewards-section">';
-    html += '<div class="hc-section-header hc-rewards-section-header">';
-    html +=
-      '<div class="hc-section-title' +
-      (section.isPast ? ' hc-section-title--past' : '') +
-      '">' +
-      escapeHtml(section.title) +
-      '</div>';
-    html += '</div>';
-    html += '<div class="hc-rewards-list">';
-    section.data.forEach(function (item) {
-      html += buildRewardCardHtml(item, section, cardLinkStatus, isEarlyRelease, getImageUrl);
-    });
-    html += '</div></div>';
-  });
-  return html;
-}
-
-function buildRewardsTabsHtml(activeTab) {
-  var html = '<div class="hc-rewards-tabs">';
-  html +=
-    '<button type="button" class="hc-rewards-tab' +
-    (activeTab === 'active' ? ' active' : '') +
-    '" data-tab="active">Active</button>';
-  html +=
-    '<button type="button" class="hc-rewards-tab' +
-    (activeTab === 'completed' ? ' active' : '') +
-    '" data-tab="completed">Completed</button>';
-  html += '</div>';
-  return html;
-}
-
-function wireUpRewardsTabs(container) {
-  var tabs = container.querySelectorAll('.hc-rewards-tab');
-  tabs.forEach(function (tab) {
-    tab.addEventListener('click', function () {
-      var targetTab = this.getAttribute('data-tab');
-      tabs.forEach(function (t) {
-        t.classList.remove('active');
-      });
-      this.classList.add('active');
-      var activeEl = container.querySelector('#hc-tab-rewards-active');
-      var completedEl = container.querySelector('#hc-tab-rewards-completed');
-      if (activeEl) activeEl.style.display = targetTab === 'active' ? '' : 'none';
-      if (completedEl) completedEl.style.display = targetTab === 'completed' ? '' : 'none';
-    });
-  });
-}
-
-function buildRewardCardHtml(item, section, cardLinkStatus, isEarlyRelease, getImageUrl) {
-  var isPast = section.isPast || false;
-  var isTimeLocked = !isPast && isRewardBeforeStart(item);
-  var isCardLocked = !isEarlyRelease && cardLinkStatus === 'unlinked';
-  var isLocked = item.is_locked || isTimeLocked;
-
-  var imageUrl = getRewardImageUrl(item, getImageUrl);
-
-  var cashCents = Number(item.cash_price_cents);
-  var cashPriceLabel =
-    Number.isFinite(cashCents) &&
-    cashCents >= 50 &&
-    (item.redemption_type === 'first' || item.redemption_type === 'card')
-      ? '$' + (cashCents / 100).toFixed(2)
-      : null;
-
-  var html = '';
-  html +=
-    '<div class="hc-reward-card' +
-    (isPast ? ' hc-reward-card--past' : '') +
-    '" data-reward-id="' +
-    escapeAttr(item.id) +
-    '">';
-
-  html += '<div class="hc-reward-image-section">';
-  if (imageUrl) {
-    html +=
-      '<img class="hc-reward-image" src="' +
-      escapeAttr(imageUrl) +
-      '" alt="' +
-      escapeAttr(item.title) +
-      '" />';
-  } else {
-    html += '<div class="hc-reward-image-placeholder"><span class="hc-placeholder-text">No Image</span></div>';
-  }
-  html += '</div>';
-
-  html += '<div class="hc-reward-info">';
-  html += '<div class="hc-reward-title">' + escapeHtml(item.title) + '</div>';
-
-  if (!isEarlyRelease) {
-    html += '<div class="hc-reward-points-row">';
-    if (item.redemption_type === 'weekly' || item.redemption_type === 'overall') {
-      html +=
-        '<span class="hc-reward-weekly-countdown"' +
-        (Number.isFinite(item.weeklyTargetMs)
-          ? ' data-weekly-target-ms="' + escapeAttr(String(item.weeklyTargetMs)) + '"'
-          : '') +
-        ' data-weekly-period-kind="' +
-        escapeAttr(item.redemption_type === 'overall' ? 'overall' : 'weekly') +
-        '"' +
-        '>' +
-        escapeHtml(
-          item.weeklyCountdownLabel ||
-            item.description ||
-            (item.redemption_type === 'overall' ? 'Overall Leaderboard' : 'Weekly Leaderboard'),
-        ) +
-        '</span>';
-    } else if (item.redemption_type === 'card') {
-      if (cashPriceLabel) {
-        html += '<span class="hc-reward-cash-price">' + escapeHtml(cashPriceLabel) + '</span>';
-      } else {
-        html += '<span class="hc-reward-points-label hc-reward-points-label--solo">Price not set</span>';
-      }
-    } else {
-      html +=
-        '<span class="hc-reward-points-value">' +
-        formatDisplayNumber(item.points_cost) +
-        '</span>';
-      html += '<span class="hc-reward-points-label">points</span>';
-      if (cashPriceLabel) {
-        html += '<span class="hc-reward-points-sep"> or </span>';
-        html += '<span class="hc-reward-cash-price">' + escapeHtml(cashPriceLabel) + '</span>';
-      }
-    }
-    html += '</div>';
-  }
-
-  html += '<div class="hc-reward-spacer"></div>';
-
-  html += '<div class="hc-reward-bottom">';
-  html += '<div class="hc-reward-badges">';
-  if (item.redemption_type === 'raffle' || item.redemption_type === 'auction') {
-    html +=
-      '<span class="hc-reward-type-badge hc-reward-type-badge--' +
-      escapeAttr(item.redemption_type) +
-      '">' +
-      (item.redemption_type === 'raffle' ? 'RAFFLE' : 'AUCTION') +
-      '</span>';
-  }
-  if (isCardLocked && !isPast) {
-    html += '<span class="hc-reward-card-required">Card required</span>';
-  }
-  html += '</div>';
-
-  if (isLocked && !isPast) {
-    html += '<div class="hc-reward-lock-badge" aria-hidden="true">';
-    html +=
-      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 11V8a5 5 0 10-10 0v3M5 11h14v10H5V11z" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    html += '</div>';
-  }
-  html += '</div>';
-
-  html += '</div></div>';
-  return html;
 }
 
 function buildWeeklyRewardListItem(weeklyReward) {
@@ -445,13 +302,6 @@ function buildOverallRewardListItem(overallReward) {
     weeklyCountdownLabel: buildWeeklyCountdownLabel(overallReward) || overallReward.subtitle || '',
     weeklyTargetMs: overallReward.targetMs,
   };
-}
-
-function formatWeeklyCountdownFromTarget(targetMs, periodKind) {
-  return buildWeeklyCountdownLabel({
-    targetMs: targetMs,
-    periodKind: periodKind === 'overall' ? 'overall' : 'weekly',
-  });
 }
 
 function lookupRewardForClick(rewardIdStr, formattedRewards, weeklyRewardItem, overallRewardItem) {
@@ -500,26 +350,9 @@ function attachWeeklyCountdown(container) {
     weeklyCountdownCleanup();
     weeklyCountdownCleanup = null;
   }
-  var nodes = Array.prototype.slice.call(container.querySelectorAll('[data-weekly-target-ms]'));
-  if (!nodes.length) return;
-
-  function update() {
-    if (!container.isConnected) {
-      if (weeklyCountdownCleanup) weeklyCountdownCleanup();
-      return;
-    }
-    nodes.forEach(function (node) {
-      var targetMs = Number(node.getAttribute('data-weekly-target-ms'));
-      var periodKind = node.getAttribute('data-weekly-period-kind') || 'weekly';
-      var label = formatWeeklyCountdownFromTarget(targetMs, periodKind);
-      if (label) node.textContent = label;
-    });
-  }
-
-  update();
-  var timer = window.setInterval(update, 1000);
+  var stop = bindPrizeCardCountdowns(container);
   weeklyCountdownCleanup = function () {
-    window.clearInterval(timer);
+    stop();
     weeklyCountdownCleanup = null;
   };
   window.addEventListener(
@@ -532,7 +365,6 @@ function attachWeeklyCountdown(container) {
 }
 
 async function loadRewards(container, routeEpoch) {
-  removeFloatingPointsOverlay();
   if (weeklyCountdownCleanup) {
     weeklyCountdownCleanup();
     weeklyCountdownCleanup = null;
@@ -542,37 +374,18 @@ async function loadRewards(container, routeEpoch) {
       api.getRewardsSummary(),
       api.getRewardsCatalog(),
       api.fetchCurrentUser(),
-      api.getCards().catch(function () {
+      api.getLeaderboard().catch(function () {
         return null;
       }),
-      api.getLeaderboard().catch(function () {
+      api.getFirstRewards().catch(function () {
         return null;
       }),
     ]);
     var summary = results[0];
     var catalogRaw = results[1];
     var currentUser = results[2];
-    var paymentCards = results[3];
-    var leaderboardRes = results[4];
-
-    var resolvedCardLinkStatus = resolveCardLinkStatus(currentUser, paymentCards);
-    var cardLinkStatus = resolvedCardLinkStatus || 'unknown';
-
-    var isEarlyRelease =
-      !!(currentUser && currentUser.active_school && currentUser.active_school.early_release);
-
-    var ticketCount = 0;
-    if (isEarlyRelease && currentUser && currentUser.id) {
-      try {
-        var ticketsResponse = await api.getRaffleTickets();
-        var tickets = ticketsResponse.results || ticketsResponse;
-        if (Array.isArray(tickets)) {
-          ticketCount = tickets.filter(function (ticket) {
-            return !ticket.raffle;
-          }).length;
-        }
-      } catch (tErr) {}
-    }
+    var leaderboardRes = results[3];
+    var firstRewardsRes = results[4];
 
     var catalog = Array.isArray(catalogRaw)
       ? catalogRaw
@@ -581,27 +394,24 @@ async function loadRewards(container, routeEpoch) {
     var leaderboardActive = !leaderboardRes || leaderboardRes.leaderboard_active !== false;
     var weeklyReward = leaderboardActive ? await buildWeeklyRewardContext(leaderboardRes) : null;
     var overallReward = leaderboardActive ? await buildOverallRewardContext(leaderboardRes) : null;
-    var rewardSections = organizeRewardsSections(formattedRewards);
-    var activeSections = rewardSections.activeSections;
-    var completedSections = rewardSections.completedSections;
+
+    var availablePoints =
+      (summary && (summary.availablePoints != null
+        ? summary.availablePoints
+        : summary.available_points)) || 0;
 
     var html = '';
 
     html += '<div class="hc-rewards-page">';
-    html += '<div class="hc-rewards-page-pad">';
 
-    html += '<div class="hc-screen-title">';
-    html += ScreenTitle({
+    // Same header as home and shop: title left, profile + points right.
+    html += buildAppHeaderHtml({
       title: 'Rewards',
-      subtitle: 'Auction and raffles for exclusive gear, access, and experiences',
+      user: currentUser,
+      points: availablePoints,
     });
-    html += '</div>';
 
-    if (!isEarlyRelease && cardLinkStatus === 'unlinked') {
-      html += buildRewardsLinkCardBanner(currentUser);
-    }
-
-    html += buildRewardsTabsHtml('active');
+    html += '<div class="hc-rewards-page-pad">';
 
     var weeklyRewardItem = weeklyReward ? buildWeeklyRewardListItem(weeklyReward) : null;
     var overallRewardItem = overallReward ? buildOverallRewardListItem(overallReward) : null;
@@ -610,78 +420,74 @@ async function loadRewards(container, routeEpoch) {
       return normalizeMediaUrl(path);
     }
 
-    var activeEmptySubtitle =
-      currentUser && currentUser.active_school && currentUser.active_school.name
-        ? 'No auctions or raffles are currently available for ' +
-          currentUser.active_school.name +
-          '. Check back later!'
-        : 'Please select a school to view available rewards.';
-
-    html +=
-      '<div id="hc-tab-rewards-active" class="hc-tab-content">';
     if (weeklyRewardItem || overallRewardItem) {
-      html += '<div class="hc-home-reward-tiles-row">';
+      html += '<div class="hc-prize-cards">';
       if (weeklyRewardItem) {
-        html += buildWeeklyRewardHomeTileHtml(weeklyReward.title, weeklyReward.rewardId, {
-          eyebrow: 'Weekly reward',
-          tileKind: 'weekly',
+        html += buildPrizeCardHtml({
+          kind: 'weekly',
+          title: weeklyReward.title,
+          imageUrl: weeklyReward.imageUrl,
+          statusText: buildPrizeCountdownLabel(weeklyReward),
+      targetMs: weeklyReward.targetMs,
+          rewardId: weeklyReward.rewardId,
         });
       }
       if (overallRewardItem) {
-        html += buildWeeklyRewardHomeTileHtml(overallReward.title, overallReward.rewardId, {
-          eyebrow: 'Overall reward',
-          tileKind: 'overall',
+        html += buildPrizeCardHtml({
+          kind: 'overall',
+          title: overallReward.title,
+          imageUrl: overallReward.imageUrl,
+          statusText: buildPrizeCountdownLabel(overallReward),
+      targetMs: overallReward.targetMs,
+          rewardId: overallReward.rewardId,
         });
       }
       html += '</div>';
     }
-    html += buildRewardsSectionsHtml(
-      activeSections,
-      cardLinkStatus,
-      isEarlyRelease,
-      getImageUrl,
-      {
-        title: 'No Rewards Available',
-        subtitle: activeEmptySubtitle,
-        className: 'hc-empty--rewards',
-        iconChar: '🎁',
-      },
-    );
-    html += '</div>';
 
-    html +=
-      '<div id="hc-tab-rewards-completed" class="hc-tab-content" style="display:none">';
-    html += buildRewardsSectionsHtml(
-      completedSections,
-      cardLinkStatus,
-      isEarlyRelease,
-      getImageUrl,
-      {
-        title: 'No Completed Rewards',
-        subtitle: 'Completed auctions and raffles will appear here.',
-        className: 'hc-empty--rewards',
-        iconChar: '🎁',
-      },
-    );
-    html += '</div>';
+    var milestones = normalizeMilestones(firstRewardsRes);
+    if (milestones.length) {
+      html += '<div class="hc-rewards-unlock">';
+      html += '<div class="hc-rewards-unlock-title">Unlock with points</div>';
+      html += buildPointsMilestonesCardHtml({
+        points: (firstRewardsRes && firstRewardsRes.earnedPoints) || 0,
+        milestones: milestones,
+        rowsOnly: true,
+      });
+      html += '</div>';
+    }
 
+    // The rest of the catalogue, under the ladder. The prize cards above are
+    // leaderboard rewards and the ladder is the first-reward set, so neither
+    // overlaps this list.
+    var nowMs = Date.now();
+    var otherRewards = formattedRewards.filter(function (r) {
+      return r && r.id != null && r.is_active !== false;
+    });
+    if (otherRewards.length) {
+      var rewardSections = groupRewardsByDate(otherRewards, nowMs).map(function (section) {
+        return {
+          title: section.title,
+          rows: section.rows.map(function (r) {
+            return {
+              id: r.id,
+              title: r.title,
+              pointsCost: r.points_cost,
+              imageUrl: getRewardImageUrl(r, getImageUrl),
+              redemptionType: r.redemption_type,
+              redeemable: isRewardRedeemable(r, availablePoints, nowMs),
+            };
+          }),
+        };
+      });
+      html += '<div class="hc-rewards-other">';
+      html += '<div class="hc-rewards-other-title">More rewards</div>';
+      html += buildRewardSectionsHtml(rewardSections);
+      html += '</div>';
+    }
+    html += buildPurchasesFootnoteHtml();
     html += '</div>';
     html += '</div>';
-
-    var availablePts =
-      summary.availablePoints != null ? summary.availablePoints : summary.available_points;
-    var displayNum = isEarlyRelease ? ticketCount : Number(availablePts) || 0;
-    var displaySuffix = isEarlyRelease ? ' Raffle tickets' : ' Available points';
-
-    html += '<div id="hc-rewards-points-overlay" class="hc-points-overlay hc-points-overlay--floating">';
-    html += '<div class="hc-points-overlay-inner">';
-    html +=
-      '<span class="hc-points-overlay-num">' +
-      formatDisplayNumber(displayNum) +
-      '</span><span class="hc-points-overlay-suffix">' +
-      escapeHtml(displaySuffix) +
-      '</span>';
-    html += '</div></div>';
 
     if (routeEpoch !== getNavEpoch() || !container.isConnected) {
       return;
@@ -689,55 +495,39 @@ async function loadRewards(container, routeEpoch) {
 
     container.innerHTML = html;
 
-    var pointsOverlay = container.querySelector('#hc-rewards-points-overlay');
-    if (pointsOverlay && document.body) {
-      document.body.appendChild(pointsOverlay);
-    }
-
+    attachAppHeader(container, { user: currentUser });
     attachWeeklyCountdown(container);
-    wireUpRewardsTabs(container);
+
+    // Same lookup + analytics path the old weekly/overall tiles used, so the
+    // prize cards land on the identical reward detail route.
+    bindPrizeCards(container, {
+      onPress: function (rewardId) {
+        if (!rewardId) return;
+        var clicked = lookupRewardForClick(
+          rewardId,
+          formattedRewards,
+          weeklyRewardItem,
+          overallRewardItem,
+        );
+        analytics.trackEmbedRewardClick(clicked, currentUser);
+        window.location.hash = buildRewardDetailHash(clicked, 'rewards');
+      },
+    });
+
+    var milestonesRoot = container.querySelector('.hc-milestones');
+    if (milestonesRoot) {
+      bindPointsMilestonesCard(milestonesRoot, {
+        onPressMilestone: function (id) {
+          window.location.hash = '#/first-rewards/' + encodeURIComponent(id) + '?from=rewards';
+        },
+        onRedeem: function (id) {
+          window.location.hash =
+            '#/first-rewards/' + encodeURIComponent(id) + '/redeem?from=rewards';
+        },
+      });
+    }
 
     container._hcLeaderboardRes = leaderboardRes || null;
-    var weeklyLbBtn = container.querySelector('[data-home-lb-tile="weekly"]');
-    if (weeklyLbBtn) {
-      weeklyLbBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (weeklyReward) {
-          var clickedWeeklyReward = lookupRewardForClick(
-            weeklyReward.rewardId,
-            formattedRewards,
-            weeklyRewardItem,
-            overallRewardItem,
-          );
-          analytics.trackEmbedRewardClick(
-            clickedWeeklyReward,
-            currentUser,
-          );
-          window.location.hash = buildRewardDetailHash(clickedWeeklyReward, 'rewards');
-        }
-      });
-    }
-    var overallLbBtn = container.querySelector('[data-home-lb-tile="overall"]');
-    if (overallLbBtn) {
-      overallLbBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (overallReward) {
-          var clickedOverallReward = lookupRewardForClick(
-            overallReward.rewardId,
-            formattedRewards,
-            weeklyRewardItem,
-            overallRewardItem,
-          );
-          analytics.trackEmbedRewardClick(
-            clickedOverallReward,
-            currentUser,
-          );
-          window.location.hash = buildRewardDetailHash(clickedOverallReward, 'rewards');
-        }
-      });
-    }
     container.onclick = function (e) {
       var card = e.target.closest('[data-reward-id]');
       if (!card) return;
@@ -763,7 +553,6 @@ async function loadRewards(container, routeEpoch) {
       };
     }
   } catch (err) {
-    removeFloatingPointsOverlay();
     if (routeEpoch !== getNavEpoch() || !container.isConnected) {
       return;
     }

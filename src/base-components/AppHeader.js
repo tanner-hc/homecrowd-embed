@@ -2,7 +2,6 @@ import { navigate } from '../router.js';
 import { escapeAttr, escapeHtml } from './html.js';
 import * as api from '../api.js';
 import personSvg from '../assets/icons/person.svg?raw';
-import starSvg from '../assets/icons/star.svg?raw';
 import chevronLeftSvg from '../assets/icons/chevron-left.svg?raw';
 
 function resolvePoints(summary, user) {
@@ -30,7 +29,8 @@ function pickAvatar(user) {
 
 function setPointsLabel(pointsLabel, points) {
   if (!pointsLabel) return;
-  pointsLabel.textContent = String(Number(points) || 0) + ' pts';
+  // "pts" is a sibling span in the pill, so this element carries the number only.
+  pointsLabel.textContent = (Number(points) || 0).toLocaleString('en-US');
 }
 
 function setProfileAvatar(profileBtn, avatarUri) {
@@ -58,26 +58,34 @@ export function buildAppHeaderHtml(props) {
     points = resolvePoints(null, props.user);
   }
   var avatarUri = props.avatarUri != null ? props.avatarUri : pickAvatar(props.user);
-  var leftInner = props.showBack
-    ? chevronLeftSvg
-    : avatarUri
-      ? '<img src="' + escapeAttr(String(avatarUri)) + '" alt="" class="hc-app-header-avatar" />'
-      : personSvg;
-  var leftLabel = props.showBack ? 'Back' : 'Profile';
+  var avatarInner = avatarUri
+    ? '<img src="' + escapeAttr(String(avatarUri)) + '" alt="" class="hc-app-header-avatar" />'
+    : personSvg;
+
+  // Left slot is the back control on detail screens and the page title
+  // elsewhere; the profile circle always sits on the right beside the points
+  // pill, per the design.
+  var left = props.showBack
+    ? '<button type="button" class="hc-app-header-circle" data-hc-app-header-back ' +
+      'aria-label="Back">' +
+      chevronLeftSvg +
+      '</button>'
+    : '<h1 class="hc-app-header-title">' + escapeHtml(String(props.title || '')) + '</h1>';
 
   return (
     '<div class="hc-app-header">' +
-    '<button type="button" class="hc-app-header-circle" data-hc-app-header-left aria-label="' +
-    escapeAttr(leftLabel) +
-    '">' +
-    leftInner +
+    left +
+    '<div class="hc-app-header-right">' +
+    '<button type="button" class="hc-app-header-circle" data-hc-app-header-profile aria-label="Profile">' +
+    avatarInner +
     '</button>' +
     '<button type="button" class="hc-app-header-points" data-hc-app-header-points aria-label="Points">' +
-    starSvg +
     '<span class="hc-app-header-points-text">' +
     escapeHtml(String(points)) +
-    ' pts</span>' +
+    '</span>' +
+    '<span class="hc-app-header-points-unit">pts</span>' +
     '</button>' +
+    '</div>' +
     '</div>'
   );
 }
@@ -104,34 +112,35 @@ export function mountAppHeader(container, options) {
     return function cleanup() {};
   }
 
-  var profileBtn = headerRoot.querySelector('[data-hc-app-header-left]');
+  var profileBtn = headerRoot.querySelector('[data-hc-app-header-profile]');
+  var backBtn = headerRoot.querySelector('[data-hc-app-header-back]');
   var pointsBtn = headerRoot.querySelector('[data-hc-app-header-points]');
   var pointsLabel = headerRoot.querySelector('.hc-app-header-points-text');
   var cancelled = false;
   var seededUser = options.user || null;
 
   setPointsLabel(pointsLabel, resolvePoints(null, seededUser));
-  if (!options.showBack) {
-    setProfileAvatar(
-      profileBtn,
-      options.avatarUri != null ? options.avatarUri : pickAvatar(seededUser)
-    );
+  setProfileAvatar(
+    profileBtn,
+    options.avatarUri != null ? options.avatarUri : pickAvatar(seededUser)
+  );
+
+  if (backBtn) {
+    backBtn.addEventListener('click', function () {
+      if (typeof options.onBackPress === 'function') {
+        options.onBackPress();
+        return;
+      }
+      if (window.history.length > 1) {
+        window.history.back();
+        return;
+      }
+      navigate('/home');
+    });
   }
 
   if (profileBtn) {
     profileBtn.addEventListener('click', function () {
-      if (options.showBack) {
-        if (typeof options.onBackPress === 'function') {
-          options.onBackPress();
-          return;
-        }
-        if (window.history.length > 1) {
-          window.history.back();
-          return;
-        }
-        navigate('/home');
-        return;
-      }
       if (typeof options.onProfilePress === 'function') {
         options.onProfilePress();
         return;
@@ -158,12 +167,10 @@ export function mountAppHeader(container, options) {
     .then(function (freshUser) {
       if (cancelled) return null;
       var user = freshUser || seededUser;
-      if (!options.showBack) {
-        setProfileAvatar(
-          profileBtn,
-          options.avatarUri != null ? options.avatarUri : pickAvatar(user)
-        );
-      }
+      setProfileAvatar(
+        profileBtn,
+        options.avatarUri != null ? options.avatarUri : pickAvatar(user)
+      );
       setPointsLabel(pointsLabel, resolvePoints(null, user));
       var userId = user && user.id;
       if (!userId) return null;

@@ -1,4 +1,5 @@
 import { escapeAttr, escapeHtml } from '../../base-components/html.js';
+import { formatNumber } from '../../formatNumber.js';
 
 // Path data lifted verbatim from the exported Figma assets. Fills are swapped to
 // currentColor so the reached/unreached states recolor from CSS instead of
@@ -28,10 +29,6 @@ function formatPts(value) {
   return (Number(value) || 0).toLocaleString('en-US') + ' pts';
 }
 
-function formatNumber(value) {
-  return (Number(value) || 0).toLocaleString('en-US');
-}
-
 function normalizeMilestone(raw) {
   if (!raw) return null;
   var cost = Number(raw.pointsCost != null ? raw.pointsCost : raw.points_cost) || 0;
@@ -45,7 +42,8 @@ function normalizeMilestone(raw) {
     pointsCost: cost,
     images: Array.isArray(raw.images) ? raw.images.filter(Boolean) : [],
     imageUrl: raw.imageUrl || raw.image_url || '',
-    // Not used by the card — the redemption screen uses it as its backdrop.
+    // Last-resort artwork: the card falls back to it for a rung's thumbnail, and
+    // the detail screen for its carousel, when no other image is configured.
     confirmationImageUrl: raw.confirmationImageUrl || raw.confirmation_image_url || '',
     unlocked: !!raw.unlocked,
     redeemed: !!raw.redeemed,
@@ -197,7 +195,10 @@ function buildProgressHtml(milestones, earned) {
  *   milestones?: object[],
  *   logoUrl?: string,
  *   loading?: boolean,
- * }} props
+ *   rowsOnly?: boolean,
+ * }} props `rowsOnly` drops the points readout, progress bar and caption — the
+ *   rewards screen shows the same rungs under its own "Unlock with points"
+ *   heading, where that header would be redundant.
  */
 export function buildPointsMilestonesCardHtml(props) {
   props = props || {};
@@ -227,14 +228,17 @@ export function buildPointsMilestonesCardHtml(props) {
   if (props.loading) {
     return (
       '<div class="hc-milestones" id="hc-milestones">' +
-      header +
+      (props.rowsOnly ? '' : header) +
       '<div class="hc-milestones-loader" aria-hidden="true"></div>' +
       '</div>'
     );
   }
 
-  // No ladder configured for this school — keep the points readout, drop the rest.
+  // No ladder configured for this school — keep the points readout, drop the
+  // rest. In rowsOnly mode there is no readout to keep, so render nothing and
+  // let the caller drop its heading too.
   if (!milestones.length) {
+    if (props.rowsOnly) return '';
     return '<div class="hc-milestones" id="hc-milestones">' + header + '</div>';
   }
 
@@ -247,13 +251,17 @@ export function buildPointsMilestonesCardHtml(props) {
     rows += buildRowHtml(milestones[i], displayPoints, i === nextIndex);
   }
 
+  var top = props.rowsOnly
+    ? ''
+    : '<div class="hc-milestones-top">' +
+      header +
+      buildProgressHtml(milestones, displayPoints) +
+      '<div class="hc-milestones-caption">Each goal you reach unlocks the next reward.</div>' +
+      '</div>';
+
   return (
     '<div class="hc-milestones" id="hc-milestones">' +
-    '<div class="hc-milestones-top">' +
-    header +
-    buildProgressHtml(milestones, displayPoints) +
-    '<div class="hc-milestones-caption">Each goal you reach unlocks the next reward.</div>' +
-    '</div>' +
+    top +
     '<ul class="hc-milestones-rows">' +
     rows +
     '</ul>' +

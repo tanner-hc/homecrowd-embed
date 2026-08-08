@@ -49,6 +49,25 @@ export function formatPeriodCountdown(endTimestampMs, nowMs, labels) {
   return prefix + ': ' + seconds + 's';
 }
 
+/**
+ * Two-unit countdown for the prize detail hero — "6d 12h left" — where the
+ * long "Ends in: 6d 12h 30m 5s" form would wrap.
+ */
+export function formatCompactCountdown(endTimestampMs, nowMs, endedText) {
+  if (!endTimestampMs || !Number.isFinite(endTimestampMs)) return '';
+  var now = nowMs != null ? nowMs : Date.now();
+  var delta = endTimestampMs - now;
+  if (delta <= 0) return endedText || 'Ended';
+  var days = Math.floor(delta / 86400000);
+  var hours = Math.floor((delta % 86400000) / 3600000);
+  var minutes = Math.floor((delta % 3600000) / 60000);
+  var seconds = Math.floor((delta % 60000) / 1000);
+  if (days > 0) return days + 'd ' + hours + 'h left';
+  if (hours > 0) return hours + 'h ' + minutes + 'm left';
+  if (minutes > 0) return minutes + 'm ' + seconds + 's left';
+  return seconds + 's left';
+}
+
 export function formatPeriodEndLocal(endTimestampMs) {
   if (!endTimestampMs || !Number.isFinite(endTimestampMs)) return '';
   return new Date(endTimestampMs).toLocaleString('en-US', {

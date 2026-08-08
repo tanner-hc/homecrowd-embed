@@ -14,11 +14,16 @@ import { isRewardBeforeStart } from '../rewardStartLock.js';
 import { createPrizeFinalizeModalWatcher } from '../prizeFinalizeModal.js';
 import {
   buildOverallRewardContext,
-  buildWeeklyCountdownLabel,
+  buildPrizeCountdownLabel,
   buildWeeklyRewardContext,
-  handleRewardDescriptionToggleClick,
-  initRewardDescriptionToggles,
 } from '../weekly-reward.js';
+import { mountAppHeader } from '../base-components/AppHeader.js';
+import {
+  bindPrizeDetail,
+  bindPrizeLeaderboardToggle,
+  buildPrizeDetailContentHtml,
+  buildPrizeDetailHtml,
+} from '../components/Rewards/PrizeDetail.js';
 
 var weeklyDetailLiveCleanup = null;
 
@@ -163,187 +168,6 @@ function collectImageUrls(product, getUrl) {
   return [];
 }
 
-function buildWeeklyTrophyIconHtml() {
-  return (
-    '<svg class="hc-weekly-screen-section-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
-    '<path d="M8 4h8v3a4 4 0 01-8 0V4z"/>' +
-    '<path d="M6 5H4a2 2 0 002 2h2"/>' +
-    '<path d="M18 5h2a2 2 0 01-2 2h-2"/>' +
-    '<path d="M12 11v4"/>' +
-    '<path d="M9 19h6"/>' +
-    '<path d="M10 15h4"/>' +
-    '</svg>'
-  );
-}
-
-function capitalizeWeeklyNameWord(word) {
-  var normalized = String(word || '').toLowerCase();
-  if (!normalized) return '';
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-}
-
-function formatWeeklyLeaderboardName(row) {
-  var fullName = String(
-    (row &&
-      (row.name ||
-        row.full_name ||
-        row.fullName ||
-        row.display_name ||
-        row.displayName ||
-        row.username)) ||
-      'User',
-  )
-    .trim()
-    .replace(/\s+/g, ' ');
-  if (!fullName) return 'User';
-  var parts = fullName.split(' ').filter(Boolean);
-  if (parts.length === 0) return 'User';
-  if (parts.length === 1) return capitalizeWeeklyNameWord(parts[0]);
-  return (
-    capitalizeWeeklyNameWord(parts[0]) +
-    ' ' +
-    capitalizeWeeklyNameWord(parts[parts.length - 1]).charAt(0) +
-    '.'
-  );
-}
-
-function buildWeeklyLeaderboardTableHtml(rows) {
-  var list = Array.isArray(rows) ? rows.slice(0, 100) : [];
-  if (!list.length) {
-    return '<div class="hc-weekly-screen-empty">No rankings yet.</div>';
-  }
-  var html = '<div class="hc-weekly-screen-table">';
-  html += '<div class="hc-weekly-screen-table-head">';
-  html += '<div class="hc-weekly-screen-table-cell hc-weekly-screen-table-cell--rank">RANK</div>';
-  html += '<div class="hc-weekly-screen-table-cell hc-weekly-screen-table-cell--name">PARTICIPANT</div>';
-  html += '<div class="hc-weekly-screen-table-cell hc-weekly-screen-table-cell--points">POINTS</div>';
-  html += '</div>';
-  html += '<div class="hc-weekly-screen-table-body">';
-  list.forEach(function (row, idx) {
-    var rank = row && row.rank != null ? row.rank : idx + 1;
-    var points = Number(row && row.points) || 0;
-    var isLast = idx === list.length - 1;
-    html +=
-      '<div class="hc-weekly-screen-table-row' +
-      (Number(rank) === 1 ? ' hc-weekly-screen-table-row--top' : '') +
-      (isLast ? ' hc-weekly-screen-table-row--last' : '') +
-      '">';
-    html +=
-      '<div class="hc-weekly-screen-table-cell hc-weekly-screen-table-cell--rank">' +
-      escapeHtml(String(rank)) +
-      '</div>';
-    html +=
-      '<div class="hc-weekly-screen-table-cell hc-weekly-screen-table-cell--name">' +
-      escapeHtml(formatWeeklyLeaderboardName(row)) +
-      '</div>';
-    html +=
-      '<div class="hc-weekly-screen-table-cell hc-weekly-screen-table-cell--points">' +
-      escapeHtml(String(points)) +
-      '</div>';
-    html += '</div>';
-  });
-  html += '</div></div>';
-  return html;
-}
-
-function buildWeeklyInfoModalHtml(kind, heading, title, text) {
-  if (!text) return '';
-  return (
-    '<div class="hc-weekly-info-modal" data-weekly-info-modal="' +
-    escapeAttr(kind) +
-    '" aria-hidden="true">' +
-    '<div class="hc-weekly-info-modal-backdrop" data-weekly-info-close="1"></div>' +
-    '<div class="hc-weekly-info-modal-card" role="dialog" aria-modal="true" aria-label="' +
-    escapeAttr(heading) +
-    '">' +
-    '<button type="button" class="hc-weekly-info-modal-close-icon" data-weekly-info-close="1" aria-label="Close">' +
-    '<svg class="hc-weekly-info-modal-close-icon-svg" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-    '<path d="M18 6L6 18"/>' +
-    '<path d="M6 6l12 12"/>' +
-    '</svg>' +
-    '</button>' +
-    '<div class="hc-weekly-info-modal-heading">' +
-    escapeHtml(heading) +
-    '</div>' +
-    (title
-      ? '<div class="hc-weekly-info-modal-title">' + escapeHtml(title) + '</div>'
-      : '') +
-    '<div class="hc-weekly-info-modal-body-scroll">' +
-    '<div class="hc-weekly-info-modal-body">' +
-    nlToBr(escapeHtml(text || 'No instructions available yet.')) +
-    '</div>' +
-    '</div>' +
-    '</div>' +
-    '</div>'
-  );
-}
-
-function buildWeeklyDetailHtml(weeklyReward) {
-  if (!weeklyReward) return '';
-  var rewardTitle = String(weeklyReward.title || '').trim();
-  var rewardDescription = String(weeklyReward.description || '').trim();
-  var rewardImageUrl = weeklyReward.imageUrl ? String(weeklyReward.imageUrl).trim() : '';
-  var showReward = !!(rewardTitle || rewardDescription || rewardImageUrl);
-  var html = '<div class="hc-weekly-screen-content">';
-  if (showReward) {
-    html += '<div class="hc-weekly-screen-hero">';
-    if (rewardImageUrl) {
-      html +=
-        '<div class="hc-weekly-screen-image-frame"><img class="hc-weekly-screen-image" src="' +
-        escapeAttr(rewardImageUrl) +
-        '" alt="' +
-        escapeAttr(rewardTitle || 'Reward') +
-        '" /></div>';
-    }
-    html += '<div class="hc-weekly-screen-copy">';
-    if (rewardTitle) {
-      html += '<div class="hc-weekly-screen-title">' + escapeHtml(rewardTitle) + '</div>';
-    }
-    if (rewardDescription) {
-      html +=
-        '<div class="hc-weekly-screen-desc-scroll"><div class="hc-weekly-screen-desc">' +
-        nlToBr(escapeHtml(rewardDescription)) +
-        '</div></div>';
-    }
-    if (weeklyReward.howToWin) {
-      html +=
-        '<button type="button" class="hc-weekly-screen-how-btn" data-weekly-info-open="how-to-win">How to Win</button>';
-    }
-    html += '</div>';
-    html += '</div>';
-  }
-  html += '<div class="hc-weekly-screen-section">';
-  html += '<div class="hc-weekly-screen-section-header">';
-  html += '<div class="hc-weekly-screen-section-title-group">';
-  html += buildWeeklyTrophyIconHtml();
-  html += '<div class="hc-weekly-screen-section-title">LEADERBOARD</div>';
-  html += '</div>';
-  html += '</div>';
-  html += buildWeeklyLeaderboardTableHtml(weeklyReward.rows);
-  html += '</div>';
-  html += '</div>';
-  return html;
-}
-
-function buildWeeklyRewardScreenHtml(weeklyReward, navSource) {
-  var backTitle = navSource === 'home' ? 'Home' : 'Rewards';
-  var rewardTitle = String(weeklyReward.title || '').trim();
-  var html = '<div class="hc-weekly-screen">';
-  html += '<div class="hc-weekly-screen-header">';
-  html += NavHeader({
-    title: backTitle,
-    backButtonId: 'hc-back-btn',
-  });
-  html += '</div>';
-  html += '<div class="hc-weekly-screen-scroll"><div class="hc-weekly-screen-inner">';
-  html += buildWeeklyDetailHtml(weeklyReward);
-  html += '</div></div>';
-  html += buildWeeklyInfoModalHtml('how-to-win', 'How to Win', rewardTitle, weeklyReward.howToWin);
-  html += buildWeeklyInfoModalHtml('terms', 'Terms', rewardTitle, weeklyReward.terms);
-  html += '</div>';
-  return html;
-}
-
 function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsResponse, weeklyReward, navSource) {
   var getUrl = function (path) {
     if (!path) return null;
@@ -356,8 +180,14 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
     return path;
   };
 
+  // Weekly and season prizes get their own screen: artwork, prize copy and the
+  // leaderboard, with no redemption footer.
   if (weeklyReward) {
-    return buildWeeklyRewardScreenHtml(weeklyReward, navSource);
+    return buildPrizeDetailHtml(weeklyReward, {
+      currentUser: currentUser,
+      points: getAvailablePoints(summary),
+      countdownLabel: buildPrizeCountdownLabel(weeklyReward),
+    });
   }
 
   var isEarlyRelease = isEarlyReleaseUser(currentUser);
@@ -551,9 +381,6 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
       html += '<div class="hc-detail-desc-text">' + nlToBr(escapeHtml(product.description)) + '</div>';
       html += '</div>';
     }
-    if (weeklyReward) {
-      html += buildWeeklyDetailHtml(weeklyReward);
-    }
     html += '</div>';
   }
 
@@ -617,7 +444,28 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
   return html;
 }
 
-function attachWeeklyRewardDetailLiveUpdates(container, initialReward) {
+/**
+ * Swap the prize copy + leaderboard in place, keeping the carousel, the header
+ * and the countdown timer untouched.
+ */
+function renderPrizeContent(container, view) {
+  var section = container.querySelector('.hc-prize-detail-content');
+  if (!section) return;
+  var wrap = document.createElement('div');
+  wrap.innerHTML = buildPrizeDetailContentHtml(view.meta, {
+    currentUser: view.currentUser,
+    expanded: view.expanded,
+  });
+  var next = wrap.firstElementChild;
+  if (!next) return;
+  section.replaceWith(next);
+  bindPrizeLeaderboardToggle(container, function (expanded) {
+    view.expanded = expanded;
+    renderPrizeContent(container, view);
+  });
+}
+
+function attachWeeklyRewardDetailLiveUpdates(container, initialReward, view) {
   var state = Object.assign({}, initialReward);
   var periodEndedRefreshDone = false;
   var countdownTimer = null;
@@ -641,23 +489,16 @@ function attachWeeklyRewardDetailLiveUpdates(container, initialReward) {
 
   function startCountdownTimer() {
     if (countdownTimer) window.clearInterval(countdownTimer);
-    var countdownEl = container.querySelector('.hc-weekly-countdown-text');
+    var countdownEl = container.querySelector('.hc-prize-detail-countdown-text');
     if (!countdownEl) return;
     countdownTimer = window.setInterval(function () {
-      countdownEl.textContent = buildWeeklyCountdownLabel(state);
+      countdownEl.textContent = buildPrizeCountdownLabel(state);
     }, 1000);
   }
 
   function replaceWeeklySection() {
-    var section =
-      container.querySelector('.hc-weekly-screen-content') ||
-      container.querySelector('.hc-weekly-detail-section');
-    if (!section) return;
-    var wrap = document.createElement('div');
-    wrap.innerHTML = buildWeeklyDetailHtml(state);
-    var next = wrap.firstElementChild;
-    if (next) section.replaceWith(next);
-    startCountdownTimer();
+    view.meta = state;
+    renderPrizeContent(container, view);
   }
 
   function syncFinalizeWatcher() {
@@ -940,30 +781,34 @@ function bindDetailEvents(
   }
 
   if (weeklyReward) {
-    initRewardDescriptionToggles(container);
-    container.onclick = function (event) {
-      if (handleRewardDescriptionToggleClick(event)) return;
-      var openBtn = event.target && event.target.closest('[data-weekly-info-open]');
-      if (openBtn) {
-        var modalKind = openBtn.getAttribute('data-weekly-info-open');
-        var modal = container.querySelector('[data-weekly-info-modal="' + modalKind + '"]');
-        if (modal) {
-          modal.classList.add('is-visible');
-          modal.setAttribute('aria-hidden', 'false');
-        }
-        return;
-      }
-      var closeBtn = event.target && event.target.closest('[data-weekly-info-close="1"]');
-      if (closeBtn) {
-        var modalWrap = closeBtn.closest('[data-weekly-info-modal]');
-        if (modalWrap) {
-          modalWrap.classList.remove('is-visible');
-          modalWrap.setAttribute('aria-hidden', 'true');
-        }
-      }
+    // The leaderboard collapses to five rows until "View all" is tapped, and
+    // both that toggle and the live refresh re-render the same section.
+    var view = {
+      meta: weeklyReward,
+      currentUser: currentUser,
+      expanded: false,
     };
 
-    weeklyDetailLiveCleanup = attachWeeklyRewardDetailLiveUpdates(container, weeklyReward);
+    var headerCleanup = mountAppHeader(container, {
+      user: currentUser,
+      showBack: true,
+      onBackPress: function () {
+        window.location.hash = navSource === 'home' ? '#/home' : '#/rewards';
+      },
+    });
+
+    bindPrizeDetail(container, {
+      onToggleLeaderboard: function (expanded) {
+        view.expanded = expanded;
+        renderPrizeContent(container, view);
+      },
+    });
+
+    var liveCleanup = attachWeeklyRewardDetailLiveUpdates(container, weeklyReward, view);
+    weeklyDetailLiveCleanup = function () {
+      headerCleanup();
+      liveCleanup();
+    };
     window.addEventListener(
       'hashchange',
       function () {

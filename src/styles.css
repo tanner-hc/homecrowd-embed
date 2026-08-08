@@ -1205,6 +1205,13 @@ html.hc-embed--no-school-brand .hc-login-card {
   padding-bottom: 0;
 }
 
+/* Figma insets the page content to 370px inside a 402px frame — 16px gutters,
+   the same padding .hc-app-header already carries. Without this the header sits
+   inset while everything under it runs edge to edge. */
+.hc-rewards-page-pad {
+  padding: 0 var(--hc-spacing-base);
+}
+
 .hc-rewards-page-inner {
   display: flex;
   flex-direction: column;
@@ -1440,10 +1447,13 @@ html.hc-embed--no-school-brand .hc-login-card {
   flex-wrap: wrap;
 }
 
+/* Ported from the mobile RewardCard's typeBadge: 9px Baikal-Bold on iosBlue
+   (#007AFF) for raffles, transactionRefund (#4ECDC4) for auctions. */
 .hc-reward-type-badge {
   padding: 3px 8px;
   border-radius: 4px;
   color: #fff;
+  font-family: 'Baikal-Bold', var(--hc-font);
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.5px;
@@ -1488,84 +1498,12 @@ html.hc-embed--no-school-brand .hc-login-card {
 }
 
 /* Points Overlay (matches PointsOverlay — value + suffix on one row) */
-.hc-points-overlay {
-  position: fixed;
-  bottom: 95px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(216, 216, 216, 0.30);
-  -webkit-backdrop-filter: blur(50px);
-  backdrop-filter: blur(50px);
-  border-radius: 12px;
-  border: 1px solid rgba(248, 248, 248, 0.14);
-  padding: 8px 18px;
-  text-align: center;
-  z-index: 9000;
-  overflow: hidden;
-}
 
-.hc-points-overlay.hc-points-overlay--floating {
-  bottom: calc(
-    20px + 88px + 20px + constant(safe-area-inset-bottom)
-  );
-  bottom: calc(20px + 88px + 20px + env(safe-area-inset-bottom, 0px));
-  z-index: 210;
-  box-sizing: border-box;
-  width: auto;
-  min-width: 0;
-  max-width: min(100%, calc(100vw - max(24px, env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px))));
-  padding: clamp(6px, 1.8vw, 8px) clamp(10px, 3.5vw, 18px);
-}
 
-.hc-points-overlay-inner {
-  display: inline-flex;
-  flex-direction: row;
-  align-items: baseline;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 4px 6px;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-}
 
-.hc-points-overlay-num {
-  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
-  font-size: clamp(20px, 5.5vw + 10px, 36px);
-  font-weight: normal;
-  color: #000;
-  line-height: 1.05;
-  min-width: 0;
-  text-align: center;
-}
 
-.hc-points-overlay-suffix {
-  font-family: 'Baikal-Book', var(--hc-font);
-  font-size: clamp(9px, 2vw + 6px, 12px);
-  font-weight: 100;
-  color: #000;
-  line-height: 1.2;
-  max-width: 100%;
-  text-align: center;
-}
 
-.hc-points-overlay-value {
-  font-family: var(--hc-font-extrabold);
-  font-size: clamp(20px, 5.5vw + 10px, 36px);
-  font-weight: normal;
-  color: #000;
-  line-height: 1.05;
-  min-width: 0;
-}
 
-.hc-points-overlay-label {
-  font-family: var(--hc-font-book);
-  font-size: clamp(9px, 2vw + 6px, 12px);
-  font-weight: normal;
-  color: #000;
-  line-height: 1.2;
-  max-width: 100%;
-}
 
 /* Activity card wrapper */
 .hc-activity-card {
@@ -6961,16 +6899,29 @@ html.hc-embed--no-school-brand .hc-login-card {
 }
 
 .hc-home-welcome {
-  margin-top: 10px;
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 24px;
+  text-align: center;
 }
 
-.hc-home-welcome-text {
-  font-size: 24px;
-  font-weight: 500;
-  line-height: 1.2;
+.hc-home-welcome-title {
+  font-size: 36px;
+  line-height: 0.9;
+  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
+  font-weight: 700;
   color: #000;
-  font-family: 'Baikal-Medium', var(--hc-font);
+}
+
+.hc-home-welcome-subtitle {
+  max-width: 292px;
+  font-size: 14px;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-weight: 400;
+  color: #888;
 }
 
 .hc-home-setup-wrap {
@@ -7533,6 +7484,22 @@ html.hc-embed--no-school-brand .hc-login-card {
 
 .hc-home-activity {
   margin-top: 0;
+}
+
+/* Closing note at the bottom of the home and rewards screens. Figma
+   1216:13717/13718: Grey 4 #888888, 14px Regular, centred on a 229px measure,
+   20px above and 34px below. */
+.hc-page-footnote {
+  padding: 20px 0 34px;
+  max-width: 229px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  font-size: 14px;
+  line-height: normal;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-weight: 400;
+  color: #888;
 }
 
 .hc-home-activity-title {
@@ -10151,6 +10118,12 @@ html.hc-embed--no-school-brand .hc-login-card {
   max-width: 100%;
 }
 
+/* The rewards screen's prize cards, sitting in home's section rhythm. */
+.hc-home-prize-cards {
+  margin-top: 16px;
+  margin-bottom: 14px;
+}
+
 .hc-home-reward-tiles-row {
   display: flex;
   flex-direction: row;
@@ -10451,383 +10424,6 @@ html.hc-embed--no-school-brand .hc-login-card {
   height: 100%;
   object-fit: cover;
   display: block;
-}
-
-.hc-weekly-screen {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: #ffffff;
-}
-
-.hc-weekly-screen-header {
-  flex-shrink: 0;
-  background: #ffffff;
-}
-
-.hc-weekly-screen-header .hc-bc-nav-header {
-  padding-top: 0;
-}
-
-.hc-weekly-screen-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.hc-weekly-screen-inner {
-  padding: 0 14px 32px;
-  box-sizing: border-box;
-}
-
-.hc-weekly-screen-content {
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
-}
-
-.hc-weekly-screen-hero {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-bottom: 34px;
-  padding: 20px 18px;
-  background: #ffffff;
-  border-radius: 18px;
-  border: 1px solid #f0f0f0;
-}
-
-.hc-weekly-screen-terms-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 24px;
-  height: 24px;
-  border: 0;
-  padding: 0;
-  margin: 0;
-  background: transparent;
-  color: #666666;
-  cursor: pointer;
-  z-index: 2;
-}
-
-.hc-weekly-screen-terms-btn-icon {
-  display: block;
-  width: 24px;
-  height: 24px;
-}
-
-.hc-weekly-screen-image-frame {
-  width: 138px;
-  min-width: 138px;
-  max-width: 138px;
-  height: 138px;
-  min-height: 138px;
-  max-height: 138px;
-  border-radius: 12px;
-  background: #fafafa;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  align-self: center;
-  flex-shrink: 0;
-}
-
-.hc-weekly-screen-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.hc-weekly-screen-copy {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.hc-weekly-screen-copy--has-terms .hc-weekly-screen-title {
-  padding-right: 28px;
-}
-
-.hc-weekly-screen-title {
-  font-size: 14px;
-  line-height: 19px;
-  font-weight: 400;
-  font-family: 'Baikal-Condensed', var(--hc-font);
-  color: #000000;
-  text-align: left;
-  margin-bottom: 10px;
-}
-
-.hc-weekly-screen-desc-scroll {
-  max-height: 110px;
-  margin-bottom: 10px;
-  overflow-y: auto;
-}
-
-.hc-weekly-screen-desc {
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 400;
-  font-family: 'Baikal-Book', var(--hc-font);
-  color: #666666;
-  text-align: left;
-}
-
-.hc-weekly-screen-how-btn {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  min-height: 36px;
-  border-radius: 16px;
-  border: 1.5px solid #a5cdff;
-  background: #ebf3ff;
-  color: #5b9fff;
-  padding: 4px 24px;
-  font-size: 11px;
-  line-height: 14px;
-  font-weight: 700;
-  font-family: 'Baikal-Bold', var(--hc-font);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  margin-top: 8px;
-}
-
-.hc-weekly-screen-section {
-  flex: 1;
-  min-height: 0;
-}
-
-.hc-weekly-screen-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.hc-weekly-screen-section-title-group {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 7px;
-}
-
-.hc-weekly-screen-section-icon {
-  width: 23px;
-  height: 23px;
-  color: #000000;
-  flex-shrink: 0;
-}
-
-.hc-weekly-screen-section-title {
-  font-size: 15.5px;
-  line-height: 20px;
-  font-weight: 400;
-  font-family: 'Baikal-Condensed', var(--hc-font);
-  color: #000000;
-}
-
-.hc-weekly-screen-empty {
-  font-size: 15px;
-  line-height: 20px;
-  font-weight: 400;
-  font-family: 'Baikal-Book', var(--hc-font);
-  color: #666666;
-  text-align: center;
-  padding: 24px 0;
-}
-
-.hc-weekly-screen-table {
-  width: 100%;
-}
-
-.hc-weekly-screen-table-head,
-.hc-weekly-screen-table-row {
-  display: flex;
-  align-items: center;
-}
-
-.hc-weekly-screen-table-head {
-  padding: 0 18px 14px;
-}
-
-.hc-weekly-screen-table-body {
-  width: 100%;
-}
-
-.hc-weekly-screen-table-row {
-  min-height: 70px;
-  padding: 0 18px;
-  border-top: 1px solid #e6e6e6;
-  background: #ffffff;
-}
-
-.hc-weekly-screen-table-row--top {
-  background: #f5faff;
-}
-
-.hc-weekly-screen-table-row--last {
-  border-bottom: 1px solid #e6e6e6;
-}
-
-.hc-weekly-screen-table-cell {
-  min-width: 0;
-  font-family: var(--hc-font);
-}
-
-.hc-weekly-screen-table-head .hc-weekly-screen-table-cell {
-  font-size: 11.5px;
-  line-height: 14px;
-  font-weight: 500;
-  text-transform: uppercase;
-  color: #909090;
-}
-
-.hc-weekly-screen-table-cell--rank {
-  width: 54px;
-  flex-shrink: 0;
-  font-size: 15.5px;
-  line-height: 19px;
-  font-weight: 700;
-  color: #000000;
-}
-
-.hc-weekly-screen-table-cell--name {
-  flex: 1;
-  padding-right: 12px;
-  font-size: 15.5px;
-  line-height: 19px;
-  font-weight: 400;
-  color: #000000;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hc-weekly-screen-table-cell--points {
-  width: 68px;
-  flex-shrink: 0;
-  font-size: 15.5px;
-  line-height: 19px;
-  font-weight: 700;
-  color: #000000;
-  text-align: right;
-}
-
-.hc-weekly-info-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 10020;
-  display: none;
-}
-
-.hc-weekly-info-modal.is-visible {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.hc-weekly-info-modal-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.hc-weekly-info-modal-card {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 420px;
-  max-height: 78vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background: #ffffff;
-  border-radius: 22px;
-  padding: 22px 26px 18px;
-  box-sizing: border-box;
-}
-
-.hc-weekly-info-modal-close-icon {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 4px;
-  border: 0;
-  margin: 0;
-  background: transparent;
-  color: #666666;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
-.hc-weekly-info-modal-close-icon-svg {
-  display: block;
-  width: 24px;
-  height: 24px;
-}
-
-.hc-weekly-info-modal-heading {
-  font-size: 18px;
-  line-height: 24px;
-  font-weight: 400;
-  color: #000000;
-  text-align: center;
-  font-family: 'Baikal-Condensed', var(--hc-font);
-}
-
-.hc-weekly-info-modal-title {
-  margin-top: 8px;
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 400;
-  color: #666666;
-  text-align: center;
-  font-family: 'Baikal-Book', var(--hc-font);
-}
-
-.hc-weekly-info-modal-body-scroll {
-  margin-top: 18px;
-  max-height: 320px;
-  overflow-y: auto;
-}
-
-.hc-weekly-info-modal-body {
-  font-size: 15px;
-  line-height: 24px;
-  font-weight: 400;
-  color: var(--hc-gray-900, #333333);
-  text-align: left;
-  font-family: 'Baikal-Book', var(--hc-font);
-  padding-bottom: 8px;
-}
-
-.hc-weekly-countdown-text {
-  font-size: 17px;
-  line-height: 22px;
-  font-weight: 700;
-  color: #111827;
-  text-align: center;
 }
 
 .hc-weekly-detail-leaderboard {
@@ -12891,11 +12487,27 @@ html.hc-embed--no-school-brand .hc-login-card {
   margin: 0;
 }
 
+.hc-app-header-title {
+  font-size: 24px;
+  line-height: 1.2;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+}
+
+/* Profile circle and points pill travel together on the right. */
+.hc-app-header-right {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+}
+
 .hc-app-header-circle {
-  width: 40px;
-  height: 40px;
-  border-radius: 20px;
-  background: #f0f0f0;
+  width: 41px;
+  height: 41px;
+  border-radius: 50%;
+  background: #f8f8f8;
   border: none;
   padding: 0;
   display: flex;
@@ -12904,11 +12516,12 @@ html.hc-embed--no-school-brand .hc-login-card {
   overflow: hidden;
   cursor: pointer;
   color: #000000;
+  flex-shrink: 0;
 }
 
 .hc-app-header-circle svg {
-  width: 18px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   display: block;
   color: #000000;
   fill: #000000;
@@ -12930,28 +12543,23 @@ html.hc-embed--no-school-brand .hc-login-card {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
   background: var(--hc-app-primary, #00c8ff);
-  padding: 10px 14px;
-  border-radius: 999px;
   border: none;
   cursor: pointer;
-  font-family: 'Baikal-Bold', var(--hc-font);
-  color: #000000;
-}
-
-.hc-app-header-points svg {
-  width: 14px;
-  height: 14px;
-  display: block;
   flex-shrink: 0;
-  color: #000000;
-  fill: #000000;
+  white-space: nowrap;
 }
 
-.hc-app-header-points-text {
-  font-size: 14px;
-  line-height: 16px;
+.hc-app-header-points-text,
+.hc-app-header-points-unit {
+  font-size: 16px;
+  line-height: normal;
+  font-family: 'Baikal-Condensed', var(--hc-font);
   font-weight: 700;
   color: #000;
 }
@@ -13126,8 +12734,15 @@ html.hc-embed--no-school-brand .hc-login-card {
 
 .hc-milestones-rows {
   list-style: none;
-  margin: 42px 0 0;
+  margin: 0;
   padding: 0;
+}
+
+/* Only separate the rows from the points readout when one is actually above
+   them — in rowsOnly mode this margin would leave dead grey space at the top
+   of the card. */
+.hc-milestones-top + .hc-milestones-rows {
+  margin-top: 42px;
 }
 
 .hc-milestones-row {
@@ -13248,25 +12863,19 @@ html.hc-embed--no-school-brand .hc-login-card {
   margin-bottom: 28px;
 }
 
-.hc-unlock-setup-title {
-  font-size: 18px;
-  font-weight: 500;
-  font-family: 'Baikal-Medium', var(--hc-font);
-  color: #000;
-  line-height: 1.2;
-  margin-bottom: 14px;
-}
 
 .hc-unlock-setup-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .hc-unlock-setup-card {
   background: #f8f8f8;
-  border-radius: 20px;
-  padding: 16px;
+  /* Figma: rounded-[12px], p-[20px]. A larger radius eats into the
+     padding at the corners and makes the row read cramped. */
+  border-radius: 12px;
+  padding: 20px;
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -13284,9 +12893,9 @@ html.hc-embed--no-school-brand .hc-login-card {
 
 .hc-unlock-setup-done,
 .hc-unlock-setup-num {
-  width: 34px;
-  height: 34px;
-  border-radius: 17px;
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13299,18 +12908,19 @@ html.hc-embed--no-school-brand .hc-login-card {
 }
 
 .hc-unlock-setup-done svg {
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
   display: block;
   color: #ffffff;
 }
 
 .hc-unlock-setup-num {
-  background: #b8ecff;
+  background: rgba(0, 200, 255, 0.29);
   font-size: 14px;
-  font-family: 'Baikal-Bold', var(--hc-font);
-  font-weight: 700;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
   color: #000;
+  line-height: 1;
 }
 
 .hc-unlock-setup-card--open .hc-unlock-setup-num {
@@ -13328,10 +12938,11 @@ html.hc-embed--no-school-brand .hc-login-card {
 }
 
 .hc-unlock-setup-pts {
-  font-size: 13px;
+  font-size: 14px;
   font-family: 'Baikal-Medium', var(--hc-font);
   font-weight: 500;
-  color: #7a9a3a;
+  line-height: 1.1;
+  color: #677a29;
   flex-shrink: 0;
 }
 
@@ -13342,13 +12953,13 @@ html.hc-embed--no-school-brand .hc-login-card {
 }
 
 .hc-unlock-setup-card--open .hc-unlock-setup-body {
-  margin-top: 5px;
+  margin-top: 18px;
 }
 
 .hc-unlock-setup-body-inner {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
 
 .hc-unlock-setup-desc {
@@ -13358,7 +12969,7 @@ html.hc-embed--no-school-brand .hc-login-card {
   font-weight: 400;
   color: #666;
   line-height: 1.2;
-  padding-left: 46px;
+  padding-left: 36px;
 }
 
 .hc-unlock-setup-cta {
@@ -13421,149 +13032,6 @@ html.hc-embed--no-school-brand .hc-login-card {
   text-align: center;
 }
 
-.hc-first-reward {
-  margin-bottom: 24px;
-}
-
-.hc-first-reward-header {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  gap: 12px;
-}
-
-.hc-first-reward-title {
-  flex: 1;
-  font-size: 18px;
-  font-family: 'Baikal-Medium', var(--hc-font);
-  font-weight: 500;
-  color: #000;
-  line-height: 1.2;
-}
-
-.hc-first-reward-view-all {
-  border: none;
-  background: transparent;
-  padding: 0;
-  font-size: 14px;
-  font-family: 'Baikal-Regular', var(--hc-font);
-  font-weight: 400;
-  color: #666;
-  cursor: pointer;
-  line-height: 14px;
-}
-
-.hc-first-reward-card {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: #f5f5f5;
-  border-radius: 24px;
-  padding: 16px;
-  border: none;
-  cursor: pointer;
-  box-sizing: border-box;
-  font-family: var(--hc-font);
-}
-
-.hc-first-reward-top {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 18px;
-}
-
-.hc-first-reward-image-wrap {
-  width: 140px;
-  height: 140px;
-  border-radius: 16px;
-  overflow: hidden;
-  background: #e5e5e5;
-  flex-shrink: 0;
-}
-
-.hc-first-reward-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.hc-first-reward-image--ph {
-  background: #e5e5e5;
-}
-
-.hc-first-reward-copy {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  justify-content: center;
-}
-
-.hc-first-reward-name {
-  font-size: 20px;
-  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
-  font-weight: 700;
-  color: #000;
-  line-height: 1.1;
-}
-
-.hc-first-reward-change {
-  align-self: flex-start;
-  background: var(--hc-app-primary, #00c8ff);
-  border-radius: 100px;
-  height: 32px;
-  padding: 0 18px;
-  border: none;
-  font-size: 14px;
-  font-family: 'Baikal-Medium', var(--hc-font);
-  font-weight: 500;
-  color: #000;
-  cursor: pointer;
-  line-height: 14px;
-}
-
-.hc-first-reward-track {
-  height: 10px;
-  border-radius: 100px;
-  background: #e8e8e8;
-  overflow: hidden;
-  margin-bottom: 10px;
-}
-
-.hc-first-reward-fill {
-  height: 100%;
-  border-radius: 100px;
-  background: var(--hc-app-primary, #00c8ff);
-}
-
-.hc-first-reward-points-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 14px;
-  font-family: 'Baikal-Medium', var(--hc-font);
-  font-weight: 500;
-  color: #000;
-  line-height: 1.1;
-}
-
-.hc-first-reward-hint {
-  margin-top: 10px;
-  font-size: 13px;
-  font-family: 'Baikal-Regular', var(--hc-font);
-  font-weight: 400;
-  color: #666;
-  line-height: 16px;
-}
-
-.hc-first-reward-loader,
 .hc-featured-stores-loader {
   height: 48px;
   margin: 16px 0;
@@ -13614,6 +13082,51 @@ html.hc-embed--no-school-brand .hc-login-card {
   font-weight: 400;
   color: #666;
   cursor: pointer;
+}
+
+/* "Linked card required" chip, Figma 1216:13702: Gray 2 #EBEBEB, 20px tall,
+   6px/3px padding, 5px radius, 14px credit-card glyph beside 12px Medium. */
+.hc-featured-stores-header--with-req {
+  margin-bottom: 10px;
+}
+
+.hc-featured-stores-req {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 20px;
+  box-sizing: border-box;
+  padding: 3px 6px;
+  margin: 0 20px 14px;
+  border-radius: 5px;
+  background: #ebebeb;
+}
+
+/* The glyph is 21x15, the same 1.4 ratio Figma insets inside its 14px box. */
+.hc-featured-stores-req-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: #000;
+  flex-shrink: 0;
+}
+
+.hc-featured-stores-req-icon svg {
+  width: 12.25px;
+  height: 8.75px;
+  display: block;
+}
+
+.hc-featured-stores-req-text {
+  font-size: 12px;
+  line-height: 1.1;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+  white-space: nowrap;
 }
 
 .hc-featured-stores-row {
@@ -15840,4 +15353,699 @@ html.hc-embed--no-school-brand .hc-login-card {
   border: 1px solid #c6c6c6;
   color: #888;
   cursor: default;
+}
+
+/* --- Rewards: weekly / season prize cards ---------------------------------
+   Figma 1236:19019 — 370x245, radius 12, stacked 24px apart. */
+.hc-prize-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Catalogue reward rows. Figma 973:6212 — 117px artwork at a 12px radius, 13px
+   from the text column, which pads 18px vertically so the block centres against
+   the square. Gray 2 #EBEBEB chip with Grey 4 #888888 label. */
+.hc-rewards-other {
+  margin-top: 42px;
+}
+
+.hc-rewards-other-title {
+  font-size: 18px;
+  line-height: 1.2;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+  margin-bottom: 16px;
+}
+
+/* Day headings, from the mobile rewards screen's section/sectionTitle styles.
+   Rewards group under the date their raffle or auction opens. */
+.hc-reward-section {
+  margin-bottom: 24px;
+}
+
+.hc-reward-section:last-child {
+  margin-bottom: 0;
+}
+
+.hc-reward-section-title {
+  font-size: 16px;
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+  margin-bottom: 12px;
+}
+
+.hc-reward-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.hc-reward-row {
+  display: flex;
+  gap: 13px;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.hc-reward-row-img {
+  flex-shrink: 0;
+  width: 117px;
+  height: 117px;
+  border-radius: 12px;
+  object-fit: cover;
+  display: block;
+}
+
+.hc-reward-row-img--ph {
+  background: #ebebeb;
+}
+
+.hc-reward-row-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 18px 0;
+}
+
+.hc-reward-row-text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  color: #000;
+}
+
+.hc-reward-row-title {
+  font-size: 16px;
+  line-height: normal;
+  font-family: 'Baikal-Condensed', var(--hc-font);
+  font-weight: 700;
+  /* The design ellipsises a long title rather than letting the row grow. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hc-reward-row-points {
+  font-size: 15px;
+  line-height: normal;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-weight: 400;
+}
+
+/* Mobile spaces the badge 8px below the price; the column's own gap supplies 6. */
+.hc-reward-row-text .hc-reward-type-badge {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.hc-reward-row-action {
+  flex-shrink: 0;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: #ebebeb;
+  color: #888;
+  font-size: 12px;
+  line-height: normal;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Affordable rewards get the live-action treatment the ladder's Redeem uses. */
+.hc-reward-row-action--ready {
+  background: var(--hc-app-primary, #00c8ff);
+  color: #000;
+}
+
+.hc-prize-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 245px;
+  border: none;
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ebebeb;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--hc-font);
+}
+
+.hc-prize-card-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hc-prize-card-img--ph {
+  background: #ebebeb;
+}
+
+/* Two stacked gradients: a light wash at the top so the label and pill stay
+   legible, and a heavier one at the bottom behind the title. */
+.hc-prize-card-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0) 30%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 42.245%, rgba(0, 0, 0, 0.39) 100%);
+  pointer-events: none;
+}
+
+.hc-prize-card-label {
+  position: absolute;
+  left: 9.5px;
+  top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 2.375px;
+  font-size: 21.375px;
+  line-height: 0.9;
+  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hc-prize-card-dot {
+  width: 14.25px;
+  height: 14.25px;
+  border-radius: 50%;
+  background: var(--hc-app-primary, #00c8ff);
+  flex-shrink: 0;
+}
+
+.hc-prize-card-status {
+  position: absolute;
+  right: 14.5px;
+  top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: rgba(216, 216, 216, 0.3);
+  border: 1px solid rgba(248, 248, 248, 0.14);
+  backdrop-filter: blur(50px);
+  -webkit-backdrop-filter: blur(50px);
+}
+
+.hc-prize-card-status-icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.hc-prize-card-status-icon svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+.hc-prize-card-status-text {
+  font-size: 12px;
+  line-height: 1.1;
+  font-family: 'Baikal-Book', var(--hc-font);
+  color: #fff;
+  white-space: nowrap;
+}
+
+/* Bottom-anchored so the title grows upward and can never run off the card.
+   At the design's two lines (36px x 0.9 = 64.8px) this puts the top edge at
+   169px, matching the frame; longer titles simply extend upward instead.
+   Capped at three lines so a very long one can't reach the label and pill. */
+.hc-prize-card-title {
+  position: absolute;
+  left: 9.5px;
+  bottom: 11px;
+  width: 238px;
+  font-size: 36px;
+  line-height: 0.9;
+  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
+  font-weight: 700;
+  color: #fff;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+/* "Unlock with points" — the ladder rows reused on the rewards screen without
+   their points header. */
+.hc-rewards-unlock {
+  /* Figma: the prize-card block ends at y=514 and this section starts at
+     y=556. */
+  margin-top: 42px;
+}
+
+.hc-rewards-unlock-title {
+  font-size: 18px;
+  line-height: 1.2;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+  /* Main Container is gap-[16px] between the header and the card. */
+  margin-bottom: 16px;
+}
+
+/* The rewards screen's copy of the ladder card differs from the home screen's
+   in a handful of values, so they're scoped here rather than changed globally:
+   16px padding all round (home pads 20 at the top for its points readout),
+   an 18px radius, and 8px thumbnails. */
+.hc-rewards-unlock .hc-milestones {
+  padding: 16px;
+  border-radius: 18px;
+}
+
+.hc-rewards-unlock .hc-milestones-thumb {
+  border-radius: 8px;
+}
+
+/* Locked rungs sit at 80% on this screen. */
+.hc-rewards-unlock .hc-milestones-row:not(.hc-milestones-row--unlocked) .hc-milestones-thumb {
+  opacity: 0.8;
+}
+
+/* Figma calls for Baikal Light 12; the project ships no Light cut, so Book
+   carries the lighter weight. */
+.hc-rewards-unlock .hc-milestones-eyebrow {
+  font-size: 12px;
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-weight: 300;
+}
+
+/* --- Weekly / season prize detail -----------------------------------------
+   Figma 1214:9292 — artwork carousel with the countdown floating on it, prize
+   copy, an info card, and the leaderboard (which only appears on this screen).
+   Shares its shape with the first-reward detail screen. */
+#app:has(.hc-prize-detail) {
+  --hc-embed-scale: 1;
+}
+
+.hc-prize-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  min-height: 100%;
+  padding-bottom: 24px;
+  box-sizing: border-box;
+  background: #fff;
+  font-family: var(--hc-font);
+  overflow-x: hidden;
+}
+
+/* Peeking carousel: slides are narrower than the viewport and snap centred, so
+   the neighbours show at the edges like the design. */
+.hc-prize-detail-media,
+.hc-prize-detail-stage {
+  position: relative;
+}
+
+.hc-prize-detail-track {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding: 0 calc((100% - 305px) / 2);
+}
+
+.hc-prize-detail-track::-webkit-scrollbar {
+  display: none;
+}
+
+.hc-prize-detail-slide {
+  flex: 0 0 305px;
+  scroll-snap-align: center;
+}
+
+.hc-prize-detail-img {
+  width: 305px;
+  height: 401px;
+  object-fit: cover;
+  border-radius: 12px;
+  display: block;
+  box-shadow: 0 5px 5px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.hc-prize-detail-img--ph {
+  background: #ebebeb;
+}
+
+/* Anchored to the image edge, so it holds its place whether or not dots
+   render below. */
+.hc-prize-detail-countdown {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(216, 216, 216, 0.3);
+  border: 1px solid rgba(248, 248, 248, 0.14);
+  backdrop-filter: blur(50px);
+  -webkit-backdrop-filter: blur(50px);
+  pointer-events: none;
+}
+
+.hc-prize-detail-countdown-text {
+  font-size: 36px;
+  line-height: 0.9;
+  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.hc-prize-detail-dots {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.hc-prize-detail-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d8d8d8;
+}
+
+.hc-prize-detail-dot.is-active {
+  background: #000;
+}
+
+.hc-prize-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 42px;
+  padding: 0 16px;
+}
+
+.hc-prize-detail-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.hc-prize-detail-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: var(--hc-app-primary, #00c8ff);
+  color: #000;
+  font-size: 12px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.hc-prize-detail-title {
+  font-size: 36px;
+  line-height: 0.9;
+  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
+  font-weight: 700;
+  color: #000;
+  text-align: center;
+}
+
+.hc-prize-detail-desc {
+  max-width: 283px;
+  font-size: 15px;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-weight: 400;
+  color: #888;
+  text-align: center;
+}
+
+/* 12px of the body's own gap plus this margin makes the 24px the design puts
+   between the copy and the card. */
+.hc-prize-detail-info {
+  width: 100%;
+  max-width: 370px;
+  margin-top: 12px;
+  padding: 18px;
+  border-radius: 16px;
+  background: #f8f8f8;
+  box-sizing: border-box;
+}
+
+.hc-prize-detail-info-row {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  padding: 15px 0;
+}
+
+.hc-prize-detail-info-row:first-child {
+  padding-top: 0;
+}
+
+.hc-prize-detail-info-row:last-child {
+  padding-bottom: 0;
+}
+
+.hc-prize-detail-info-row + .hc-prize-detail-info-row {
+  border-top: 1px solid #ebebeb;
+}
+
+.hc-prize-detail-info-icon {
+  flex-shrink: 0;
+  display: flex;
+  color: #000;
+}
+
+.hc-prize-detail-info-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.hc-prize-detail-info-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hc-prize-detail-info-title {
+  font-size: 16px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+}
+
+.hc-prize-detail-info-body {
+  font-size: 14px;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-weight: 400;
+  color: #888;
+}
+
+/* Leaderboard — prize detail only. */
+.hc-prize-lb {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  max-width: 370px;
+  margin: 0 auto;
+}
+
+.hc-prize-lb-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hc-prize-lb-title {
+  font-size: 18px;
+  line-height: 1.2;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+}
+
+.hc-prize-lb-toggle {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 15px;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-weight: 400;
+  color: #888;
+  white-space: nowrap;
+}
+
+/* The design's chevron points down while collapsed; expanding flips it. */
+.hc-prize-lb-toggle-icon {
+  display: flex;
+  transform: rotate(-90deg);
+  transition: transform 0.15s ease;
+}
+
+.hc-prize-lb-toggle.is-expanded .hc-prize-lb-toggle-icon {
+  transform: rotate(90deg);
+}
+
+.hc-prize-lb-toggle-icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+.hc-prize-lb-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hc-prize-lb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+}
+
+/* Your own standing, pinned and tinted so it reads at a glance. */
+.hc-prize-lb-row--you {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #f0f9ff;
+}
+
+.hc-prize-lb-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+}
+
+.hc-prize-lb-medal {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.hc-prize-lb-medal svg {
+  width: 26px;
+  height: 26px;
+  display: block;
+}
+
+.hc-prize-lb-medal--gold {
+  color: #ffb804;
+}
+
+.hc-prize-lb-medal--silver {
+  color: #dadada;
+}
+
+.hc-prize-lb-medal--bronze {
+  color: #a36a25;
+}
+
+/* Same footprint as a medal, so ranked rows stay aligned with the podium. */
+.hc-prize-lb-rank {
+  width: 26px;
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1.1;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #888;
+  text-align: center;
+}
+
+.hc-prize-lb-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ebebeb;
+}
+
+.hc-prize-lb-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hc-prize-lb-avatar--ph svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.hc-prize-lb-avatar--ph svg path {
+  fill: #b4b4b4;
+}
+
+.hc-prize-lb-name {
+  font-size: 16px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-prize-lb-points {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.hc-prize-lb-points-value,
+.hc-prize-lb-points-unit {
+  font-size: 14px;
+  line-height: 1.1;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+}
+
+.hc-prize-lb-empty {
+  padding: 0 16px;
+  font-size: 14px;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-weight: 400;
+  color: #888;
 }

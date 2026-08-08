@@ -1,5 +1,6 @@
 import { escapeAttr, escapeHtml } from '../../base-components/html.js';
 import { renderPointMultiplierBadgeHtml } from '../../pointMultiplier.js';
+import cardFilledSvg from '../../assets/icons/card-filled.svg?raw';
 
 var BRAND_COLORS = {
   'best buy': '#0046BE',
@@ -69,12 +70,28 @@ export function normalizeFeaturedStores(response) {
 }
 
 /**
- * @param {{ stores?: object[], loading?: boolean, title?: string }} props
+ * @param {{
+ *   stores?: object[],
+ *   loading?: boolean,
+ *   title?: string,
+ *   linkedCardRequired?: boolean, shows the "Linked card required" chip
+ * }} props
  */
 export function buildHomeFeaturedStoresHtml(props) {
   props = props || {};
   var title = props.title || 'Earn where you already shop';
   var stores = Array.isArray(props.stores) ? props.stores : [];
+
+  // Figma 1216:13702 — sits between the section header and the store row while
+  // the user has no card linked, since these offers only pay out once one is.
+  var requirementHtml = props.linkedCardRequired
+    ? '<div class="hc-featured-stores-req">' +
+      '<span class="hc-featured-stores-req-icon" aria-hidden="true">' +
+      cardFilledSvg +
+      '</span>' +
+      '<span class="hc-featured-stores-req-text">Linked card required</span>' +
+      '</div>'
+    : '';
 
   var body = '';
   if (props.loading) {
@@ -112,12 +129,15 @@ export function buildHomeFeaturedStoresHtml(props) {
 
   return (
     '<div class="hc-featured-stores">' +
-    '<div class="hc-featured-stores-header">' +
+    '<div class="hc-featured-stores-header' +
+    (requirementHtml ? ' hc-featured-stores-header--with-req' : '') +
+    '">' +
     '<div class="hc-featured-stores-title">' +
     escapeHtml(title) +
     '</div>' +
     '<button type="button" class="hc-featured-stores-see-all" data-featured-see-all="1">View all</button>' +
     '</div>' +
+    requirementHtml +
     body +
     '</div>'
   );

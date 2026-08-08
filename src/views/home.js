@@ -6,10 +6,14 @@ import { buildTiersModalHtml } from '../base-components/TiersModal.js';
 import { buildAppHeaderHtml, attachAppHeader } from '../base-components/AppHeader.js';
 import { showPointsEarnedToast } from '../base-components/PointsEarnedToast.js';
 import {
-  buildOverallRewardContext,
+  buildPrizeCountdownLabel,
   buildWeeklyRewardContext,
-  buildWeeklyRewardHomeTileHtml,
 } from '../weekly-reward.js';
+import {
+  buildPrizeCardHtml,
+  bindPrizeCards,
+  bindPrizeCardCountdowns,
+} from '../components/Rewards/PrizeCard.js';
 import {
   fetchSetupRewardPoints,
   getSetupRewardPoints,
@@ -24,7 +28,6 @@ import {
   buildSetupCompleteSectionHtml,
   mountSetupCompleteConfetti,
 } from '../components/Dashboard/SetupCompleteSection.js';
-import { isPointRewardItem } from '../components/Dashboard/YourFirstRewardSection.js';
 import {
   buildPointsMilestonesCardHtml,
   bindPointsMilestonesCard,
@@ -36,11 +39,14 @@ import {
   normalizeFeaturedStores,
 } from '../components/Dashboard/HomeFeaturedStores.js';
 import { buildTransactionItemHtml } from '../components/Dashboard/TransactionItem.js';
+import { buildPurchasesFootnoteHtml } from '../purchasesFootnote.js';
 import {
   userExtensionEnabled,
   userHasLinkedCard,
   syncExtensionEnabledFromNative,
 } from '../extension-status.js';
+
+var prizeCountdownCleanup = null;
 
 var SETUP_COMPLETE_SHOWN_KEY = '@setup_complete_celebration_shown';
 var SETUP_CHECKLIST_SEEN_KEY = '@setup_checklist_seen';
@@ -303,26 +309,25 @@ function buildRewardDetailHash(rewardMeta, source) {
   return params.length ? hash + '?' + params.join('&') : hash;
 }
 
+/**
+ * The rewards screen's prize card, reused so both screens match. Home shows the
+ * weekly prize only — the season prize lives on the rewards screen.
+ */
 function buildRewardTilesHtml(ctx) {
   var showWeeklyTile = ctx.leaderboardSectionActive && ctx.weeklyReward && ctx.weeklyReward.rewardId;
-  var showOverallTile =
-    ctx.leaderboardSectionActive && ctx.overallReward && ctx.overallReward.rewardId;
-  if (!showWeeklyTile && !showOverallTile) return '';
-  var html = '<div class="hc-home-reward-tiles-row">';
-  if (showWeeklyTile) {
-    html += buildWeeklyRewardHomeTileHtml(ctx.weeklyReward.title, ctx.weeklyReward.rewardId, {
-      eyebrow: 'Weekly reward',
-      tileKind: 'weekly',
-    });
-  }
-  if (showOverallTile) {
-    html += buildWeeklyRewardHomeTileHtml(ctx.overallReward.title, ctx.overallReward.rewardId, {
-      eyebrow: 'Overall reward',
-      tileKind: 'overall',
-    });
-  }
-  html += '</div>';
-  return html;
+  if (!showWeeklyTile) return '';
+  return (
+    '<div class="hc-prize-cards hc-home-prize-cards">' +
+    buildPrizeCardHtml({
+      kind: 'weekly',
+      title: ctx.weeklyReward.title,
+      imageUrl: ctx.weeklyReward.imageUrl,
+      statusText: buildPrizeCountdownLabel(ctx.weeklyReward),
+      targetMs: ctx.weeklyReward.targetMs,
+      rewardId: ctx.weeklyReward.rewardId,
+    }) +
+    '</div>'
+  );
 }
 
 function buildHomeHtml(ctx) {
@@ -384,6 +389,9 @@ function buildHomeHtml(ctx) {
     buildHomeFeaturedStoresHtml({
       stores: ctx.featuredStores,
       loading: ctx.featuredLoading,
+      // These offers only pay out on a linked card, so the chip states a fact
+      // about them rather than a setup step — it shows either way.
+      linkedCardRequired: true,
     }) +
     '</div>';
 
@@ -394,6 +402,8 @@ function buildHomeHtml(ctx) {
     '<div id="hc-home-activity-body" class="hc-home-activity-body"></div>' +
     '</div>';
 
+  var activityFootnoteHtml = buildPurchasesFootnoteHtml();
+
   var tiersModalHtml = buildTiersModalHtml({
     tiers: Array.isArray(ctx.tierConfigTiers) ? ctx.tierConfigTiers : [],
     currentTierName: userTier && userTier.name,
@@ -403,16 +413,18 @@ function buildHomeHtml(ctx) {
   return (
     '<div class="hc-home">' +
     buildAppHeaderHtml({
+      title: 'Home',
       user: user,
       points: availablePts,
     }) +
     '<div class="hc-home-page-pad">' +
-    buildWelcomeSectionHtml(user) +
+    buildWelcomeSectionHtml(user, { setupIncomplete: showUnlockSetup }) +
     (setupHtml ? '<div class="hc-home-setup-wrap">' + setupHtml + '</div>' : '') +
     milestonesHtml +
     featuredHtml +
     buildRewardTilesHtml(ctx) +
     recentActivityHtml +
+    activityFootnoteHtml +
     '</div>' +
     tiersModalHtml +
     '</div>'
@@ -443,9 +455,6 @@ async function fetchDashboardPayload() {
     api.getFeaturedOffers('click').catch(function () {
       return null;
     }),
-    api.getRewardsCatalog().catch(function () {
-      return null;
-    }),
     api.getFirstRewards().catch(function () {
       return null;
     }),
@@ -459,8 +468,7 @@ async function fetchDashboardPayload() {
   var setupRewardPoints = parallel[5] || getSetupRewardPoints();
   var activityLogRes = parallel[6];
   var featuredRes = parallel[7];
-  var rewardsCatalogRes = parallel[8];
-  var firstRewardsRes = parallel[9];
+  var firstRewardsRes = parallel[8];
 
   var latestUser = mergeUserSchoolColor(freshUser, profileUser);
   try {
@@ -526,19 +534,13 @@ async function fetchDashboardPayload() {
     leaderboardRes.success &&
     leaderboardRes.leaderboard_active !== false
   );
+  // Only the weekly prize is shown here, so the season context is not built —
+  // it costs a reward-detail fetch that nothing on this screen reads.
   var weeklyReward = null;
-  var overallReward = null;
   if (leaderboardSectionActive) {
-    var rewardPair = await Promise.all([
-      buildWeeklyRewardContext(leaderboardRes).catch(function () {
-        return null;
-      }),
-      buildOverallRewardContext(leaderboardRes).catch(function () {
-        return null;
-      }),
-    ]);
-    weeklyReward = rewardPair[0];
-    overallReward = rewardPair[1];
+    weeklyReward = await buildWeeklyRewardContext(leaderboardRes).catch(function () {
+      return null;
+    });
   }
 
   var profileSchool =
@@ -551,14 +553,6 @@ async function fetchDashboardPayload() {
       ? profileSchool.tier_config.tiers
       : [];
 
-  var rewardsList = [];
-  if (rewardsCatalogRes) {
-    var rawRewards =
-      rewardsCatalogRes.results ||
-      rewardsCatalogRes.rewards ||
-      (Array.isArray(rewardsCatalogRes) ? rewardsCatalogRes : []);
-    rewardsList = (Array.isArray(rawRewards) ? rawRewards : []).filter(isPointRewardItem);
-  }
   var featuredStores = normalizeFeaturedStores(featuredRes);
 
   return {
@@ -572,11 +566,9 @@ async function fetchDashboardPayload() {
     transactions: transactionsForList,
     leaderboardSectionActive: leaderboardSectionActive,
     weeklyReward: weeklyReward,
-    overallReward: overallReward,
     tierConfigTiers: tierConfigTiers,
     pointsSummary: pointsSummary,
     milestones: normalizeMilestones(firstRewardsRes),
-    rewardsList: rewardsList,
     rewardsLoading: false,
     featuredStores: featuredStores,
     featuredLoading: false,
@@ -643,26 +635,26 @@ function bindHomeInteractions(container, ctx) {
     });
   }
 
-  var weeklyLbBtn = container.querySelector('[data-home-lb-tile="weekly"]');
-  if (weeklyLbBtn) {
-    weeklyLbBtn.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      if (ctx.weeklyReward) {
-        window.location.hash = buildRewardDetailHash(ctx.weeklyReward, 'home');
-      }
-    });
-  }
-  var overallLbBtn = container.querySelector('[data-home-lb-tile="overall"]');
-  if (overallLbBtn) {
-    overallLbBtn.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      if (ctx.overallReward) {
-        window.location.hash = buildRewardDetailHash(ctx.overallReward, 'home');
-      }
-    });
-  }
+  bindPrizeCards(container, {
+    onPress: function () {
+      if (!ctx.weeklyReward) return;
+      window.location.hash = buildRewardDetailHash(ctx.weeklyReward, 'home');
+    },
+  });
+
+  if (prizeCountdownCleanup) prizeCountdownCleanup();
+  var stopCountdowns = bindPrizeCardCountdowns(container);
+  prizeCountdownCleanup = function () {
+    stopCountdowns();
+    prizeCountdownCleanup = null;
+  };
+  window.addEventListener(
+    'hashchange',
+    function () {
+      if (prizeCountdownCleanup) prizeCountdownCleanup();
+    },
+    { once: true },
+  );
 
   mountHomeRecentActivity(container);
 

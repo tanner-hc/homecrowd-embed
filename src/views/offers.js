@@ -292,7 +292,7 @@ export function renderStoresMap(container) {
 function buildMarketplaceShell() {
   return (
     '<div class="hc-offers-page hc-offers-page--marketplace">' +
-    buildAppHeaderHtml({}) +
+    buildAppHeaderHtml({ title: 'Shop' }) +
     '<div class="hc-marketplace-scroll">' +
     '<div class="hc-marketplace-hero">' +
     '<div class="hc-marketplace-hero-title">Shop and earn points</div>' +
