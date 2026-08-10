@@ -2303,9 +2303,10 @@ function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMar
         dismissSelectedMapMerchant(container);
       });
 
-      var boundsGroup = (userMarker ? [userMarker] : []).concat(merchantLayers);
-      if (merchantLayers.length > 0 && boundsGroup.length > 0) {
-        map.fitBounds(L.featureGroup(boundsGroup).getBounds().pad(0.2));
+      if (showUserMarker) {
+        map.setView([userLat, userLng], 13, { animate: true });
+      } else if (merchantLayers.length > 0) {
+        map.fitBounds(L.featureGroup(merchantLayers).getBounds().pad(0.2));
       } else {
         map.setView([userLat, userLng], 13);
       }
@@ -2464,11 +2465,9 @@ function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merc
   });
   container._hcMkMerchantAnnotations = merchantAnnotations;
 
-  var regionBox = computeMapKitRegionLikeStoreMap(
-    showUserMarker ? userLat : NaN,
-    showUserMarker ? userLng : NaN,
-    merchantMarkerData,
-  );
+  var regionBox = showUserMarker
+    ? { centerLat: userLat, centerLng: userLng, spanLat: 0.05, spanLon: 0.05 }
+    : computeMapKitRegionLikeStoreMap(NaN, NaN, merchantMarkerData);
   var mapCenterCoord = new Coord(regionBox.centerLat, regionBox.centerLng);
   var startSpan = new Span(regionBox.spanLat, regionBox.spanLon);
   var M = mapkit.Map;
@@ -2979,7 +2978,6 @@ function initOffersMap(container, cardlinked) {
       var o = JSON.parse(raw);
       if (o && o.lat != null && o.lng != null) {
         return applyFreshLocation(Number(o.lat), Number(o.lng), {
-          previewMap: false,
           persist: false,
         }).then(function () {
           return true;
@@ -3001,9 +2999,15 @@ function initOffersMap(container, cardlinked) {
     }
     setStoresGridLoading(true);
 
-    if (options.previewMap !== false) {
-      focusOffersMap(container, lat, lng);
+    var previewMap = options.previewMap !== false;
+    if (previewMap) {
+      showMapUI();
       setMapShellLoading(true);
+      if (container._hcLeafletMap || container._hcMkMap) {
+        focusOffersMap(container, lat, lng);
+      } else {
+        renderMap(lat, lng, true);
+      }
     }
 
     return api
@@ -3165,7 +3169,7 @@ function initOffersMap(container, cardlinked) {
         function (pos) {
           if (mapSearchInput) mapSearchInput.value = '';
           hideMapSuggestions();
-          applyFreshLocation(pos.coords.latitude, pos.coords.longitude, { previewMap: false });
+          applyFreshLocation(pos.coords.latitude, pos.coords.longitude);
         },
         function () {
           if (locationKnown) return;
