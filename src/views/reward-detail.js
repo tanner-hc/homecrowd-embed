@@ -5,7 +5,10 @@ import { formatDisplayNumber } from '../formatNumber.js';
 import RafflePill, { attachRafflePillAuction } from '../base-components/RafflePill.js';
 import MainButton from '../base-components/MainButton.js';
 import NavHeader from '../base-components/NavHeader.js';
-import { buildRewardsLinkCardBanner } from '../rewardsLinkCardBanner.js';
+import {
+  buildLinkCardUnlockBarHtml,
+  bindLinkCardUnlockBar,
+} from '../base-components/LinkCardUnlockBar.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
 import { writeRedemptionConfirmAndNavigate } from './redemption-confirmation.js';
@@ -661,11 +664,17 @@ function buildBottomBarHtml(o) {
     return '<div class="hc-detail-bottom hc-detail-bottom--empty" id="hc-detail-bottom"></div>';
   }
 
-  var html = '<div class="hc-detail-bottom hc-product-bottom" id="hc-detail-bottom">';
-
   if (o.showLockedBanner) {
-    html += buildRewardsLinkCardBanner(o.currentUser);
+    return (
+      '<div class="hc-detail-bottom hc-product-bottom hc-detail-bottom--unlock" id="hc-detail-bottom">' +
+      buildLinkCardUnlockBarHtml({
+        message: 'Link your card to unlock rewards',
+      }) +
+      '</div>'
+    );
   }
+
+  var html = '<div class="hc-detail-bottom hc-product-bottom" id="hc-detail-bottom">';
 
   if (rt === 'auction' && o.auctionInfo) {
     if (o.userWonAuction) {
@@ -822,10 +831,9 @@ function bindDetailEvents(
     return;
   }
 
-  var linkBtn = container.querySelector('.hc-stores-link-card-btn');
-  if (linkBtn) {
-    linkBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
+  var linkUnlockRoot = container.querySelector('#hc-link-card-unlock-bar');
+  if (linkUnlockRoot) {
+    bindLinkCardUnlockBar(container, function () {
       window.location.hash = '#/cards/link-intro';
     });
   }

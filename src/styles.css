@@ -3093,7 +3093,22 @@ html.hc-embed--no-school-brand .hc-login-card {
   min-height: 0;
 }
 
-.hc-detail-bottom.hc-product-bottom .hc-btn-primary:not(.hc-stripe-pay):not(.hc-stores-link-card-btn):not(:disabled):not(.hc-split-half),
+.hc-detail-bottom--unlock {
+  padding: 0;
+  background: #fff;
+  max-width: none;
+}
+
+.hc-detail-bottom--unlock .hc-link-card-unlock-bar {
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid #dadada;
+}
+
+.hc-content.hc-content--reward-detail .hc-detail-bottom--unlock {
+  background: #fff;
+}
+
+.hc-detail-bottom.hc-product-bottom .hc-btn-primary:not(.hc-stripe-pay):not(.hc-stores-link-card-btn):not(.hc-link-card-unlock-btn):not(:disabled):not(.hc-split-half),
 .hc-detail-bottom.hc-product-bottom #hc-bid-submit.hc-btn-primary:not(:disabled) {
   background: var(--hc-detail-cta-bg);
   color: #fff;
@@ -3105,7 +3120,7 @@ html.hc-embed--no-school-brand .hc-login-card {
   box-shadow: var(--hc-shadow-cta);
 }
 
-.hc-detail-bottom.hc-product-bottom .hc-btn-primary:not(.hc-stripe-pay):not(.hc-stores-link-card-btn):not(:disabled):not(.hc-split-half):hover {
+.hc-detail-bottom.hc-product-bottom .hc-btn-primary:not(.hc-stripe-pay):not(.hc-stores-link-card-btn):not(.hc-link-card-unlock-btn):not(:disabled):not(.hc-split-half):hover {
   background: var(--hc-detail-cta-hover);
 }
 
@@ -7107,7 +7122,7 @@ button.hc-shop-detail-cats--expandable {
   background: var(--hc-success);
 }
 
-.hc-detail-bottom.hc-product-bottom .hc-btn.hc-bc-main-btn--filled:not(.hc-split-half):not(.hc-stripe-pay):not(:disabled),
+.hc-detail-bottom.hc-product-bottom .hc-btn.hc-bc-main-btn--filled:not(.hc-split-half):not(.hc-stripe-pay):not(.hc-link-card-unlock-btn):not(:disabled),
 .hc-detail-bottom.hc-product-bottom #hc-bid-submit.hc-bc-main-btn--filled:not(:disabled) {
   background: var(--hc-detail-cta-bg);
   color: #fff;
@@ -7120,7 +7135,7 @@ button.hc-shop-detail-cats--expandable {
   box-shadow: var(--hc-shadow-cta);
 }
 
-.hc-detail-bottom.hc-product-bottom .hc-btn.hc-bc-main-btn--filled:not(.hc-split-half):not(.hc-stripe-pay):not(:disabled):hover {
+.hc-detail-bottom.hc-product-bottom .hc-btn.hc-bc-main-btn--filled:not(.hc-split-half):not(.hc-stripe-pay):not(.hc-link-card-unlock-btn):not(:disabled):hover {
   background: var(--hc-detail-cta-hover);
 }
 
