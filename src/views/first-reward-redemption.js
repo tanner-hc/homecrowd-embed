@@ -4,7 +4,6 @@ import { escapeAttr, escapeHtml } from '../base-components/html.js';
 import { formatNumber } from '../formatNumber.js';
 import { normalizeMilestones } from '../components/Dashboard/PointsMilestonesCard.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
-import { showSuccess } from '../base-components/toastApi.js';
 import { formatPhoneNumber, isValidEmail, isValidPhone } from '../contact-validation.js';
 import { getHeaderLogoUrl, hasCustomHeaderLogo } from '../brand.js';
 import wordmarkUrl from '../assets/logos/homecrowd-wordmark.svg';
@@ -103,6 +102,77 @@ function buildUnavailableHtml(message) {
   );
 }
 
+function buildSuccessHtml(milestone) {
+  var backgroundUrl = milestone.confirmationImageUrl || '';
+  return (
+    '<div class="hc-fr-success">' +
+    (backgroundUrl
+      ? '<img class="hc-fr-success-background" src="' +
+        escapeAttr(backgroundUrl) +
+        '" alt="" aria-hidden="true" />'
+      : '') +
+    '<div class="hc-fr-success-overlay"></div>' +
+    '<img class="hc-fr-success-wordmark" src="' +
+    escapeAttr(wordmarkUrl) +
+    '" alt="Homecrowd" />' +
+    '<div class="hc-fr-success-copy">' +
+    '<p class="hc-fr-success-eyebrow">Reward unlocked!</p>' +
+    '<h1 class="hc-fr-success-title">' +
+    escapeHtml(milestone.title || 'Your reward') +
+    '</h1>' +
+    '<p class="hc-fr-success-body">You\'ve reached ' +
+    formatNumber(milestone.pointsCost) +
+    ' points. ' +
+    escapeHtml(milestone.title || 'Your reward') +
+    ' is ready to redeem.</p>' +
+    '</div>' +
+    '<button type="button" class="hc-fr-success-continue" data-fr-continue="1">Continue</button>' +
+    '</div>'
+  );
+}
+
+function bindViewport(container) {
+  var screen = container.querySelector('.hc-fr-redeem');
+  var viewport = window.visualViewport;
+  if (!screen || !viewport) return;
+
+  var observer = null;
+  var scrollTimer = null;
+
+  function cleanup() {
+    viewport.removeEventListener('resize', sync);
+    if (scrollTimer) window.clearTimeout(scrollTimer);
+    if (observer) observer.disconnect();
+  }
+
+  function revealFocusedInput() {
+    var active = document.activeElement;
+    if (!active || !screen.contains(active) || active.tagName !== 'INPUT') return;
+    var formLabel = screen.querySelector('.hc-fr-redeem-form-label');
+    if (scrollTimer) window.clearTimeout(scrollTimer);
+    scrollTimer = window.setTimeout(function () {
+      if (!active.isConnected) return;
+      (formLabel || active).scrollIntoView({ block: 'start', inline: 'nearest' });
+    }, 80);
+  }
+
+  function sync() {
+    if (!screen.isConnected) {
+      cleanup();
+      return;
+    }
+    screen.style.setProperty('--hc-fr-viewport-height', Math.round(viewport.height) + 'px');
+    revealFocusedInput();
+  }
+
+  viewport.addEventListener('resize', sync);
+  observer = new MutationObserver(function () {
+    if (!screen.isConnected) cleanup();
+  });
+  observer.observe(container, { childList: true });
+  sync();
+}
+
 /**
  * Full-bleed "Reward unlocked!" screen for a first-reward rung. Collects how the
  * student wants to be contacted and claims the reward — this is the only step
@@ -155,6 +225,7 @@ export async function renderFirstRewardRedemption(container, rewardId, options) 
   }
 
   container.innerHTML = buildHtml(milestone);
+  bindViewport(container);
   bindForm(container, milestone, returnTo);
 }
 
@@ -227,6 +298,16 @@ function bindForm(container, milestone, returnTo) {
     showError('');
   });
 
+  input.addEventListener('focus', function () {
+    var formLabel = container.querySelector('.hc-fr-redeem-form-label');
+    window.setTimeout(function () {
+      (formLabel || input).scrollIntoView({ block: 'start', inline: 'nearest' });
+    }, 120);
+    window.setTimeout(function () {
+      (formLabel || input).scrollIntoView({ block: 'start', inline: 'nearest' });
+    }, 360);
+  });
+
   redeemBtn.addEventListener('click', async function () {
     if (submitting) return;
     var value = (input.value || '').trim();
@@ -259,8 +340,10 @@ function bindForm(container, milestone, returnTo) {
         contactMethod: method,
         contactValue: value,
       });
-      navigate(returnTo);
-      showSuccess('Redemption successful');
+      container.innerHTML = buildSuccessHtml(milestone);
+      container.querySelector('[data-fr-continue]').addEventListener('click', function () {
+        navigate(returnTo);
+      });
     } catch (err) {
       submitting = false;
       redeemBtn.disabled = false;
