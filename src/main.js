@@ -11,6 +11,7 @@ import {
   clearBrandConfig,
   hasCustomHeaderLogo,
   renderBrandLockup,
+  setEmbedSchoolId,
 } from './brand.js';
 import { renderLogin } from './views/login.js';
 import { renderGetStarted } from './views/get-started.js';
@@ -81,16 +82,31 @@ var hostConfig =
     ? window.__HC_EMBED_HOST_CONFIG__
     : null;
 var params = new URLSearchParams(window.location.search);
+function normalizeSchoolId(value) {
+  return String(value || '')
+    .trim()
+    .replace(/^\/+|\/+$/g, '');
+}
 function getSchoolIdFromConfig(config) {
   if (!config || typeof config !== 'object') return '';
-  return String(config.schoolId || config.school_id || '').trim();
+  return normalizeSchoolId(
+    config.schoolId || config.schoolID || config.school_id || '',
+  );
 }
 function getSchoolIdFromUrl() {
   var urlParams = new URLSearchParams(window.location.search);
-  return String(urlParams.get('schoolId') || urlParams.get('school_id') || '').trim();
+  return normalizeSchoolId(
+    urlParams.get('schoolId') ||
+      urlParams.get('schoolID') ||
+      urlParams.get('school_id') ||
+      '',
+  );
 }
 var schoolId =
-  getSchoolIdFromConfig(hostConfig) || params.get('schoolId') || params.get('school_id') || '';
+  getSchoolIdFromConfig(hostConfig) ||
+  normalizeSchoolId(
+    params.get('schoolId') || params.get('schoolID') || params.get('school_id') || '',
+  );
 var partnerToken = (hostConfig && hostConfig.token) || params.get('token') || '';
 var initialView = (hostConfig && hostConfig.view) || params.get('view') || 'home';
 
@@ -130,11 +146,14 @@ var pendingPasswordLinkStorageKey = 'hc_embed_pending_school_link';
 var pendingLoginEmailStorageKey = 'hc_embed_pending_login_email';
 
 async function applySchoolConfig(nextSchoolId) {
-  schoolId = nextSchoolId || '';
+  schoolId = normalizeSchoolId(nextSchoolId);
   if (!schoolId) {
     clearBrandConfig();
     return;
   }
+
+  // Mark school mode immediately so get-started can switch UI even if config fetch is slow/fails.
+  setEmbedSchoolId(schoolId);
 
   try {
     var config = await api.fetchSchoolConfig(schoolId);
@@ -142,7 +161,8 @@ async function applySchoolConfig(nextSchoolId) {
     return;
   } catch (e) { }
 
-  clearBrandConfig();
+  // Keep school id for school-mode UI; appearance falls back to defaults.
+  applyBrandConfig(null, schoolId);
 }
 
 /**

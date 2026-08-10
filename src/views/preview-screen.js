@@ -1,5 +1,6 @@
 import { escapeHtml } from '../base-components/html.js';
 import { PRIVACY_URL, TERMS_URL } from '../legal-urls.js';
+import { getSchoolColor, hasSchoolBrand } from '../brand.js';
 
 function envelopeIcon() {
   var stroke = 'currentColor';
@@ -20,12 +21,31 @@ export function renderPreviewScreen(container, options) {
   var signedEmail = String(opts.schoolEmail || '').trim() || 'school email';
   var termsUrl = String(opts.termsUrl || TERMS_URL).trim();
   var privacyUrl = String(opts.privacyUrl || PRIVACY_URL).trim();
+  var schoolMode = hasSchoolBrand();
+  var schoolColor = schoolMode ? getSchoolColor() : '';
+  var screenClass = schoolMode ? 'hc-preview-screen hc-preview-screen--school' : 'hc-preview-screen';
+  var screenStyle = schoolColor
+    ? ' style="--hc-welcome-card-bg: ' + escapeHtml(schoolColor) + ';"'
+    : '';
+  var primaryIcon = schoolMode
+    ? ''
+    : '<span class="hc-preview-btn-icon">' + envelopeIcon() + '</span>';
+  var secondaryIcon = schoolMode
+    ? ''
+    : '<span class="hc-preview-btn-icon">' + envelopeIcon() + '</span>';
+  var titleText = schoolMode ? "Let's Get Started" : "Let's Get Started.";
 
   container.innerHTML =
-    '<div class="hc-preview-screen">' +
+    '<div class="' +
+    screenClass +
+    '"' +
+    screenStyle +
+    '>' +
     '<div class="hc-preview-card">' +
-    '<h1 class="hc-preview-title">Let\'s Get Started.</h1>' +
-    '<p class="hc-preview-subtitle">Choose how you\'d like to sign in.</p>' +
+    '<h1 class="hc-preview-title">' +
+    titleText +
+    '</h1>' +
+    '<p class="hc-preview-subtitle">Choose how you\'d like to sign in</p>' +
     '<label class="hc-preview-terms">' +
     '<input type="checkbox" id="hc-preview-terms-checkbox" />' +
     '<span class="hc-preview-terms-check" aria-hidden="true"></span>' +
@@ -36,17 +56,13 @@ export function renderPreviewScreen(container, options) {
     '" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
     '</label>' +
     '<button type="button" id="hc-preview-signin-primary" class="hc-preview-btn hc-preview-btn-primary" disabled>' +
-    '<span class="hc-preview-btn-icon">' +
-    envelopeIcon() +
-    '</span>' +
+    primaryIcon +
     '<span class="hc-preview-btn-label">Sign in with ' +
     escapeHtml(signedEmail) +
     '</span>' +
     '</button>' +
     '<button type="button" id="hc-preview-signin-secondary" class="hc-preview-btn hc-preview-btn-secondary">' +
-    '<span class="hc-preview-btn-icon">' +
-    envelopeIcon() +
-    '</span>' +
+    secondaryIcon +
     '<span class="hc-preview-btn-label">Sign in with another email</span>' +
     '</button>' +
     '<div id="hc-preview-alt-wrap" class="hc-preview-alt-wrap" style="display:none;">' +

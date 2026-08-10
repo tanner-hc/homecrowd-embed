@@ -2,6 +2,7 @@ import defaultHeaderLogoUrl from './assets/header.png';
 import { escapeHtml } from './base-components/html.js';
 
 var brandConfig = null;
+var embedSchoolId = '';
 
 var PREVIEW_VARS = [
   '--hc-preview-bg',
@@ -23,6 +24,7 @@ var PREVIEW_VARS = [
   '--hc-btn2-icon',
   '--hc-email-selection-bg-image',
   '--hc-email-card-blur',
+  '--hc-welcome-card-bg',
   '--hc-powered-by-text',
   '--hc-powered-by-text-label',
   '--hc-powered-by-text-name',
@@ -203,7 +205,10 @@ function setNoSchoolBrandState(isNoSchool) {
 
 export function applyBrandConfig(config, activeSchoolId) {
   brandConfig = config && typeof config === 'object' ? config : null;
-  if (!activeSchoolId) {
+  embedSchoolId = activeSchoolId
+    ? String(activeSchoolId).trim().replace(/^\/+|\/+$/g, '')
+    : '';
+  if (!embedSchoolId) {
     clearBrandConfig();
     return;
   }
@@ -262,6 +267,11 @@ export function applyBrandConfig(config, activeSchoolId) {
   setVar('--hc-btn2-icon', readCssColor(brandConfig, 'buttonSecondaryIcon', 'buttonSecondaryIconOpacity', buttonSecondaryIcon || chrome, 100));
   setVar('--hc-email-selection-bg-image', 'url("' + sharedBackground + '")');
   setVar('--hc-email-card-blur', readBlurPx(brandConfig, 'emailSelectionCardBlur', 0));
+  var schoolSolid =
+    normalizeHexInput(button) ||
+    normalizeHexInput(brandConfig && brandConfig.primaryColor) ||
+    '#00C8FF';
+  setVar('--hc-welcome-card-bg', schoolSolid);
 
   var loginBgUrl = loginBackground || emailSelectionBackground || defaultBackground;
   setVar('--hc-login-bg-image', 'url("' + loginBgUrl + '")');
@@ -288,6 +298,7 @@ export function applyBrandConfig(config, activeSchoolId) {
 
 export function clearBrandConfig() {
   brandConfig = null;
+  embedSchoolId = '';
   clearVars(PREVIEW_VARS);
   clearVars(LOGIN_VARS);
   setVar('--hc-preview-bg', 'transparent');
@@ -307,6 +318,47 @@ export function getHeaderLogoUrl() {
 
 export function hasCustomHeaderLogo() {
   return !!(brandConfig && brandConfig.headerLogoUrl);
+}
+
+export function hasSchoolBrand() {
+  return !!embedSchoolId;
+}
+
+export function getEmbedSchoolId() {
+  return embedSchoolId;
+}
+
+export function setEmbedSchoolId(schoolId) {
+  embedSchoolId = String(schoolId || '')
+    .trim()
+    .replace(/^\/+|\/+$/g, '');
+  if (embedSchoolId) {
+    setNoSchoolBrandState(false);
+  }
+}
+
+export function getWelcomeScreenImageUrl() {
+  if (!brandConfig) return '';
+  var custom = (
+    brandConfig.welcomeScreenImageUrl ||
+    brandConfig.loginBackgroundUrl ||
+    brandConfig.emailSelectionBackgroundUrl ||
+    ''
+  ).trim();
+  return custom;
+}
+
+export function getSchoolColor() {
+  if (!brandConfig) return '';
+  return (
+    normalizeHexInput(
+      brandConfig.button ||
+        brandConfig.buttonColor ||
+        brandConfig.buttonFillColor ||
+        brandConfig.primaryColor ||
+        '',
+    ) || ''
+  );
 }
 
 export function renderPoweredByLockup(className) {
