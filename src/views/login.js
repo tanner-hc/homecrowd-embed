@@ -1,13 +1,32 @@
 import * as api from '../api.js';
+import { navigate } from '../router.js';
 import {
+  getEmbedSchoolId,
   getHeaderLogoUrl,
+  getSchoolColor,
   hasCustomHeaderLogo,
+  hasSchoolBrand,
   renderBrandLockup,
   renderPoweredByLockup,
 } from '../brand.js';
 import Input from '../base-components/Input.js';
 import { escapeAttr, escapeHtml } from '../base-components/html.js';
 import { PRIVACY_URL, TERMS_URL } from '../legal-urls.js';
+
+function isSchoolMode(optionsSchoolId) {
+  var params = new URLSearchParams(window.location.search);
+  var urlSchoolId = String(
+    params.get('schoolId') || params.get('schoolID') || params.get('school_id') || '',
+  )
+    .trim()
+    .replace(/^\/+|\/+$/g, '');
+  return (
+    hasSchoolBrand() ||
+    !!getEmbedSchoolId() ||
+    !!urlSchoolId ||
+    !!(optionsSchoolId && String(optionsSchoolId).trim())
+  );
+}
 
 function sortSchoolsForPicker(schools) {
   var list = Array.isArray(schools) ? schools.slice() : [];
@@ -55,13 +74,35 @@ export function renderLogin(container, onLoginSuccess, options) {
   var lockEmail = !!(options && options.lockEmail);
   var initialNotice = options && options.notice ? String(options.notice) : '';
   var isSchoolSelectionLocked = !!schoolId;
-  var logoBlock = hasCustomHeaderLogo()
+  var schoolMode = isSchoolMode(schoolId);
+  var schoolColor = schoolMode ? getSchoolColor() : '';
+  var shellClass = schoolMode ? 'hc-login-shell hc-login-shell--school' : 'hc-login-shell';
+  var shellStyle = schoolColor
+    ? ' style="--hc-welcome-card-bg: ' + escapeAttr(schoolColor) + ';"'
+    : '';
+  var logoBlock = hasCustomHeaderLogo() || schoolMode
     ? '<div class="hc-login-logo hc-login-logo--brand">' + renderBrandLockup() + '</div>'
     : '<div class="hc-login-logo"><img src="' +
       escapeAttr(getHeaderLogoUrl()) +
       '" alt="Homecrowd" class="hc-login-logo-img" /></div>';
+  var titleLine1 = schoolMode ? 'Shop Smarter' : 'Shop Smarter.';
+  var titleLine2 = schoolMode ? 'Cheer Louder' : 'Cheer Louder.';
+  var footerHtml = schoolMode ? '' : renderPoweredByLockup('hc-login-footer');
+  var forgotHtml =
+    '<div id="hc-forgot-password-wrap" class="hc-login-forgot-wrap">' +
+    '<a href="#/forgot-password" class="hc-login-forgot-link">Forgot your password?</a>' +
+    '</div>';
+  var signupPromptHtml =
+    '<p id="hc-login-signup-prompt" class="hc-login-signup-prompt">' +
+    'Log in to your account to get access to your dashboard. New to the app? ' +
+    '<button type="button" id="hc-login-signup-link" class="hc-login-signup-link">Sign Up</button>' +
+    '</p>';
   container.innerHTML =
-    '<div class="hc-login-shell">' +
+    '<div class="' +
+    shellClass +
+    '"' +
+    shellStyle +
+    '>' +
     '<div class="hc-login-bg"></div>' +
     '<div class="hc-login-overlay">' +
     '<div class="hc-login-container">' +
@@ -71,8 +112,12 @@ export function renderLogin(container, onLoginSuccess, options) {
     '<button type="button" id="hc-signup-back-btn" class="hc-signup-back-btn" style="display:none" aria-label="Back to login">' +
     '<span class="hc-signup-back-arrow">&larr;</span>' +
     '</button>' +
-    '<h1 class="hc-login-title">Shop Smarter.</h1>' +
-    '<h1 class="hc-login-title">Cheer Louder.</h1>' +
+    '<h1 class="hc-login-title">' +
+    titleLine1 +
+    '</h1>' +
+    '<h1 class="hc-login-title">' +
+    titleLine2 +
+    '</h1>' +
     '</div>' +
     '<div id="hc-login-error" class="hc-alert-error" style="' +
     (initialNotice ? '' : 'display:none') +
@@ -114,13 +159,15 @@ export function renderLogin(container, onLoginSuccess, options) {
       id: 'hc-email',
       name: 'email',
       type: 'email',
-      label: 'Email',
+      label: schoolMode ? '' : 'Email',
       placeholder: 'Email',
       autocomplete: 'email',
       value: '',
     }) +
     '<div class="hc-form-group" id="hc-password-wrap">' +
-    '<label class="hc-label" id="hc-password-label" for="hc-password">Password</label>' +
+    (schoolMode
+      ? ''
+      : '<label class="hc-label" id="hc-password-label" for="hc-password">Password</label>') +
     '<div style="position:relative">' +
     '<input id="hc-password" class="hc-input" type="password" placeholder="Password" autocomplete="current-password" />' +
     '<button type="button" id="hc-toggle-pw" class="hc-toggle-pw">Show</button>' +
@@ -133,13 +180,7 @@ export function renderLogin(container, onLoginSuccess, options) {
     '<button type="button" id="hc-toggle-pw-confirm" class="hc-toggle-pw">Show</button>' +
     '</div>' +
     '</div>' +
-    '<div id="hc-forgot-password-wrap" class="hc-login-forgot-wrap">' +
-    '<a href="#/forgot-password" class="hc-login-forgot-link">Forgot your password?</a>' +
-    '</div>' +
-    '<p id="hc-login-signup-prompt" class="hc-login-signup-prompt">' +
-    'Log in to your account to get access to your dashboard. New to the app? ' +
-    '<button type="button" id="hc-login-signup-link" class="hc-login-signup-link">Sign up</button>' +
-    '</p>' +
+    (schoolMode ? signupPromptHtml + forgotHtml : forgotHtml + signupPromptHtml) +
     '<div id="hc-signup-terms-wrap" class="hc-form-group hc-login-terms" style="display:none">' +
     '<label class="hc-login-checkbox-label">' +
     '<input id="hc-accept-terms" type="checkbox" />' +
@@ -151,9 +192,11 @@ export function renderLogin(container, onLoginSuccess, options) {
     '</label>' +
     '</div>' +
     '</form>' +
-    renderPoweredByLockup('hc-login-footer') +
+    footerHtml +
     '</div>' +
-    '<button class="hc-btn hc-btn-primary hc-btn-large hc-login-submit-btn" id="hc-login-btn" type="submit" form="hc-login-form">Log In</button>' +
+    '<button class="hc-btn hc-btn-primary hc-btn-large hc-login-submit-btn" id="hc-login-btn" type="submit" form="hc-login-form">' +
+    (schoolMode ? 'Login' : 'Log In') +
+    '</button>' +
     '</div>' +
     '</div>' +
     '</div>';
@@ -304,16 +347,20 @@ export function renderLogin(container, onLoginSuccess, options) {
       signinModeBtn.classList.toggle('active', !isSignup);
     }
     if (titleEls[0]) {
-      titleEls[0].textContent = isSignup ? 'Create Account' : 'Shop Smarter.';
+      titleEls[0].textContent = isSignup
+        ? 'Create Account'
+        : schoolMode
+          ? 'Shop Smarter'
+          : 'Shop Smarter.';
     }
     if (titleEls[1]) {
-      titleEls[1].textContent = isSignup ? '' : 'Cheer Louder.';
+      titleEls[1].textContent = isSignup ? '' : schoolMode ? 'Cheer Louder' : 'Cheer Louder.';
       titleEls[1].style.display = isSignup ? 'none' : '';
     }
     if (subtitleEl) {
       subtitleEl.textContent = isSignup ? 'Create a Homecrowd account to continue' : '';
     }
-    submitBtn.textContent = isSignup ? 'Create Account' : 'Log In';
+    submitBtn.textContent = isSignup ? 'Create Account' : schoolMode ? 'Login' : 'Log In';
     passwordInput.setAttribute('autocomplete', isSignup ? 'new-password' : 'current-password');
     if (isSignup || !initialNotice) {
       errorEl.style.display = 'none';
@@ -357,6 +404,10 @@ export function renderLogin(container, onLoginSuccess, options) {
     });
   }
   signupPromptBtn.addEventListener('click', function () {
+    if (schoolMode) {
+      navigate('/create-account');
+      return;
+    }
     applyMode('signup');
   });
   signupBackBtn.addEventListener('click', function () {
@@ -453,7 +504,7 @@ export function renderLogin(container, onLoginSuccess, options) {
       errorEl.textContent = err.message || 'Login failed';
       errorEl.style.display = 'block';
       submitBtn.disabled = false;
-      submitBtn.textContent = isSignup ? 'Create Account' : 'Log In';
+      submitBtn.textContent = isSignup ? 'Create Account' : schoolMode ? 'Login' : 'Log In';
     }
   });
 

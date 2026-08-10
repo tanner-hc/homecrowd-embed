@@ -366,7 +366,13 @@ export async function linkSchoolEmail(payload) {
 }
 
 export async function fetchSchoolConfig(schoolId) {
-  return request('/api/school/merchants-page-config/' + encodeURIComponent(schoolId) + '/');
+  var id = String(schoolId || '')
+    .trim()
+    .replace(/^\/+|\/+$/g, '');
+  if (!id) {
+    throw new Error('School id is required');
+  }
+  return request('/api/school/merchants-page-config/' + encodeURIComponent(id) + '/');
 }
 
 export async function fetchPublicSchools(includeInactive) {

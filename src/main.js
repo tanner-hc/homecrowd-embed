@@ -11,6 +11,7 @@ import {
   clearBrandConfig,
   hasCustomHeaderLogo,
   renderBrandLockup,
+  setEmbedSchoolId,
 } from './brand.js';
 import { renderLogin } from './views/login.js';
 import { renderGetStarted } from './views/get-started.js';
@@ -81,16 +82,31 @@ var hostConfig =
     ? window.__HC_EMBED_HOST_CONFIG__
     : null;
 var params = new URLSearchParams(window.location.search);
+function normalizeSchoolId(value) {
+  return String(value || '')
+    .trim()
+    .replace(/^\/+|\/+$/g, '');
+}
 function getSchoolIdFromConfig(config) {
   if (!config || typeof config !== 'object') return '';
-  return String(config.schoolId || config.school_id || '').trim();
+  return normalizeSchoolId(
+    config.schoolId || config.schoolID || config.school_id || '',
+  );
 }
 function getSchoolIdFromUrl() {
   var urlParams = new URLSearchParams(window.location.search);
-  return String(urlParams.get('schoolId') || urlParams.get('school_id') || '').trim();
+  return normalizeSchoolId(
+    urlParams.get('schoolId') ||
+      urlParams.get('schoolID') ||
+      urlParams.get('school_id') ||
+      '',
+  );
 }
 var schoolId =
-  getSchoolIdFromConfig(hostConfig) || params.get('schoolId') || params.get('school_id') || '';
+  getSchoolIdFromConfig(hostConfig) ||
+  normalizeSchoolId(
+    params.get('schoolId') || params.get('schoolID') || params.get('school_id') || '',
+  );
 var partnerToken = (hostConfig && hostConfig.token) || params.get('token') || '';
 var initialView = (hostConfig && hostConfig.view) || params.get('view') || 'home';
 
@@ -130,11 +146,14 @@ var pendingPasswordLinkStorageKey = 'hc_embed_pending_school_link';
 var pendingLoginEmailStorageKey = 'hc_embed_pending_login_email';
 
 async function applySchoolConfig(nextSchoolId) {
-  schoolId = nextSchoolId || '';
+  schoolId = normalizeSchoolId(nextSchoolId);
   if (!schoolId) {
     clearBrandConfig();
     return;
   }
+
+  // Mark school mode immediately so get-started can switch UI even if config fetch is slow/fails.
+  setEmbedSchoolId(schoolId);
 
   try {
     var config = await api.fetchSchoolConfig(schoolId);
@@ -142,7 +161,8 @@ async function applySchoolConfig(nextSchoolId) {
     return;
   } catch (e) { }
 
-  clearBrandConfig();
+  // Keep school id for school-mode UI; appearance falls back to defaults.
+  applyBrandConfig(null, schoolId);
 }
 
 /**
@@ -181,13 +201,13 @@ function readPendingPasswordLink() {
   }
 }
 
-function writePendingPasswordLink(token, linkedEmail) {
+function writePendingPasswordLink(token, linkedEmail, linkSchoolId) {
   try {
     window.sessionStorage.setItem(
       pendingPasswordLinkStorageKey,
       JSON.stringify({
         token: token,
-        schoolId: schoolId || '',
+        schoolId: linkSchoolId || schoolId || '',
         linkedEmail: linkedEmail || '',
       }),
     );
@@ -1034,7 +1054,7 @@ function render(route) {
     if (queryEmail && !pendingEmail) {
       pendingEmail = queryEmail;
     }
-    var noticeText = pendingLink
+    var noticeText = pendingLink && pendingLink.linkedEmail
       ? 'Account exists. Enter password to continue.'
       : '';
     appEl.innerHTML = '';
@@ -1045,14 +1065,12 @@ function render(route) {
           : '') || schoolId;
       var linkData = readPendingPasswordLink();
       if (linkData && linkData.token) {
-        try {
-          await api.linkSchoolEmail({
-            token: linkData.token,
-            schoolId: linkData.schoolId || schoolId || '',
-          });
-          clearPendingPasswordLink();
-          clearPendingLoginEmail();
-        } catch (_e) { }
+        await api.linkSchoolEmail({
+          token: linkData.token,
+          schoolId: linkData.schoolId || schoolId || '',
+        });
+        clearPendingPasswordLink();
+        clearPendingLoginEmail();
       }
       if (assignSchoolId) {
         try {
@@ -1071,7 +1089,7 @@ function render(route) {
     }, {
       schoolId: schoolId,
       initialEmail: pendingEmail,
-      lockEmail: !!pendingLink,
+      lockEmail: !!(pendingLink && pendingLink.linkedEmail),
       notice: noticeText,
     });
     return;
@@ -1380,14 +1398,17 @@ function render(route) {
         completeLoginState(nextUser, previewCtx.token);
         navigate('/' + initialView);
       },
-      onAlternateChoice: function (email) {
-        return handleAlternateSchoolChoice(email);
-      },
-      onPasswordChoice: function (email, password) {
-        return handlePreviewPasswordSignIn(email, password);
-      },
-      onForgotPassword: function (email) {
-        return handlePreviewForgotPassword(email);
+      onSecondaryChoice: function () {
+        if (!previewCtx.token) {
+          throw new Error('Missing school token');
+        }
+        writePendingPasswordLink(
+          previewCtx.token,
+          '',
+          previewCtx.schoolId || schoolId || '',
+        );
+        clearPendingLoginEmail();
+        navigate('/login');
       },
     });
   } else if (pathOnly === '/offers') {

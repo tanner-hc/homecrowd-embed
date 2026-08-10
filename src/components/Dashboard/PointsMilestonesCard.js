@@ -139,21 +139,126 @@ function buildRowHtml(milestone, earned, isNext) {
  * marker at each end so the last one tucks flush inside the track rather than
  * overhanging it, which is how the design places it.
  */
-function progressPercent(milestones, earned) {
+var SCALE_TRACK_ASSUME_PX = 280;
+var SCALE_CHAR_PX = 8;
+var SCALE_PAD_PX = 8;
+
+function scaleLabelText(pointsCost) {
+  return formatNumber(pointsCost);
+}
+
+function scaleMinGapPct(leftText, rightText, rightIsLast) {
+  var leftHalf = String(leftText).length * (SCALE_CHAR_PX / 2);
+  var rightPart = rightIsLast
+    ? String(rightText).length * SCALE_CHAR_PX
+    : String(rightText).length * (SCALE_CHAR_PX / 2);
+  return ((leftHalf + rightPart + SCALE_PAD_PX) / SCALE_TRACK_ASSUME_PX) * 100;
+}
+
+function idealScalePositions(milestones, max) {
+  var positions = [];
+  for (var i = 0; i < milestones.length; i++) {
+    positions.push(
+      max > 0 ? Math.min((milestones[i].pointsCost / max) * 100, 100) : 0
+    );
+  }
+  return positions;
+}
+
+function spreadScalePositions(milestones, ideals) {
+  var n = ideals.length;
+  if (!n) return [];
+
+  var texts = [];
+  var gaps = [];
+  var i;
+  for (i = 0; i < n; i++) {
+    texts.push(scaleLabelText(milestones[i].pointsCost));
+  }
+  for (i = 0; i < n - 1; i++) {
+    gaps.push(scaleMinGapPct(texts[i], texts[i + 1], i + 1 === n - 1));
+  }
+
+  var totalGap = 0;
+  for (i = 0; i < gaps.length; i++) totalGap += gaps[i];
+  if (totalGap > 100) {
+    var shrink = 100 / totalGap;
+    for (i = 0; i < gaps.length; i++) gaps[i] *= shrink;
+  }
+
+  var pos = ideals.slice();
+  pos[n - 1] = 100;
+
+  for (var pass = 0; pass < 40; pass++) {
+    for (i = 0; i < n - 1; i++) {
+      var need = gaps[i];
+      var cur = pos[i + 1] - pos[i];
+      if (cur >= need) continue;
+      var delta = need - cur;
+      if (i + 1 === n - 1) {
+        pos[i] -= delta;
+      } else {
+        pos[i] -= delta / 2;
+        pos[i + 1] += delta / 2;
+      }
+    }
+
+    pos[n - 1] = 100;
+    for (i = n - 2; i >= 0; i--) {
+      pos[i] = Math.min(pos[i], pos[i + 1] - gaps[i]);
+    }
+    pos[0] = Math.max(0, pos[0]);
+    for (i = 1; i < n; i++) {
+      pos[i] = Math.max(pos[i], pos[i - 1] + gaps[i - 1]);
+    }
+    if (pos[n - 1] > 100) {
+      var overflow = pos[n - 1] - 100;
+      for (i = 0; i < n; i++) pos[i] -= overflow;
+      pos[n - 1] = 100;
+    }
+  }
+
+  for (i = 0; i < n; i++) {
+    pos[i] = Math.min(100, Math.max(0, pos[i]));
+  }
+  pos[n - 1] = 100;
+  return pos;
+}
+
+function displayProgressPercent(milestones, earned, displayPositions) {
   var max = milestones[milestones.length - 1].pointsCost;
   if (max <= 0) return 0;
-  return Math.min(Math.max((earned / max) * 100, 0), 100);
+  if (earned <= 0) return 0;
+  if (earned >= max) return 100;
+
+  var costs = [0];
+  var disp = [0];
+  for (var i = 0; i < milestones.length; i++) {
+    costs.push(milestones[i].pointsCost);
+    disp.push(displayPositions[i]);
+  }
+
+  for (var j = 1; j < costs.length; j++) {
+    if (earned <= costs[j]) {
+      var span = costs[j] - costs[j - 1];
+      var t = span > 0 ? (earned - costs[j - 1]) / span : 1;
+      return disp[j - 1] + (disp[j] - disp[j - 1]) * t;
+    }
+  }
+  return 100;
 }
 
 function buildProgressHtml(milestones, earned) {
   var max = milestones[milestones.length - 1].pointsCost;
-  var pct = progressPercent(milestones, earned);
+  var ideals = idealScalePositions(milestones, max);
+  var positions = spreadScalePositions(milestones, ideals);
+  var pct = displayProgressPercent(milestones, earned, positions);
 
   var markers = '';
   var scale = '';
   for (var i = 0; i < milestones.length; i++) {
     var m = milestones[i];
-    var at = max > 0 ? Math.min((m.pointsCost / max) * 100, 100) : 0;
+    var at = positions[i];
     markers +=
       '<span class="hc-milestones-marker' +
       (m.unlocked ? ' hc-milestones-marker--reached' : '') +
@@ -168,7 +273,7 @@ function buildProgressHtml(milestones, earned) {
       '" style="left:' +
       at +
       '%">' +
-      escapeHtml(formatNumber(m.pointsCost)) +
+      escapeHtml(scaleLabelText(m.pointsCost)) +
       '</span>';
   }
 

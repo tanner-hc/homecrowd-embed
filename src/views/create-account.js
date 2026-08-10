@@ -3,11 +3,22 @@ import { navigate } from '../router.js';
 import { showError } from '../base-components/toastApi.js';
 import { escapeAttr } from '../base-components/html.js';
 import { getPendingSignupSchool } from './find-your-school.js';
+import { getEmbedSchoolId, hasSchoolBrand } from '../brand.js';
 import headerUrl from '../assets/header.png';
 import googleIconUrl from '../assets/providers/googleIcon.png';
 import appleIconUrl from '../assets/providers/apple_icon_dark.png';
 import chevronLeftSvg from '../assets/icons/chevron-left.svg?raw';
 import { isValidEmail } from '../contact-validation.js';
+
+function isSchoolMode() {
+  var params = new URLSearchParams(window.location.search);
+  var urlSchoolId = String(
+    params.get('schoolId') || params.get('schoolID') || params.get('school_id') || '',
+  )
+    .trim()
+    .replace(/^\/+|\/+$/g, '');
+  return hasSchoolBrand() || !!getEmbedSchoolId() || !!urlSchoolId;
+}
 
 export var PENDING_SIGNUP_EMAIL_KEY = 'hc_embed_pending_signup_email';
 
@@ -130,7 +141,7 @@ export function renderCreateAccount(container) {
 
   if (backBtn) {
     backBtn.addEventListener('click', function () {
-      navigate('/youre-in');
+      navigate(isSchoolMode() ? '/get-started' : '/youre-in');
     });
   }
 
