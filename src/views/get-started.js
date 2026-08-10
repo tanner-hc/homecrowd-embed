@@ -1,16 +1,22 @@
 import { navigate } from '../router.js';
 import headerUrl from '../assets/header.png';
-import cardScreenUrl from '../assets/signIn_flow/card_screen.svg';
+import cardScreenSvg from '../assets/signIn_flow/card_screen.svg?raw';
 import CurvedLogoCarouselHtml, {
   mountCurvedLogoCarousel,
 } from '../base-components/CurvedLogoCarousel.js';
-import { escapeAttr } from '../base-components/html.js';
+import { escapeAttr, escapeHtml } from '../base-components/html.js';
 import {
+  darkenHex,
   getEmbedSchoolId,
   getSchoolColor,
+  getSchoolName,
   getWelcomeScreenImageUrl,
   hasSchoolBrand,
 } from '../brand.js';
+
+var CARD_SCREEN_PRIMARY = '#003DA5';
+var CARD_SCREEN_DARK = '#052C6F';
+var CARD_SCREEN_DARKEN = 0.32;
 
 function readSchoolIdFromUrl() {
   var params = new URLSearchParams(window.location.search);
@@ -21,14 +27,32 @@ function readSchoolIdFromUrl() {
     .replace(/^\/+|\/+$/g, '');
 }
 
+function tintCardScreenSvg(svg, primaryHex) {
+  var primary = String(primaryHex || '').trim();
+  if (!primary) return svg;
+  var dark = darkenHex(primary, CARD_SCREEN_DARKEN) || primary;
+  return svg
+    .split(CARD_SCREEN_PRIMARY)
+    .join(primary)
+    .split(CARD_SCREEN_PRIMARY.toLowerCase())
+    .join(primary)
+    .split(CARD_SCREEN_DARK)
+    .join(dark)
+    .split(CARD_SCREEN_DARK.toLowerCase())
+    .join(dark);
+}
+
 export function renderGetStarted(container) {
   var schoolMode = hasSchoolBrand() || !!getEmbedSchoolId() || !!readSchoolIdFromUrl();
   var welcomeImageUrl = getWelcomeScreenImageUrl();
   var schoolColor = schoolMode ? getSchoolColor() : '';
+  var schoolName = schoolMode ? getSchoolName() : '';
+  var brandSchool = schoolName ? String(schoolName).trim().toUpperCase() : '';
   var rootClass = schoolMode ? 'hc-get-started hc-get-started--school' : 'hc-get-started';
   var rootStyle = schoolColor
     ? ' style="--hc-get-started-primary: ' + escapeAttr(schoolColor) + ';"'
     : '';
+  var phoneSvg = tintCardScreenSvg(cardScreenSvg, schoolColor);
 
   container.innerHTML =
     '<div class="' +
@@ -48,14 +72,20 @@ export function renderGetStarted(container) {
       : CurvedLogoCarouselHtml()) +
     '<div class="hc-get-started-hero">' +
     '<div class="hc-get-started-phone">' +
-    '<img src="' +
-    escapeAttr(cardScreenUrl) +
-    '" alt="" class="hc-get-started-hero-img" />' +
+    '<div class="hc-get-started-hero-img" aria-hidden="true">' +
+    phoneSvg +
+    '</div>' +
     (welcomeImageUrl
       ? '<img src="' +
         escapeAttr(welcomeImageUrl) +
         '" alt="" class="hc-get-started-welcome-img" />'
       : '') +
+    '<div class="hc-get-started-card-brand" aria-hidden="true">' +
+    (brandSchool
+      ? '<div class="hc-get-started-card-school">' + escapeHtml(brandSchool) + '</div>'
+      : '') +
+    '<div class="hc-get-started-card-homecrowd">HOMECROWD</div>' +
+    '</div>' +
     '<div class="hc-get-started-hero-fade" aria-hidden="true"></div>' +
     '</div>' +
     '</div>' +

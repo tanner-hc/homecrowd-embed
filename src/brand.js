@@ -361,6 +361,29 @@ export function getSchoolColor() {
   );
 }
 
+export function getSchoolName() {
+  if (!brandConfig) return '';
+  return String(
+    brandConfig.abbreviation ||
+      brandConfig.Abbreviation ||
+      brandConfig.abbr ||
+      '',
+  ).trim();
+}
+
+export function darkenHex(hex, amount) {
+  var normalized = normalizeHexInput(hex);
+  if (!normalized) return '';
+  var factor = 1 - Math.min(1, Math.max(0, Number(amount) || 0));
+  var r = Math.round(parseInt(normalized.slice(1, 3), 16) * factor);
+  var g = Math.round(parseInt(normalized.slice(3, 5), 16) * factor);
+  var b = Math.round(parseInt(normalized.slice(5, 7), 16) * factor);
+  function toHex(n) {
+    return (n < 16 ? '0' : '') + n.toString(16).toUpperCase();
+  }
+  return '#' + toHex(r) + toHex(g) + toHex(b);
+}
+
 export function renderPoweredByLockup(className) {
   var extra = className ? ' ' + escapeHtml(className) : '';
   return (

@@ -64,6 +64,12 @@
 @font-face {
   font-family: 'Baikal-ExtraCondensedBold';
   src: url('./fonts/Baikal-ExtraCondensedBold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Baikal-ExtraCondensedBold';
+  src: url('./fonts/Baikal-ExtraCondensedBold.otf') format('opentype');
   font-weight: 900;
   font-style: normal;
 }
@@ -12084,6 +12090,7 @@ button.hc-shop-detail-cats--expandable {
   width: 236px;
   height: 444px;
   flex: 0 0 auto;
+  container-type: size;
 }
 
 .hc-get-started-hero-img {
@@ -12091,6 +12098,17 @@ button.hc-shop-detail-cats--expandable {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+.hc-get-started-hero-img svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hc-get-started-hero-img #hc-card-school-name,
+.hc-get-started-hero-img #hc-card-homecrowd {
+  display: none;
 }
 
 /* Welcome / fan card slot inside card_screen phone (viewBox 254×477, card ~38×83 / 177×188) */
@@ -12104,6 +12122,39 @@ button.hc-shop-detail-cats--expandable {
   border-radius: 6px;
   pointer-events: none;
   z-index: 1;
+}
+
+/* Figma: 58×18 at left 6.41 / top 6.56 inside blue card */
+.hc-get-started-card-brand {
+  position: absolute;
+  left: 17.5756%;
+  top: 18.7704%;
+  width: 25.2%;
+  min-height: 3.7736%;
+  height: auto;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow: visible;
+  pointer-events: none;
+  color: #f1f1f6;
+  font-family: 'Baikal-ExtraCondensedBold', sans-serif;
+  font-weight: 700;
+  font-style: normal;
+  font-size: calc(11.77 / 254 * 100cqw);
+  line-height: 79%;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hc-get-started-card-school,
+.hc-get-started-card-homecrowd {
+  display: block;
+  width: max-content;
+  max-width: none;
+  overflow: visible;
 }
 
 .hc-get-started-carousel-spacer {
