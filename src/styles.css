@@ -16280,7 +16280,6 @@ body:has(.hc-fr-success) {
 
 .hc-fr-success {
   position: relative;
-  isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -16294,29 +16293,6 @@ body:has(.hc-fr-success) {
   background: #000f19;
   color: #fff;
   text-align: center;
-}
-
-.hc-fr-success-background,
-.hc-fr-success-overlay {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.hc-fr-success-background {
-  z-index: -2;
-  object-fit: cover;
-}
-
-.hc-fr-success-overlay {
-  z-index: -1;
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.4) 0%,
-    rgba(0, 0, 0, 0.18) 55%,
-    rgba(0, 0, 0, 0.35) 100%
-  );
 }
 
 .hc-fr-success-wordmark {

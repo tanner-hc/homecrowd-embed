@@ -201,13 +201,13 @@ function readPendingPasswordLink() {
   }
 }
 
-function writePendingPasswordLink(token, linkedEmail) {
+function writePendingPasswordLink(token, linkedEmail, linkSchoolId) {
   try {
     window.sessionStorage.setItem(
       pendingPasswordLinkStorageKey,
       JSON.stringify({
         token: token,
-        schoolId: schoolId || '',
+        schoolId: linkSchoolId || schoolId || '',
         linkedEmail: linkedEmail || '',
       }),
     );
@@ -1054,7 +1054,7 @@ function render(route) {
     if (queryEmail && !pendingEmail) {
       pendingEmail = queryEmail;
     }
-    var noticeText = pendingLink
+    var noticeText = pendingLink && pendingLink.linkedEmail
       ? 'Account exists. Enter password to continue.'
       : '';
     appEl.innerHTML = '';
@@ -1065,14 +1065,12 @@ function render(route) {
           : '') || schoolId;
       var linkData = readPendingPasswordLink();
       if (linkData && linkData.token) {
-        try {
-          await api.linkSchoolEmail({
-            token: linkData.token,
-            schoolId: linkData.schoolId || schoolId || '',
-          });
-          clearPendingPasswordLink();
-          clearPendingLoginEmail();
-        } catch (_e) { }
+        await api.linkSchoolEmail({
+          token: linkData.token,
+          schoolId: linkData.schoolId || schoolId || '',
+        });
+        clearPendingPasswordLink();
+        clearPendingLoginEmail();
       }
       if (assignSchoolId) {
         try {
@@ -1091,7 +1089,7 @@ function render(route) {
     }, {
       schoolId: schoolId,
       initialEmail: pendingEmail,
-      lockEmail: !!pendingLink,
+      lockEmail: !!(pendingLink && pendingLink.linkedEmail),
       notice: noticeText,
     });
     return;
@@ -1400,14 +1398,17 @@ function render(route) {
         completeLoginState(nextUser, previewCtx.token);
         navigate('/' + initialView);
       },
-      onAlternateChoice: function (email) {
-        return handleAlternateSchoolChoice(email);
-      },
-      onPasswordChoice: function (email, password) {
-        return handlePreviewPasswordSignIn(email, password);
-      },
-      onForgotPassword: function (email) {
-        return handlePreviewForgotPassword(email);
+      onSecondaryChoice: function () {
+        if (!previewCtx.token) {
+          throw new Error('Missing school token');
+        }
+        writePendingPasswordLink(
+          previewCtx.token,
+          '',
+          previewCtx.schoolId || schoolId || '',
+        );
+        clearPendingLoginEmail();
+        navigate('/login');
       },
     });
   } else if (pathOnly === '/offers') {

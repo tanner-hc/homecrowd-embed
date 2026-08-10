@@ -103,15 +103,8 @@ function buildUnavailableHtml(message) {
 }
 
 function buildSuccessHtml(milestone) {
-  var backgroundUrl = milestone.confirmationImageUrl || '';
   return (
     '<div class="hc-fr-success">' +
-    (backgroundUrl
-      ? '<img class="hc-fr-success-background" src="' +
-        escapeAttr(backgroundUrl) +
-        '" alt="" aria-hidden="true" />'
-      : '') +
-    '<div class="hc-fr-success-overlay"></div>' +
     '<img class="hc-fr-success-wordmark" src="' +
     escapeAttr(wordmarkUrl) +
     '" alt="Homecrowd" />' +
