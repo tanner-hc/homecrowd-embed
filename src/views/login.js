@@ -408,7 +408,7 @@ export function renderLogin(container, onLoginSuccess, options) {
       navigate('/create-account');
       return;
     }
-    applyMode('signup');
+    navigate('/get-started');
   });
   signupBackBtn.addEventListener('click', function () {
     applyMode('signin');

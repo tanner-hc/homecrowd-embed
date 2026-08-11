@@ -1,24 +1,57 @@
 import * as api from '../api.js';
-import { getHeaderLogoUrl, renderPoweredByLockup } from '../brand.js';
+import {
+  getEmbedSchoolId,
+  getHeaderLogoUrl,
+  getSchoolColor,
+  hasCustomHeaderLogo,
+  hasSchoolBrand,
+  renderBrandLockup,
+  renderPoweredByLockup,
+} from '../brand.js';
 import Input from '../base-components/Input.js';
-import Button from '../base-components/Button.js';
-import { escapeHtml } from '../base-components/html.js';
+import { escapeAttr, escapeHtml } from '../base-components/html.js';
 import { isValidEmail } from '../contact-validation.js';
 
+function isSchoolMode() {
+  var params = new URLSearchParams(window.location.search);
+  var urlSchoolId = String(
+    params.get('schoolId') || params.get('schoolID') || params.get('school_id') || '',
+  )
+    .trim()
+    .replace(/^\/+|\/+$/g, '');
+  return hasSchoolBrand() || !!getEmbedSchoolId() || !!urlSchoolId;
+}
+
 export function renderForgotPassword(container) {
-  var logoUrl = getHeaderLogoUrl();
+  var schoolMode = isSchoolMode();
+  var schoolColor = schoolMode ? getSchoolColor() : '';
+  var shellClass = schoolMode ? 'hc-login-shell hc-login-shell--school' : 'hc-login-shell';
+  var shellStyle = schoolColor
+    ? ' style="--hc-welcome-card-bg: ' + escapeAttr(schoolColor) + ';"'
+    : '';
+  var logoBlock =
+    hasCustomHeaderLogo() || schoolMode
+      ? '<div class="hc-login-logo hc-login-logo--brand">' + renderBrandLockup() + '</div>'
+      : '<div class="hc-login-logo"><img src="' +
+        escapeAttr(getHeaderLogoUrl()) +
+        '" alt="Homecrowd" class="hc-login-logo-img" /></div>';
+  var footerHtml = schoolMode ? '' : renderPoweredByLockup('hc-login-footer');
+
   container.innerHTML =
-    '<div class="hc-login-shell">' +
+    '<div class="' +
+    shellClass +
+    '"' +
+    shellStyle +
+    '>' +
     '<div class="hc-login-bg"></div>' +
     '<div class="hc-login-overlay">' +
     '<div class="hc-login-container">' +
-    '<div class="hc-login-logo">' +
-    '<img data-hc-ph="none" src="' +
-    logoUrl +
-    '" alt="Homecrowd" class="hc-login-logo-img" />' +
-    '</div>' +
-    '<div class="hc-login-card hc-auth-card">' +
+    logoBlock +
+    '<div class="hc-login-card hc-login-card--signup">' +
     '<div class="hc-login-heading">' +
+    '<button type="button" id="hc-forgot-back" class="hc-signup-back-btn" style="display:inline-flex" aria-label="Back to login">' +
+    '<span class="hc-signup-back-arrow">&larr;</span>' +
+    '</button>' +
     '<h1 class="hc-login-title">Forgot Password?</h1>' +
     '</div>' +
     '<div id="hc-forgot-success" class="hc-auth-success" style="display:none"></div>' +
@@ -30,23 +63,18 @@ export function renderForgotPassword(container) {
       id: 'hc-forgot-email',
       name: 'email',
       type: 'email',
-      label: 'Email',
+      label: schoolMode ? '' : 'Email',
       placeholder: 'Email',
       autocomplete: 'email',
       value: '',
     }) +
-    Button({
-      id: 'hc-forgot-btn',
-      title: 'Send Reset Link',
-      type: 'submit',
-      variant: 'primary',
-      className: 'hc-btn-large hc-login-submit-btn',
-    }) +
     '</form>' +
-    '<button type="button" id="hc-forgot-back" class="hc-auth-link">Back to Login</button>' +
     '</div>' +
-    renderPoweredByLockup('hc-login-footer') +
+    footerHtml +
     '</div>' +
+    '<button class="hc-btn hc-btn-primary hc-btn-large hc-login-submit-btn" id="hc-forgot-btn" type="submit" form="hc-forgot-form">' +
+    'Send Reset Link' +
+    '</button>' +
     '</div>' +
     '</div>' +
     '</div>';
@@ -59,14 +87,16 @@ export function renderForgotPassword(container) {
   var successEl = document.getElementById('hc-forgot-success');
   var backBtn = document.getElementById('hc-forgot-back');
 
+  function goToLogin() {
+    window.location.hash = '#/login';
+  }
+
   function showError(message) {
     errorEl.textContent = message;
     errorEl.style.display = 'block';
   }
 
-  backBtn.addEventListener('click', function () {
-    window.location.hash = '#/login';
-  });
+  backBtn.addEventListener('click', goToLogin);
 
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
@@ -87,6 +117,7 @@ export function renderForgotPassword(container) {
     try {
       await api.forgotPassword(email);
       formWrap.style.display = 'none';
+      submitBtn.style.display = 'none';
       successEl.innerHTML =
         '<p class="hc-auth-success-title">We&apos;ve sent a password reset link to<br><strong>' +
         escapeHtml(email) +
@@ -94,9 +125,7 @@ export function renderForgotPassword(container) {
         '<p class="hc-auth-success-copy">Please check your email and follow the instructions to reset your password.</p>' +
         '<button type="button" id="hc-forgot-success-back" class="hc-auth-link">Back to Login</button>';
       successEl.style.display = 'block';
-      document.getElementById('hc-forgot-success-back').addEventListener('click', function () {
-        window.location.hash = '#/login';
-      });
+      document.getElementById('hc-forgot-success-back').addEventListener('click', goToLogin);
     } catch (err) {
       var body = err && err.body ? err.body : null;
       var emailError = body && body.email

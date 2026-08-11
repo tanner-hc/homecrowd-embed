@@ -1140,8 +1140,11 @@ html.hc-embed--no-school-brand .hc-login-card {
 }
 
 .hc-login-card--signup .hc-login-title {
+  box-sizing: border-box;
   font-size: 34px;
   line-height: 1.08;
+  max-width: 100%;
+  padding: 0 44px;
 }
 
 .hc-login-subtitle {
@@ -1282,6 +1285,7 @@ html.hc-embed--no-school-brand .hc-login-card {
 .hc-login-shell--school .hc-login-card--signup .hc-login-title {
   font-size: 42px;
   line-height: 0.95;
+  padding: 0 44px;
 }
 
 .hc-login-shell--school .hc-login-container .hc-label {
@@ -1360,7 +1364,7 @@ html.hc-embed--no-school-brand .hc-login-card {
   color: #ffffff;
 }
 
-.hc-login-shell--school .hc-login-submit-btn {
+.hc-login-shell--school .hc-login-container .hc-login-submit-btn.hc-btn-primary {
   margin-top: 16px;
   max-width: none;
   /* Figma: 16px padding all round, natural line box — no fixed height. */
@@ -1369,22 +1373,42 @@ html.hc-embed--no-school-brand .hc-login-card {
   line-height: normal;
   border-radius: 999px;
   border: none;
-  background: var(--hc-login-button, var(--hc-welcome-card-bg, #e00122));
-  color: var(--hc-login-button-text, #ffffff);
+  background: var(--hc-welcome-card-bg, #e00122);
+  color: #ffffff;
   font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 16px;
+  opacity: 1;
+  box-shadow: none;
 }
 
-.hc-login-shell--school .hc-login-submit-btn:hover,
-.hc-login-shell--school .hc-login-container .hc-btn-primary:hover {
-  background: var(--hc-login-button, var(--hc-welcome-card-bg, #e00122));
+.hc-login-shell--school .hc-login-container .hc-login-submit-btn.hc-btn-primary:hover {
+  background: var(--hc-welcome-card-bg, #e00122);
   opacity: 0.92;
+  box-shadow: none;
 }
 
 .hc-login-shell--school .hc-login-container .hc-alert-error {
   background: rgba(255, 255, 255, 0.16);
   color: #ffffff;
   border-color: rgba(255, 255, 255, 0.35);
+}
+
+.hc-login-shell--school .hc-signup-back-btn {
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #ffffff;
+}
+
+.hc-login-shell--school .hc-login-subtitle,
+.hc-login-shell--school .hc-auth-description {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.hc-login-shell--school .hc-auth-success,
+.hc-login-shell--school .hc-auth-success-title,
+.hc-login-shell--school .hc-auth-success-title strong,
+.hc-login-shell--school .hc-auth-success-copy,
+.hc-login-shell--school .hc-auth-link {
+  color: #ffffff;
 }
 
 /* Login-specific form overrides */

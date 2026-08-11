@@ -272,10 +272,20 @@ function resolveShowSetupComplete(userId, showUnlockSetup) {
     storageSet(checklistKey, '1');
     return false;
   }
-  if (storageGet(shownKey)) return false;
-  var sawChecklist = storageGet(checklistKey);
-  storageSet(shownKey, '1');
-  return !!sawChecklist;
+  if (!storageGet(checklistKey)) return false;
+
+  var TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+  var now = Date.now();
+  var raw = storageGet(shownKey);
+  if (!raw) {
+    storageSet(shownKey, String(now));
+    return true;
+  }
+
+  var startedAt = Number(raw);
+  // Legacy flag was '1' (hide forever after first paint). Keep those dismissed.
+  if (!Number.isFinite(startedAt) || startedAt <= 1) return false;
+  return now - startedAt < TWENTY_FOUR_HOURS_MS;
 }
 
 function buildRewardDetailHash(rewardMeta, source) {
