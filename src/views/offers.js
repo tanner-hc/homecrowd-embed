@@ -28,11 +28,12 @@ import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { renderPointMultiplierBadgeHtml } from '../pointMultiplier.js';
 import { searchUSCities, lookupUSCity } from '../usCitySearch.js';
 import { navigate } from '../router.js';
-import { isIOS, isAndroid } from '../platform.js';
+import { openDirectionsPicker } from '../mapDirections.js';
 import {
   buildHomeFeaturedStoresHtml,
   bindHomeFeaturedStores,
-  normalizeFeaturedStores,
+  buildLinkedCardRequiredHtml,
+  normalizeOnlineStores,
 } from '../components/Dashboard/HomeFeaturedStores.js';
 import {
   buildBottomFeaturedGridHtml,
@@ -211,14 +212,14 @@ export function renderOffers(container) {
       populateMarketplacePreferredPartners(container, [], false);
     });
 
+  // "Shop online" previews the first 20 of the online catalog, matching what its
+  // "View all" opens. It used to show only top/bottom-featured offers, which is
+  // a different (promoted) set than the list behind it.
   api
-    .getFeaturedOffers('click')
+    .getWildfireOffers(1, 60)
     .then(function (raw) {
       if (!container.isConnected) return;
-      populateMarketplaceFeaturedShops(
-        container,
-        normalizeFeaturedStores(raw, { onlineOnly: true })
-      );
+      populateMarketplaceFeaturedShops(container, normalizeOnlineStores(raw, 20));
     })
     .catch(function () {
       if (!container.isConnected) return;
@@ -347,10 +348,11 @@ function buildMarketplaceShell() {
     '<div id="hc-marketplace-bottom-grid" class="hc-marketplace-bottom-grid"></div>' +
     '<div class="hc-marketplace-map-block">' +
     '<div class="hc-marketplace-map-header">' +
-    '<div class="hc-marketplace-map-title">Earn points near you</div>' +
+    '<div class="hc-marketplace-map-title">Shop in person near you</div>' +
     '<button type="button" class="hc-marketplace-map-view" id="hc-marketplace-view-map">View map</button>' +
     '</div>' +
     renderLocationMapSection({ includeSearch: false }) +
+    buildLinkedCardRequiredHtml('hc-marketplace-map-req') +
     '</div>' +
     '<div id="hc-stores-grid" class="hc-merchant-grid">' +
     gridSkeletonHtml() +
@@ -392,7 +394,7 @@ function populateMarketplacePreferredPartners(container, partners, loading) {
 
   container._hcPreferredPartnersApi = mountPreferredPartnersCarousel(root, {
     onViewAll: function () {
-      navigate('/offers/all-shops?categoryId=all');
+      navigate('/offers/all-shops?preferred=1');
     },
     onPartnerPress: function (partner) {
       if (!partner) return;
@@ -404,7 +406,15 @@ function populateMarketplacePreferredPartners(container, partners, loading) {
       try {
         sessionStorage.setItem(
           'hc_offer_detail_initial',
-          JSON.stringify({ offerId: String(offerId), offer: partner })
+          JSON.stringify({
+            offerId: String(offerId),
+            offer: partner,
+            // The small mark is the one on the partner card, and it is what the
+            // detail page should show. It travels as an override rather than on
+            // the offer because fetched merchant data is merged over the seeded
+            // offer and would otherwise replace it.
+            logoOverride: partner.small_logo_url || partner.large_logo_url || '',
+          })
         );
       } catch (_e) {}
       window.location.hash = '#/offers/' + encodeURIComponent(offerId);
@@ -416,12 +426,12 @@ function populateMarketplaceFeaturedShops(container, stores) {
   var wrap = container.querySelector('#hc-marketplace-featured-shops');
   if (!wrap) return;
   wrap.innerHTML = buildHomeFeaturedStoresHtml({
-    title: 'Featured shops',
+    title: 'Shop online',
     stores: stores,
   });
   bindHomeFeaturedStores(wrap, {
     onSeeAll: function () {
-      navigate('/offers/all-shops?categoryId=all');
+      navigate('/offers/all-shops?channel=online');
     },
     onStorePress: function (id) {
       var store = (stores || []).find(function (s) {
@@ -602,6 +612,7 @@ function pickWildfireList(raw) {
   if (Array.isArray(raw)) return raw;
   return [];
 }
+
 
 function gridSkeletonHtml() {
   var card =
@@ -1688,113 +1699,11 @@ function buildMerchantDirectionsDestination(merchant) {
   };
 }
 
-function buildDirectionsAppOptions(dest, origin) {
-  var daddr = dest.query;
-  var hasCoords = Number.isFinite(dest.lat) && Number.isFinite(dest.lng);
-  var originStr =
-    origin && Number.isFinite(origin.lat) && Number.isFinite(origin.lng)
-      ? origin.lat + ',' + origin.lng
-      : '';
-
-  var apple =
-    'https://maps.apple.com/?' +
-    (originStr ? 'saddr=' + encodeURIComponent(originStr) + '&' : '') +
-    'daddr=' +
-    encodeURIComponent(daddr) +
-    '&dirflg=d';
-
-  var google =
-    'https://www.google.com/maps/dir/?api=1' +
-    (originStr ? '&origin=' + encodeURIComponent(originStr) : '') +
-    '&destination=' +
-    encodeURIComponent(daddr);
-
-  var waze = hasCoords
-    ? 'https://waze.com/ul?ll=' +
-      encodeURIComponent(dest.lat + ',' + dest.lng) +
-      '&navigate=yes'
-    : 'https://waze.com/ul?q=' + encodeURIComponent(daddr) + '&navigate=yes';
-
-  var options = [];
-  if (isIOS()) {
-    options.push({ id: 'apple', label: 'Apple Maps', url: apple });
-    options.push({ id: 'google', label: 'Google Maps', url: google });
-    options.push({ id: 'waze', label: 'Waze', url: waze });
-  } else if (isAndroid()) {
-    options.push({ id: 'google', label: 'Google Maps', url: google });
-    options.push({ id: 'waze', label: 'Waze', url: waze });
-  } else {
-    options.push({ id: 'google', label: 'Google Maps', url: google });
-    options.push({ id: 'apple', label: 'Apple Maps', url: apple });
-  }
-  return options;
-}
-
-function openDirectionsUrl(url) {
-  if (!url) return;
-  if (hasNativeBridge()) {
-    try {
-      postToNative('homecrowd:open-url', { url: url, title: 'Directions' });
-    } catch (_e) {}
-    try {
-      postToNative('homecrowd:open-merchant-webview', { url: url, title: 'Directions' });
-    } catch (_e2) {}
-  }
-  window.open(url, '_blank', 'noopener,noreferrer');
-}
-
 function openMapDirectionsPicker(container, merchant) {
-  var dest = buildMerchantDirectionsDestination(merchant);
-  if (!dest.query) {
-    window.alert('Location is not available for this store.');
-    return;
-  }
-  var origin = getMapUserLatLng(container);
-  var apps = buildDirectionsAppOptions(dest, origin);
-  if (!apps.length) return;
-
-  if (apps.length === 1) {
-    openDirectionsUrl(apps[0].url);
-    return;
-  }
-
-  var bodyHtml =
-    '<div class="hc-map-directions-picker">' +
-    apps
-      .map(function (app) {
-        return (
-          '<button type="button" class="hc-map-directions-option" data-map-app="' +
-          escapeAttr(app.id) +
-          '">' +
-          escapeHtml(app.label) +
-          '</button>'
-        );
-      })
-      .join('') +
-    '</div>';
-
-  var sheet = openBottomSheet({
-    title: 'Get Directions',
-    bodyHtml: bodyHtml,
-  });
-  var root = sheet && sheet.root;
-  if (!root) return;
-
-  root.querySelectorAll('[data-map-app]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var id = btn.getAttribute('data-map-app');
-      var app = apps.find(function (item) {
-        return item.id === id;
-      });
-      if (typeof sheet.close === 'function') {
-        sheet.close(function () {
-          if (app) openDirectionsUrl(app.url);
-        });
-      } else if (app) {
-        openDirectionsUrl(app.url);
-      }
-    });
-  });
+  openDirectionsPicker(
+    buildMerchantDirectionsDestination(merchant),
+    getMapUserLatLng(container)
+  );
 }
 
 function hideSelectedMapMerchant(container) {
@@ -1849,10 +1758,13 @@ function showSelectedMapMerchant(container, merchant) {
   });
   var directionsBtn = slot.querySelector('[data-hc-map-directions]');
   if (directionsBtn) {
+    // Both maps forward to the offer rather than launching the picker here —
+    // the detail page carries its own "Get directions", so the address and the
+    // rest of the offer stay in one place.
     directionsBtn.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
-      openMapDirectionsPicker(container, merchant);
+      openMapMerchantFromCard(merchant);
     });
   }
   syncSelectedMerchantPinStyles(container, merchant);

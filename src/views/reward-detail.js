@@ -20,13 +20,18 @@ import {
   buildPrizeCountdownLabel,
   buildWeeklyRewardContext,
 } from '../weekly-reward.js';
-import { mountAppHeader } from '../base-components/AppHeader.js';
+import { buildAppHeaderHtml, mountAppHeader } from '../base-components/AppHeader.js';
 import {
   bindPrizeDetail,
   bindPrizeLeaderboardToggle,
   buildPrizeDetailContentHtml,
   buildPrizeDetailHtml,
 } from '../components/Rewards/PrizeDetail.js';
+import dateSvg from '../assets/icon-date-fill.svg?raw';
+import medalSvg from '../assets/icon-medal.svg?raw';
+import shieldSvg from '../assets/icons/shield.svg?raw';
+import unlockSvg from '../assets/icon-unlock.svg?raw';
+import giftSvg from '../assets/icon-gift-outline.svg?raw';
 
 var weeklyDetailLiveCleanup = null;
 
@@ -171,6 +176,185 @@ function collectImageUrls(product, getUrl) {
   return [];
 }
 
+/**
+ * The chip the design floats over the centred slide. Prizes put a countdown in
+ * theirs; a reward puts its cost there, which is where the design shows the
+ * figure rather than as a text line under the title.
+ */
+function buildMediaOverlayHtml(o) {
+  if (!o.pointsCost) return '';
+  return (
+    '<div class="hc-prize-detail-countdown">' +
+    '<span class="hc-prize-detail-points-value">' +
+    escapeHtml(formatDisplayNumber(o.pointsCost)) +
+    '</span>' +
+    '<span class="hc-prize-detail-points-unit">pts</span>' +
+    '</div>'
+  );
+}
+
+/**
+ * The prize screen's peeking carousel, reused for reward artwork so both detail
+ * screens share one media treatment. `overlayHtml` floats over the centred slide
+ * the same way the countdown does for weekly and season prizes.
+ */
+function buildRewardMediaHtml(images, overlayHtml) {
+  var urls = (Array.isArray(images) ? images : []).filter(Boolean);
+
+  var slides = urls.length
+    ? urls
+        .map(function (url) {
+          return (
+            '<div class="hc-prize-detail-slide">' +
+            '<img class="hc-prize-detail-img" src="' +
+            escapeAttr(url) +
+            '" alt="" /></div>'
+          );
+        })
+        .join('')
+    : '<div class="hc-prize-detail-slide">' +
+      '<div class="hc-prize-detail-img hc-prize-detail-img--ph"></div></div>';
+
+  var dots = '';
+  if (urls.length > 1) {
+    dots = '<div class="hc-prize-detail-dots">';
+    for (var i = 0; i < urls.length; i++) {
+      dots += '<span class="hc-prize-detail-dot' + (i === 0 ? ' is-active' : '') + '"></span>';
+    }
+    dots += '</div>';
+  }
+
+  return (
+    '<div class="hc-prize-detail-media">' +
+    '<div class="hc-prize-detail-stage">' +
+    '<div class="hc-prize-detail-track">' +
+    slides +
+    '</div>' +
+    (overlayHtml || '') +
+    '</div>' +
+    dots +
+    '</div>'
+  );
+}
+
+function rewardInfoRowHtml(icon, title, body) {
+  return (
+    '<div class="hc-prize-detail-info-row">' +
+    '<span class="hc-prize-detail-info-icon">' +
+    icon +
+    '</span>' +
+    '<div class="hc-prize-detail-info-text">' +
+    '<span class="hc-prize-detail-info-title">' +
+    escapeHtml(title) +
+    '</span>' +
+    '<span class="hc-prize-detail-info-body">' +
+    escapeHtml(body) +
+    '</span>' +
+    '</div>' +
+    '</div>'
+  );
+}
+
+/**
+ * The tinted boxes that used to sit loose between the header and the description
+ * (drawing date, entry count, auction pill) become icon rows in one card, which is
+ * how the prize screen presents Date / Location / How to Win / Terms.
+ */
+function buildRewardInfoHtml(o) {
+  var rows = '';
+
+  // Row order is fixed: Entries, Drawing Date, Description, How to Win, Terms.
+  if (o.redemptionType === 'raffle' && o.raffleInfo) {
+    if (!o.hideEntries) {
+      rows += rewardInfoRowHtml(
+        medalSvg,
+        'Your Entries',
+        formatDisplayNumber(o.userEntries) +
+          ' ' +
+          (o.userEntries === 1 ? 'entry' : 'entries') +
+          ' in this raffle'
+      );
+    }
+    if (o.timeLocked && o.raffleInfo.start_date) {
+      rows += rewardInfoRowHtml(dateSvg, 'Opens', formatLongDate(o.raffleInfo.start_date));
+    }
+    if (o.raffleInfo.drawing_date) {
+      rows += rewardInfoRowHtml(
+        dateSvg,
+        'Drawing Date',
+        formatLongDate(o.raffleInfo.drawing_date)
+      );
+    }
+  }
+
+  // Auctions deliberately keep RafflePill instead of an "Ends" row: the pill runs a
+  // live countdown via attachRafflePillAuction, which a static date row would lose.
+  // Only the bid figure moves into the card.
+  if (o.redemptionType === 'auction' && o.auctionInfo) {
+    rows += rewardInfoRowHtml(
+      medalSvg,
+      'Current Bid',
+      formatDisplayNumber(o.auctionInfo.current_highest_bid || 0) + ' points'
+    );
+  }
+
+  // The reward's own copy sits in the card as a row rather than above it.
+  if (o.description) {
+    rows += rewardInfoRowHtml(giftSvg, 'Description', o.description);
+  }
+
+  // The design always closes with a how-to row. Rewards carry no such copy in
+  // the API, so it is derived from the cost rather than left blank — without it
+  // a plain reward has no card at all.
+  if (o.howToUnlock) {
+    rows += rewardInfoRowHtml(
+      o.redemptionType === 'raffle' ? medalSvg : unlockSvg,
+      o.redemptionType === 'raffle' ? 'How to Win' : 'How to Unlock',
+      o.howToUnlock
+    );
+  }
+
+  if (o.terms) {
+    rows += rewardInfoRowHtml(shieldSvg, 'Terms', o.terms);
+  }
+
+  if (!rows) return '';
+  return '<div class="hc-prize-detail-info">' + rows + '</div>';
+}
+
+/**
+ * Reads from the reward's own cost and the viewer's balance, so it states what
+ * is actually true for them rather than a generic line.
+ */
+function buildHowToUnlockCopy(o) {
+  if (o.redemptionType === 'raffle') {
+    if (!o.pointsCost) return '';
+    return (
+      'Redeem ' +
+      formatDisplayNumber(o.pointsCost) +
+      ' points for an entry. Winners are drawn at the end of the raffle and contacted with details.'
+    );
+  }
+  if (o.redemptionType === 'auction') {
+    return 'Place a bid with your points. The highest bid when the auction closes wins.';
+  }
+  if (!o.pointsCost) return '';
+  if (o.availablePts >= o.pointsCost) {
+    return (
+      'You have enough points to redeem this reward. Redeeming spends ' +
+      formatDisplayNumber(o.pointsCost) +
+      ' points from your balance.'
+    );
+  }
+  return (
+    'Earn ' +
+    formatDisplayNumber(o.pointsCost - o.availablePts) +
+    ' more points to unlock this reward. Once unlocked, you can redeem it for ' +
+    formatDisplayNumber(o.pointsCost) +
+    ' points.'
+  );
+}
+
 function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsResponse, weeklyReward, navSource) {
   var getUrl = function (path) {
     if (!path) return null;
@@ -263,30 +447,49 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
 
   var images = collectImageUrls(product, getUrl);
 
+  // Badge mirrors the prize screen's "Weekly Prize" / "Season Prize" chip.
+  var badgeLabel =
+    redemptionType === 'raffle'
+      ? 'Raffle'
+      : redemptionType === 'auction'
+        ? 'Auction'
+        : capitalize(product.reward_type || 'merchandise');
+
   var html = '';
 
-  html += '<div class="hc-product-detail' + (completed ? ' hc-product-detail--completed' : '') + '">';
+  html +=
+    '<div class="hc-product-detail hc-product-detail--prize' +
+    (completed ? ' hc-product-detail--completed' : '') +
+    '">';
 
-  html += '<div class="hc-product-detail-nav-sticky">';
-  html += NavHeader({
-    title: navSource === 'home' ? 'Home' : 'Rewards',
-    backButtonId: 'hc-back-btn',
+  html += buildAppHeaderHtml({
+    showBack: true,
+    user: currentUser,
+    points: availablePts,
   });
-  html += '</div>';
 
   html += '<div class="hc-product-detail-scroll">';
 
-  html += '<div class="' + (completed ? 'hc-product-completed-wrap' : '') + '">';
-  html += buildCarouselHtml(images);
-  html += '</div>';
+  // Only wrap when there is something to dim: an always-on wrapper would break
+  // the centred flex column the body relies on.
+  var mediaHtml = buildRewardMediaHtml(
+    images,
+    buildMediaOverlayHtml({
+      pointsCost: isEarlyRelease ? 0 : product.points_cost || 0,
+    }),
+  );
+  html += completed
+    ? '<div class="hc-product-completed-wrap">' + mediaHtml + '</div>'
+    : mediaHtml;
 
-  html += '<div class="hc-detail-header' + (completed ? ' hc-product-completed-wrap' : '') + '">';
-  html += '<div class="hc-detail-title">' + escapeHtml(product.title) + '</div>';
-  html +=
-    '<div class="hc-detail-category">' +
-    escapeHtml(capitalize(product.reward_type || 'merchandise')) +
-    '</div>';
+  html += '<div class="hc-prize-detail-content">';
+  html += '<div class="hc-prize-detail-body">';
 
+  html += '<span class="hc-prize-detail-badge">' + escapeHtml(badgeLabel) + '</span>';
+  html += '<h1 class="hc-prize-detail-title">' + escapeHtml(product.title) + '</h1>';
+
+  // Prizes carry no cost, so there is no slot for this upstream — it sits directly
+  // under the title where the prize screen would start its description.
   if (!isEarlyRelease && !weeklyReward) {
     html += '<div class="hc-product-points-row">';
     if (redemptionType === 'card') {
@@ -311,38 +514,6 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
     }
     html += '</div>';
   }
-  html += '</div>';
-
-  if (timeLocked && redemptionType === 'raffle' && raffleInfo && raffleInfo.start_date) {
-    html += '<div class="hc-product-drawing-date">';
-    html += '<div class="hc-product-drawing-label">Opens</div>';
-    html += '<div class="hc-product-drawing-value">' + escapeHtml(formatLongDate(raffleInfo.start_date)) + '</div>';
-    html += '</div>';
-  }
-
-  if (redemptionType === 'raffle' && raffleInfo && raffleInfo.drawing_date) {
-    html += '<div class="hc-product-drawing-date">';
-    html += '<div class="hc-product-drawing-label">Drawing Date</div>';
-    html += '<div class="hc-product-drawing-value">' + escapeHtml(formatLongDate(raffleInfo.drawing_date)) + '</div>';
-    html += '</div>';
-  }
-
-  if (
-    redemptionType === 'raffle' &&
-    raffleInfo &&
-    !(raffleInfo.status === 'completed' && raffleInfo.winner && String(raffleInfo.winner) === userId)
-  ) {
-    html += '<div class="hc-product-raffle-entries">';
-    html +=
-      '<span class="hc-product-raffle-entries-text">' +
-      (isPast ? 'You had' : 'You have') +
-      ' <strong class="hc-product-raffle-count">' +
-      formatDisplayNumber(userEntries) +
-      '</strong> ' +
-      (userEntries === 1 ? 'entry' : 'entries') +
-      ' in this raffle</span>';
-    html += '</div>';
-  }
 
   if (redemptionType === 'auction' && auctionInfo && userWonAuction) {
     html += '<div class="hc-product-winner-auction">';
@@ -363,29 +534,55 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
     html += '<div class="hc-product-winner-sub">You won the raffle drawing for this prize!</div>';
     html += '<div class="hc-product-winner-contact">You will be contacted with more details</div>';
     html += '</div>';
-    html += '<div class="hc-product-raffle-entries">';
-    html +=
-      '<span class="hc-product-raffle-entries-text">You had <strong class="hc-product-raffle-count">' +
-      formatDisplayNumber(userEntries) +
-      '</strong> ' +
-      (userEntries === 1 ? 'entry' : 'entries') +
-      ' in this raffle</span>';
-    html += '</div>';
+    // Entry count is rendered by the info card below, not repeated here.
   }
 
   if (!hideMainProductBlock) {
-    html += '<div class="' + (completed ? 'hc-product-completed-wrap' : '') + '">';
+    var mainBlock = '';
     if (redemptionType === 'auction' && auctionInfo) {
-      html += buildAuctionBidStatusHtml(auctionInfo);
-      html += buildAuctionPillHtml(auctionInfo);
+      // "You're the highest bidder" / "You've been outbid", plus the live countdown.
+      mainBlock += buildAuctionBidStatusHtml(auctionInfo);
+      mainBlock += buildAuctionPillHtml(auctionInfo);
     }
-    if (product.description) {
-      html += '<div class="hc-product-desc-wrap">';
-      html += '<div class="hc-detail-desc-text">' + nlToBr(escapeHtml(product.description)) + '</div>';
-      html += '</div>';
-    }
-    html += '</div>';
+    mainBlock += buildRewardInfoHtml({
+      redemptionType: redemptionType,
+      raffleInfo: raffleInfo,
+      auctionInfo: auctionInfo,
+      userEntries: userEntries,
+      timeLocked: timeLocked,
+      completed: completed,
+      hideEntries: false,
+      description: product.description || '',
+      howToUnlock: buildHowToUnlockCopy({
+        redemptionType: redemptionType,
+        pointsCost: product.points_cost || 0,
+        availablePts: availablePts,
+      }),
+      terms: product.terms || product.terms_and_conditions || '',
+    });
+    // Unwrapped unless there is something to dim, so the description and info
+    // card stay direct children of the centred body column.
+    html += completed
+      ? '<div class="hc-product-completed-wrap">' + mainBlock + '</div>'
+      : mainBlock;
+  } else {
+    // Raffle winner: the congratulations banner carries the page, but the entry
+    // count still belongs somewhere.
+    html += buildRewardInfoHtml({
+      redemptionType: redemptionType,
+      raffleInfo: raffleInfo,
+      auctionInfo: null,
+      userEntries: userEntries,
+      timeLocked: timeLocked,
+      completed: completed,
+      hideEntries: false,
+      description: product.description || '',
+      terms: product.terms || product.terms_and_conditions || '',
+    });
   }
+
+  html += '</div>';
+  html += '</div>';
 
   if (completed) {
     html += '<div class="hc-product-ended-banner">';
@@ -600,36 +797,6 @@ function attachWeeklyRewardDetailLiveUpdates(container, initialReward, view) {
   };
 }
 
-function buildCarouselHtml(urls) {
-  var spacer = '<div class="hc-carousel-spacer" aria-hidden="true"></div>';
-  var inner = '';
-  if (!urls.length) {
-    inner =
-      '<div class="hc-carousel">' +
-      spacer +
-      '<div class="hc-carousel-slide"><div class="hc-carousel-ph">No Image</div></div>' +
-      spacer +
-      '</div>';
-    return '<div class="hc-product-carousel-bleed">' + inner + '</div>';
-  }
-  inner = '<div class="hc-carousel">' + spacer;
-  urls.forEach(function (url) {
-    inner +=
-      '<div class="hc-carousel-slide"><div class="hc-carousel-img-wrap"><img class="hc-carousel-img" src="' +
-      escapeAttr(url) +
-      '" alt="" /></div></div>';
-  });
-  inner += spacer + '</div>';
-  if (urls.length > 1) {
-    inner += '<div class="hc-carousel-dots">';
-    urls.forEach(function (_, i) {
-      inner += '<span class="hc-carousel-dot' + (i === 0 ? ' active' : '') + '"></span>';
-    });
-    inner += '</div>';
-  }
-  return '<div class="hc-product-carousel-bleed">' + inner + '</div>';
-}
-
 function buildAuctionBidStatusHtml(auctionInfo) {
   var ub = auctionInfo.user_current_bid;
   var ch = auctionInfo.current_highest_bid;
@@ -782,12 +949,18 @@ function bindDetailEvents(
   navSource,
 ) {
   container.onclick = null;
-  var backBtn = document.getElementById('hc-back-btn');
-  if (backBtn) {
-    backBtn.addEventListener('click', function () {
-      window.location.hash = navSource === 'home' ? '#/home' : '#/rewards';
-    });
-  }
+
+  // Both screens now render AppHeader, which owns its own back control via
+  // [data-hc-app-header-back] — the old '#hc-back-btn' element no longer exists,
+  // so this has to be mounted on the reward path too or Back does nothing.
+  var goBack = function () {
+    window.location.hash = navSource === 'home' ? '#/home' : '#/rewards';
+  };
+  var headerCleanup = mountAppHeader(container, {
+    user: currentUser,
+    showBack: true,
+    onBackPress: goBack,
+  });
 
   if (weeklyReward) {
     // The leaderboard collapses to five rows until "View all" is tapped, and
@@ -797,14 +970,6 @@ function bindDetailEvents(
       currentUser: currentUser,
       expanded: false,
     };
-
-    var headerCleanup = mountAppHeader(container, {
-      user: currentUser,
-      showBack: true,
-      onBackPress: function () {
-        window.location.hash = navSource === 'home' ? '#/home' : '#/rewards';
-      },
-    });
 
     bindPrizeDetail(container, {
       onToggleLeaderboard: function (expanded) {
@@ -838,7 +1003,9 @@ function bindDetailEvents(
     });
   }
 
-  initCarouselDots(container);
+  // The media is the prize carousel now (.hc-prize-detail-track/-dot), not the
+  // old .hc-carousel markup, so the dots need that binding to track scrolling.
+  initPrizeCarouselDots(container);
   syncDetailScrollPadding(container);
 
   attachRafflePillAuction(container);
@@ -987,29 +1154,33 @@ function syncDetailScrollPadding(container) {
   }
 }
 
-function initCarouselDots(container) {
-  var carousel = container.querySelector('.hc-carousel');
-  if (!carousel) return;
-  var dots = container.querySelectorAll('.hc-carousel-dot');
-  if (!dots.length) return;
-  carousel.addEventListener('scroll', function () {
-    var slides = carousel.querySelectorAll('.hc-carousel-slide');
+/**
+ * Marks the dot for whichever slide is nearest the centre. The peeking track
+ * shows neighbours either side, so the centred slide is the active one rather
+ * than scrollLeft / clientWidth.
+ */
+function initPrizeCarouselDots(container) {
+  var track = container.querySelector('.hc-prize-detail-track');
+  if (!track) return;
+  var dots = container.querySelectorAll('.hc-prize-detail-dot');
+  if (dots.length < 2) return;
+  track.addEventListener('scroll', function () {
+    var slides = track.querySelectorAll('.hc-prize-detail-slide');
     if (!slides.length) return;
-    var cRect = carousel.getBoundingClientRect();
-    var mid = cRect.left + cRect.width / 2;
+    var trackRect = track.getBoundingClientRect();
+    var mid = trackRect.left + trackRect.width / 2;
     var best = 0;
     var bestDist = Infinity;
     slides.forEach(function (slide, i) {
-      var r = slide.getBoundingClientRect();
-      var sc = r.left + r.width / 2;
-      var dist = Math.abs(sc - mid);
+      var rect = slide.getBoundingClientRect();
+      var dist = Math.abs(rect.left + rect.width / 2 - mid);
       if (dist < bestDist) {
         bestDist = dist;
         best = i;
       }
     });
-    dots.forEach(function (d, i) {
-      d.classList.toggle('active', i === best);
+    dots.forEach(function (dot, i) {
+      dot.classList.toggle('is-active', i === best);
     });
   });
 }
@@ -1024,7 +1195,4 @@ function capitalize(s) {
     .join(' ');
 }
 
-function nlToBr(s) {
-  return s.replace(/\n/g, '<br>');
-}
 

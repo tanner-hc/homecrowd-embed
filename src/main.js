@@ -1452,14 +1452,19 @@ function renderLayout(route) {
   var isAddCardPage = pathOnly === '/cards/link';
   var isSafariOnPage = pathOnly === '/browser-extension';
   // Rewards now renders its own AppHeader, so the shell's lockup would sit
-  // above it as a second header.
+  // above it as a second header. The reward detail does the same — but only on
+  // the detail route itself; /confirm and /thanks still rely on the lockup.
   var isRewardsPage = pathOnly === '/rewards';
+  var isRewardDetailRoot = /^\/rewards\/[^/]+$/.test(pathOnly);
+  var isActivityLogPage = pathOnly === '/activity-log';
   var hideBrandLockup =
     isTravelPage ||
     isHomePage ||
     isOffersPage ||
     isOfferDetailPage ||
     isRewardsPage ||
+    isRewardDetailRoot ||
+    isActivityLogPage ||
     isPrizeDetailPage ||
     isLinkCardIntroPage ||
     isAddCardPage ||
@@ -1482,7 +1487,11 @@ function renderLayout(route) {
     isHomePage ||
     isOffersPage ||
     isOfferDetailPage ||
-    isRewardsPage
+    isRewardsPage ||
+    // Screens rendering their own sticky AppHeader need padding-top: 0, or the
+    // scroller's 8px top padding leaves a strip above the header where content
+    // shows through as it scrolls past.
+    isActivityLogPage
       ? ' hc-content--flush-top'
       : '';
 

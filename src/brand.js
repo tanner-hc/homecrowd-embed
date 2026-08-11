@@ -361,6 +361,18 @@ export function getSchoolColor() {
   );
 }
 
+/**
+ * The rewards program's own name — "Utah Rewards", "Bearcat Rewards" — as
+ * distinct from the school (getSchoolName returns the abbreviation). Empty when
+ * no brand config is loaded, so callers can fall back to Homecrowd.
+ */
+export function getProgramName() {
+  if (!brandConfig) return '';
+  return String(
+    brandConfig.rewardsTitle || brandConfig.rewards_title || '',
+  ).trim();
+}
+
 export function getSchoolName() {
   if (!brandConfig) return '';
   return String(

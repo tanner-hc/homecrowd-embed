@@ -8,6 +8,12 @@ import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import NoExtraCostFooter from '../base-components/NoExtraCostFooter.js';
 import PointsPerDollarBanner from '../base-components/PointsPerDollarBanner.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
+import {
+  getHeaderLogoUrl,
+  getProgramName,
+  getSchoolName,
+  hasCustomHeaderLogo,
+} from '../brand.js';
 import { renderPointMultiplierBadgeHtml } from '../pointMultiplier.js';
 import { showError } from '../base-components/toastApi.js';
 import { showPointsEarnedToast } from '../base-components/PointsEarnedToast.js';
@@ -432,12 +438,22 @@ function renderSafariPrompt(container, onContinue) {
     '<button type="button" class="hc-safari-on-back" id="hc-safari-on-back" aria-label="Back">' +
     chevronLeftSvg +
     '</button>' +
-    '<div class="hc-safari-on-logo">HOMECROWD</div>' +
+    // School programs show their own mark here; the Homecrowd wordmark is the
+    // fallback when no brand config came back.
+    (hasCustomHeaderLogo()
+      ? '<img src="' +
+        escapeAttr(getHeaderLogoUrl()) +
+        '" alt="' +
+        escapeAttr(getSchoolName() || 'School brand') +
+        '" class="hc-safari-on-logo hc-safari-on-logo--brand" />'
+      : '<div class="hc-safari-on-logo" role="img" aria-label="Homecrowd"></div>') +
     '<div class="hc-safari-on-nav-spacer" aria-hidden="true"></div>' +
     '</div>' +
     '<div class="hc-safari-on-bottom">' +
     '<div class="hc-safari-on-card">' +
-    '<h1 class="hc-safari-on-title">Turn on HomeCrowd in Safari</h1>' +
+    '<h1 class="hc-safari-on-title">Turn on ' +
+    escapeHtml(getProgramName() || 'HomeCrowd') +
+    ' in Safari</h1>' +
     '<p class="hc-safari-on-subtitle">' +
     'Earn points for your school when you make qualifying purchases in Safari.' +
     '</p>' +

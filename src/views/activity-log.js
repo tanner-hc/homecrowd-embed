@@ -1,7 +1,8 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
-import NavHeader from '../base-components/NavHeader.js';
+import { buildAppHeaderHtml, attachAppHeader } from '../base-components/AppHeader.js';
+import ScreenTitle from '../base-components/ScreenTitle.js';
 import { escapeHtml } from '../base-components/html.js';
 
 function formatUsdFromCents(cents) {
@@ -258,14 +259,10 @@ async function loadActivityLog(container) {
 
   var html = '';
   html += '<div class="hc-activity-log">';
-  html += '<div class="hc-account-settings-nav">';
-  html += NavHeader({
-    title: 'Activity Log',
-    backButtonId: 'hc-al-back',
-  });
-  html += '</div>';
+  html += buildAppHeaderHtml({ showBack: true });
   html += '<div class="hc-al-body">';
   html += '<div class="hc-al-sticky-block">';
+  html += ScreenTitle({ title: 'Activity log' });
   html += '<div class="hc-al-search-wrap">';
   html +=
     '<input type="search" id="hc-al-search" class="hc-input hc-al-search" placeholder="Search activity" autocomplete="off" />';
@@ -289,8 +286,17 @@ async function loadActivityLog(container) {
 
   paintList();
 
-  document.getElementById('hc-al-back').addEventListener('click', function () {
-    navigate('/profile');
+  attachAppHeader(container, {
+    showBack: true,
+    // Reachable from both the profile menu and home's "View all", so step back
+    // to wherever the user actually came from rather than a fixed screen.
+    onBackPress: function () {
+      if (window.history.length > 1) {
+        window.history.back();
+        return;
+      }
+      navigate('/profile');
+    },
   });
   var searchEl = document.getElementById('hc-al-search');
   if (searchEl) {

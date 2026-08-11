@@ -732,9 +732,12 @@ html.hc-embed--no-school-brand .hc-embed--email-selection {
   padding: var(--hc-spacing-base) var(--hc-spacing-xl);
   border: none;
   border-radius: var(--hc-radius-pill);
-  font-family: var(--hc-font-bold);
+  /* Design system "Button (new)" labels are Baikal Medium 16. This read
+     var(--hc-font-bold), which is defined nowhere — so font-family collapsed to
+     inherit and font-weight:normal rendered every button in Baikal Regular. */
+  font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 16px;
-  font-weight: normal;
+  font-weight: 500;
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1186,8 +1189,8 @@ html.hc-embed--no-school-brand .hc-login-card {
 
 .hc-login-shell--school .hc-login-container {
   justify-content: flex-start;
-  padding: 12px 16px max(16px, env(safe-area-inset-bottom, 0px));
-  padding-top: max(12px, env(safe-area-inset-top, 0px));
+  padding: 26px 16px max(32px, env(safe-area-inset-bottom, 0px));
+  padding-top: max(26px, env(safe-area-inset-top, 0px));
   --hc-powered-by-text: #111111;
   --hc-powered-by-text-label: rgba(17, 17, 17, 0.55);
   --hc-powered-by-text-name: #111111;
@@ -1201,7 +1204,9 @@ html.hc-embed--no-school-brand .hc-login-card {
   align-items: center;
   justify-content: flex-start;
   min-height: 0;
-  margin-bottom: 12px;
+  /* 18px here + 4px on .hc-header-powered = the 22px Figma leaves between the
+     "powered by" lockup and the top of the red card. */
+  margin-bottom: 18px;
   width: 100%;
 }
 
@@ -1219,8 +1224,9 @@ html.hc-embed--no-school-brand .hc-login-card {
 
 .hc-login-shell--school .hc-login-logo--brand .hc-header-logo--brand {
   height: auto;
-  max-height: min(120px, 16vh);
-  width: min(220px, 62vw);
+  /* Figma school mark: 194 x 95 in a 402-wide frame. */
+  max-height: min(95px, 12vh);
+  width: min(194px, 48vw);
   margin-top: 0;
   object-fit: contain;
 }
@@ -1237,13 +1243,13 @@ html.hc-embed--no-school-brand .hc-login-card {
 .hc-login-shell--school .hc-login-logo--brand .hc-header-powered-label {
   text-transform: lowercase;
   letter-spacing: 0.02em;
-  font-family: 'Baikal-Regular', var(--hc-font);
-  font-size: 13px;
-  color: rgba(17, 17, 17, 0.55);
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-size: 9px;
+  color: #696969;
 }
 
 .hc-login-shell--school .hc-login-logo--brand .hc-header-powered-logo {
-  width: 92px;
+  width: 88px;
   height: 14px;
   background-color: #111111;
 }
@@ -1251,8 +1257,8 @@ html.hc-embed--no-school-brand .hc-login-card {
 .hc-login-shell--school .hc-login-card {
   max-width: none;
   border: none;
-  border-radius: 28px;
-  padding: 28px 20px 22px;
+  border-radius: 12px;
+  padding: 16px;
   background: var(--hc-welcome-card-bg, #e00122);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -1260,14 +1266,15 @@ html.hc-embed--no-school-brand .hc-login-card {
 }
 
 .hc-login-shell--school .hc-login-heading {
-  margin-bottom: 22px;
+  /* Figma card gap between the headline and the inputs stack. */
+  margin-bottom: 24px;
 }
 
 .hc-login-shell--school .hc-login-title {
   color: #ffffff;
   font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
   font-weight: 700;
-  font-size: 56px;
+  font-size: 64px;
   line-height: 0.9;
   letter-spacing: 0;
 }
@@ -1281,13 +1288,26 @@ html.hc-embed--no-school-brand .hc-login-card {
   color: rgba(255, 255, 255, 0.9);
 }
 
+/* Figma stacks the fields 8px apart, then leaves 16px before the helper copy.
+   Scoped away from signup, which has more fields than the design covers. */
+.hc-login-shell--school .hc-login-card:not(.hc-login-card--signup) .hc-form-group {
+  margin-bottom: 8px;
+}
+
+.hc-login-shell--school .hc-login-card:not(.hc-login-card--signup) #hc-password-wrap {
+  margin-bottom: 16px;
+}
+
 .hc-login-shell--school .hc-login-container .hc-input,
 .hc-login-shell--school .hc-login-container .hc-login-school-select {
   background: transparent;
   border: 1.5px solid #ffffff;
-  border-radius: 14px;
+  border-radius: 12px;
   color: #ffffff;
-  min-height: 52px;
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-size: 14px;
+  min-height: 44px;
+  padding: 10px 14px;
   box-shadow: none;
 }
 
@@ -1307,29 +1327,32 @@ html.hc-embed--no-school-brand .hc-login-card {
 }
 
 .hc-login-shell--school .hc-login-signup-prompt {
-  margin: 8px 0 14px;
+  margin: 0;
   color: #ffffff;
-  font-family: 'Baikal-Regular', var(--hc-font);
-  font-size: 13px;
-  line-height: 1.4;
-  text-align: left;
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-size: 12px;
+  line-height: normal;
+  text-align: center;
 }
 
 .hc-login-shell--school .hc-login-signup-link {
   color: #ffffff;
   text-decoration: underline;
-  font-family: 'Baikal-Bold', var(--hc-font);
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-size: 12px;
 }
 
+/* Figma separates "Forgot your password?" from the prompt by one blank 12px line. */
 .hc-login-shell--school .hc-login-forgot-wrap {
-  margin: 0 0 4px;
+  margin: 14px 0 0;
   text-align: center;
 }
 
 .hc-login-shell--school .hc-login-forgot-link {
   color: #ffffff;
-  font-family: 'Baikal-Regular', var(--hc-font);
-  font-size: 13px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 12px;
+  text-decoration: underline;
 }
 
 .hc-login-shell--school .hc-login-checkbox-label,
@@ -1340,18 +1363,26 @@ html.hc-embed--no-school-brand .hc-login-card {
 .hc-login-shell--school .hc-login-submit-btn {
   margin-top: 16px;
   max-width: none;
-  min-height: 56px;
+  /* Figma: 16px padding all round, natural line box — no fixed height. */
+  min-height: 0;
+  padding: 16px;
+  line-height: normal;
   border-radius: 999px;
   border: none;
-  background: var(--hc-welcome-card-bg, #e00122);
-  color: #ffffff;
-  font-family: 'Baikal-Bold', var(--hc-font);
-  font-size: 17px;
+  /* The admin's login-button picker feeds --hc-login-button. This used to read
+     --hc-welcome-card-bg, which is the school's solid colour and ignores that
+     picker entirely; it also tied with the .hc-login-container .hc-btn-primary
+     rule below on specificity, so the winner came down to source order. Falling
+     back to the school colour keeps unconfigured schools looking right. */
+  background: var(--hc-login-button, var(--hc-welcome-card-bg, #e00122));
+  color: var(--hc-login-button-text, #ffffff);
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 16px;
 }
 
 .hc-login-shell--school .hc-login-submit-btn:hover,
 .hc-login-shell--school .hc-login-container .hc-btn-primary:hover {
-  background: var(--hc-welcome-card-bg, #e00122);
+  background: var(--hc-login-button, var(--hc-welcome-card-bg, #e00122));
   opacity: 0.92;
 }
 
@@ -3112,10 +3143,9 @@ html.hc-embed--no-school-brand .hc-login-card {
 .hc-detail-bottom.hc-product-bottom #hc-bid-submit.hc-btn-primary:not(:disabled) {
   background: var(--hc-detail-cta-bg);
   color: #fff;
-  font-family: var(--hc-detail-cta-font);
-  font-weight: 800;
-  font-size: 15px;
-  letter-spacing: 0.03em;
+  /* Type deliberately omitted: these are "Button (new)" instances, so the label
+     stays at .hc-btn's Baikal Medium 16. This used to force an 800-weight 15px
+     tracked-out label that no design calls for. */
   border-radius: var(--hc-radius-pill);
   box-shadow: var(--hc-shadow-cta);
 }
@@ -7126,11 +7156,7 @@ button.hc-shop-detail-cats--expandable {
 .hc-detail-bottom.hc-product-bottom #hc-bid-submit.hc-bc-main-btn--filled:not(:disabled) {
   background: var(--hc-detail-cta-bg);
   color: #fff;
-  font-family: var(--hc-detail-cta-font);
-  font-weight: 800;
-  font-size: 15px;
-  letter-spacing: 0.03em;
-  line-height: 1.15;
+  line-height: normal;
   border-radius: var(--hc-radius-pill);
   box-shadow: var(--hc-shadow-cta);
 }
@@ -7143,11 +7169,11 @@ button.hc-shop-detail-cats--expandable {
   border: 2px solid #1976d2;
   background: #fff;
   color: #1976d2;
-  font-family: var(--hc-font);
-  font-weight: 700;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
   font-size: 16px;
   letter-spacing: normal;
-  line-height: 1.25;
+  line-height: normal;
   box-shadow: none;
 }
 
@@ -7739,8 +7765,15 @@ button.hc-shop-detail-cats--expandable {
   margin-top: 0;
 }
 
+/* Figma 1216:13477 — home's top-level sections sit 42px apart. */
 .hc-home-section--spaced {
-  margin-top: 34px;
+  margin-top: 42px;
+}
+
+#hc-home-featured-wrap,
+.hc-home-prize-cards.hc-home-prize-cards,
+.hc-home-activity.hc-home-activity {
+  margin-top: 42px;
 }
 
 .hc-home-welcome-block {
@@ -8309,28 +8342,44 @@ button.hc-shop-detail-cats--expandable {
   color: #888;
 }
 
-.hc-home-activity-title {
-  font-size: 16px;
-  font-weight: 100;
-  color: #000;
+/* Section header component (Figma 1216:13714 / 3568:4197): title and "View all"
+   share a baseline. No horizontal padding — .hc-home-page-pad supplies it. */
+.hc-home-activity-header {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 8px;
-  font-family: var(--hc-font);
 }
 
-.hc-home-activity-search {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 12px 14px;
+/* Baikal Medium 18 / 1.2. This was 16px at weight 100, which the Baikal family
+   has no face for — it fell back to the lightest cut. */
+.hc-home-activity-title {
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #000;
+}
+
+.hc-home-activity-view-all {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-family: 'Baikal-Regular', var(--hc-font);
   font-size: 15px;
-  font-family: var(--hc-font);
-  border: 1px solid #e5e5e5;
-  border-radius: 12px;
-  background: #fff;
-  margin-bottom: 4px;
+  font-weight: 400;
+  line-height: normal;
+  color: #888;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.hc-home-activity-search::placeholder {
-  color: #999;
+.hc-home-activity-view-all:active {
+  opacity: 0.7;
 }
 
 .hc-home-activity-body {
@@ -12053,6 +12102,15 @@ button.hc-shop-detail-cats--expandable {
   margin-bottom: 22px;
 }
 
+/* The Homecrowd wordmark is a ~6.6:1 lockup; school program marks are much
+   closer to square, so the 132x20 box would shrink one to a sliver. Bound both
+   axes instead and let object-fit keep whatever aspect the school's file has. */
+.hc-get-started-logo--brand {
+  width: auto;
+  max-width: min(260px, 70vw);
+  height: 80px;
+}
+
 .hc-get-started-headline {
   margin: 0 0 14px;
   font-family: 'Baikal-ExtraCondensedBold', 'Baikal', sans-serif;
@@ -12187,6 +12245,10 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-get-started--school .hc-get-started-btn--primary {
   background: var(--hc-get-started-primary, var(--hc-app-primary, #00c8ff));
+  /* School colours are mostly dark saturated brand tones, so the default black
+     label reads poorly on them — force white. The unbranded cyan default keeps
+     its black label. */
+  color: #ffffff;
 }
 
 .hc-get-started--school .hc-get-started-btn--secondary {
@@ -12231,9 +12293,9 @@ button.hc-shop-detail-cats--expandable {
   width: 100%;
   height: 53px;
   border-radius: 100px;
-  font-family: 'Baikal-Bold', 'Baikal', sans-serif;
+  font-family: 'Baikal-Medium', 'Baikal', sans-serif;
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 500;
   color: #000;
   cursor: pointer;
   box-sizing: border-box;
@@ -14269,6 +14331,24 @@ button.hc-shop-detail-cats--expandable {
   background: var(--hc-app-primary, #00c8ff);
 }
 
+/* Branded embeds show the school's program logo bare — no disc, no fill, and
+   contained rather than cropped, since a program mark is usually wordmark-shaped
+   and a circular crop would cut it in half. */
+.hc-tx-avatar--brand {
+  background: transparent;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.hc-tx-brand-icon {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
 .hc-tx-avatar--merchant {
   background: #f2f2f2;
 }
@@ -14473,27 +14553,32 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-marketplace-preferred-partners {
   margin-top: 8px;
-  margin-bottom: 8px;
+  /* Figma 1219:18157 spaces the Shop sections 43px apart. The track already
+     carries 4px of bottom padding to clear the card shadow, so this makes up
+     the remainder rather than stacking a full 43 on top of it. */
+  margin-bottom: 39px;
 }
 
 .hc-pp {
   font-family: var(--hc-font);
 }
 
+/* Section header — Figma 1219:18159. Title and "View all" sit on a shared
+   baseline, with 24px down to the cards. */
 .hc-pp-header {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 20px 12px;
+  padding: 8px 20px 24px;
 }
 
 .hc-pp-title {
-  font-family: 'Baikal-Bold', var(--hc-font);
+  font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 18px;
-  font-weight: 700;
-  line-height: 22px;
+  font-weight: 500;
+  line-height: 1.2;
   color: #000;
 }
 
@@ -14503,11 +14588,11 @@ button.hc-shop-detail-cats--expandable {
   padding: 0;
   margin: 0;
   cursor: pointer;
-  font-family: 'Baikal-Medium', var(--hc-font);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 18px;
-  color: #9a9a9a;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: normal;
+  color: #888;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -14524,7 +14609,10 @@ button.hc-shop-detail-cats--expandable {
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding: 0 max(20px, calc((100% - min(340px, calc(100% - 52px))) / 2)) 4px;
+  /* Centring inset must be derived from the same 316px cap the slide uses —
+     this was still solving for the old 340px width, so the card sat off-centre
+     and the peek on either side was uneven. */
+  padding: 0 max(20px, calc((100% - min(316px, calc(100% - 52px))) / 2)) 4px;
 }
 
 .hc-pp-track::-webkit-scrollbar {
@@ -14532,21 +14620,20 @@ button.hc-shop-detail-cats--expandable {
 }
 
 .hc-pp-slide {
-  flex: 0 0 calc(100% - 52px);
-  max-width: 340px;
+  flex: 0 0 min(316px, calc(100% - 52px));
   scroll-snap-align: center;
 }
 
+/* Card — Figma 1219:18161: 316x182, 12px radius, 18px padding. */
 .hc-pp-card {
   position: relative;
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 10;
-  min-height: 188px;
+  aspect-ratio: 316 / 182;
   border: none;
   padding: 0;
   margin: 0;
-  border-radius: 20px;
+  border-radius: 12px;
   overflow: hidden;
   background: #d9d9d9;
   cursor: pointer;
@@ -14572,59 +14659,59 @@ button.hc-shop-detail-cats--expandable {
   display: block;
 }
 
+/* Full-height ramp starting at 40.66%, not a bottom band. */
 .hc-pp-card-shade {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 55%;
+  inset: 0;
   background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.72) 0%,
-    rgba(0, 0, 0, 0.28) 45%,
-    rgba(0, 0, 0, 0) 100%
+    180deg,
+    rgba(0, 0, 0, 0) 40.659%,
+    rgba(0, 0, 0, 0.6) 100%
   );
   pointer-events: none;
 }
 
 .hc-pp-card-badge {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 18px;
+  right: 18px;
   z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 12px;
-  border-radius: 100px;
+  padding: 3px 6px;
+  border-radius: 5px;
   background: #fff;
   color: #000;
   font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 12px;
   font-weight: 500;
-  line-height: 14px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  line-height: 1.1;
 }
 
 .hc-pp-card-meta {
   position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 14px;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
   z-index: 2;
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
+/* Square tile, black behind the mark, filled rather than letterboxed — both
+   design variants scale the logo past the tile edges and crop.
+   Figma 1219:18165 is 54x54; dialled back at Tanner's request. */
 .hc-pp-card-logo {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
   object-fit: cover;
-  background: #fff;
+  background: #000;
   flex-shrink: 0;
   display: block;
 }
@@ -14643,21 +14730,24 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-pp-card-name {
   color: #fff;
-  font-family: 'Baikal-Bold', var(--hc-font);
+  font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 16px;
-  font-weight: 700;
-  line-height: 20px;
+  font-weight: 500;
+  line-height: normal;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* Design calls for Baikal Light; the project ships Book as its lightest cut.
+   'Baikal-Book' is only registered at weight 400, so asking it for 300 leaves
+   face selection to the engine — pin it to the weight that actually exists. */
 .hc-pp-card-sub {
-  color: rgba(255, 255, 255, 0.88);
-  font-family: 'Baikal-Regular', var(--hc-font);
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Baikal-Book', var(--hc-font);
   font-size: 12px;
   font-weight: 400;
-  line-height: 16px;
+  line-height: normal;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -14665,8 +14755,8 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-pp-skeleton {
   margin: 0 20px;
-  height: 188px;
-  border-radius: 20px;
+  height: 182px;
+  border-radius: 12px;
   background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
   background-size: 200% 100%;
   animation: hc-home-shimmer 1.2s ease-in-out infinite;
@@ -14674,15 +14764,25 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-marketplace-featured-shops {
   padding: 0 20px;
+  /* Figma 1209:6435 spaces every Shop section 43px apart. */
+  margin-bottom: 43px;
 }
 
 .hc-marketplace-featured-shops .hc-featured-stores {
   margin-top: 8px;
 }
 
+/* Card-linked featured grid — an extra section this Figma frame doesn't carry.
+   It renders as '' when there are no merchants, so it collapses entirely and
+   leaves the 43px above it as the whole Shop online -> map gap; when it does
+   have rows it becomes a section of its own with 43px on both sides. */
 .hc-marketplace-bottom-grid {
-  margin-top: 3px;
-  margin-bottom: 12px;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.hc-marketplace-bottom-grid:not(:empty) {
+  margin-bottom: 43px;
 }
 
 .hc-bottom-featured {
@@ -14759,6 +14859,14 @@ button.hc-shop-detail-cats--expandable {
   margin-bottom: 20px;
   padding: 0 20px;
 }
+
+/* The chip carries a 20px side margin for the home screen, where it sits in an
+   unpadded column. Here the map block already supplies that gutter, and the
+   chip sits under the map so the spacing goes above it. */
+.hc-featured-stores-req.hc-marketplace-map-req {
+  margin: 14px 0 0;
+}
+
 
 .hc-marketplace-map-header {
   display: flex;
@@ -14990,6 +15098,40 @@ button.hc-shop-detail-cats--expandable {
   object-fit: contain;
 }
 
+/* This page scrolls inside .hc-all-shops-body so the search bar and scope pill
+   stay put. The shell must therefore not scroll as well, or the whole page
+   travels and takes the search bar with it. Same treatment .hc-content--marketplace
+   already gets; :has() is used because the route carries no dedicated class. */
+.hc-content:has(.hc-all-shops) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overscroll-behavior: none;
+  padding-bottom: 0;
+}
+
+.hc-content.hc-content--with-tab-bar:has(.hc-all-shops) {
+  padding-bottom: 0;
+}
+
+/* renderLayout returns the inner #hc-content div, so .hc-all-shops is a
+   grandchild of .hc-content. Both links need flex sizing or the chain breaks
+   and .hc-all-shops-body never gets a bounded height to scroll within — same
+   rules --marketplace and --travel already carry for their own screens. */
+.hc-content:has(.hc-all-shops) #hc-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.hc-content:has(.hc-all-shops) .hc-all-shops {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .hc-all-shops {
   background: #fff;
   min-height: 100%;
@@ -15113,6 +15255,21 @@ button.hc-shop-detail-cats--expandable {
   color: #fff;
 }
 
+/* star.svg paints with fill="currentColor"; store.svg is stroke-based with a
+   baked-in grey, so it needs the opposite treatment to pick up the pill colour. */
+.hc-all-shops-preferred-icon svg,
+.hc-all-shops-preferred-icon svg * {
+  fill: none;
+  stroke: currentColor;
+}
+
+/* icon-location.svg hardcodes fill="black" on its paths. A presentation
+   attribute loses to any CSS rule, so this recolours it for the active pill. */
+.hc-all-shops-inperson-icon svg,
+.hc-all-shops-inperson-icon svg * {
+  fill: currentColor;
+}
+
 .hc-all-shops-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -15124,6 +15281,12 @@ button.hc-shop-detail-cats--expandable {
 .hc-all-shops-list {
   display: flex;
   flex-direction: column;
+}
+
+/* Infinite-scroll trigger. Needs height so it can intersect the scroller even
+   when no spinner is inside it. */
+.hc-all-shops-sentinel {
+  min-height: 24px;
 }
 
 .hc-all-shops-row {
@@ -17002,7 +17165,11 @@ body:has(.hc-fr-success) {
    Figma 1214:9292 — artwork carousel with the countdown floating on it, prize
    copy, an info card, and the leaderboard (which only appears on this screen).
    Shares its shape with the first-reward detail screen. */
-#app:has(.hc-prize-detail) {
+/* The reward detail borrows this screen's markup, so it has to opt out of the
+   embed downscale too — the carousel's peek math is computed from 100% of the
+   container, which 0.92 scaling throws off by ~35px of gutter. */
+#app:has(.hc-prize-detail),
+#app:has(.hc-product-detail--prize) {
   --hc-embed-scale: 1;
 }
 
@@ -17064,6 +17231,9 @@ body:has(.hc-fr-success) {
   left: 50%;
   bottom: 12px;
   transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
   padding: 12px 16px;
   border-radius: 12px;
   background: rgba(216, 216, 216, 0.3);
@@ -17071,6 +17241,27 @@ body:has(.hc-fr-success) {
   backdrop-filter: blur(50px);
   -webkit-backdrop-filter: blur(50px);
   pointer-events: none;
+}
+
+/* Rewards float their cost in the same chip prizes use for the countdown:
+   the figure at Extra/36, the unit at Extra/16 sitting on the baseline. */
+.hc-prize-detail-points-value {
+  font-size: 36px;
+  line-height: 0.9;
+  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.hc-prize-detail-points-unit {
+  padding-bottom: 6px;
+  font-size: 16px;
+  line-height: normal;
+  font-family: 'Baikal-Condensed', var(--hc-font);
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
 }
 
 .hc-prize-detail-countdown-text {
@@ -17208,6 +17399,9 @@ body:has(.hc-fr-success) {
   font-family: 'Baikal-Regular', var(--hc-font);
   font-weight: 400;
   color: #888;
+  /* Row bodies are escaped, so a multi-line reward description would otherwise
+     collapse to one paragraph. */
+  white-space: pre-line;
 }
 
 /* Leaderboard — prize detail only. */
@@ -17410,12 +17604,12 @@ body:has(.hc-fr-success) {
   padding-bottom: 0;
   margin: 0;
   overflow: hidden;
-  background: #05c8fb;
+  background: #9eb7d5;
 }
 
 .hc-content.hc-content--safari-on.hc-content--flush-top {
   padding-top: 0;
-  background: #05c8fb;
+  background: #9eb7d5;
 }
 
 .hc-content.hc-content--safari-on .hc-content-brand,
@@ -17431,7 +17625,7 @@ body:has(.hc-fr-success) {
   flex-direction: column;
   overflow: hidden;
   padding: 0;
-  background: #05c8fb;
+  background: #9eb7d5;
 }
 
 .hc-safari-on {
@@ -17443,7 +17637,8 @@ body:has(.hc-fr-success) {
   min-height: 100%;
   min-height: 100dvh;
   height: 100%;
-  background: #05c8fb;
+  /* Figma 973:6326 — Sky #9EB7D5 behind the hero photo. */
+  background: #9eb7d5;
   box-sizing: border-box;
   overflow: hidden;
 }
@@ -17455,7 +17650,7 @@ body:has(.hc-fr-success) {
 .hc-safari-on-bg {
   position: absolute;
   inset: 0;
-  background-color: #05c8fb;
+  background-color: #9eb7d5;
   background-size: cover;
   background-position: center top;
   background-repeat: no-repeat;
@@ -17474,73 +17669,91 @@ body:has(.hc-fr-success) {
   box-sizing: border-box;
 }
 
+/* Header sits 24px below the status bar, inset 16px, 370px wide. */
 .hc-safari-on-nav {
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 16px 8px;
+  padding: 24px 16px 0;
   flex: 0 0 auto;
 }
 
 .hc-safari-on-back {
-  width: 36px;
-  height: 36px;
-  border-radius: 18px;
-  background: #fff;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #ebebeb;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
+  padding: 8px;
+  box-sizing: border-box;
   cursor: pointer;
   color: #000;
   -webkit-tap-highlight-color: transparent;
 }
 
 .hc-safari-on-back svg {
-  width: 18px;
-  height: 18px;
+  width: 13px;
+  height: 16px;
   display: block;
 }
 
+/* The wordmark is a tinted mask so it can render white on the photo, matching
+   the .hc-header-powered-logo treatment. */
 .hc-safari-on-logo {
-  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
-  font-weight: 700;
-  font-size: 22px;
-  line-height: 22px;
-  letter-spacing: 1px;
-  color: #fff;
-  text-align: center;
+  width: 124px;
+  height: 20px;
+  flex-shrink: 0;
+  background-color: #ffffff;
+  -webkit-mask: url('./assets/header.png') center / contain no-repeat;
+  mask: url('./assets/header.png') center / contain no-repeat;
+}
+
+/* A school mark is close to square, unlike the ~6:1 wordmark, so it gets its
+   own box rather than the 124x20 slot. Bounded on both axes with contain, since
+   program lockups vary in aspect ratio. */
+.hc-safari-on-logo--brand {
+  width: auto;
+  max-width: min(220px, 55vw);
+  height: 64px;
+  background: none;
+  -webkit-mask: none;
+  mask: none;
+  object-fit: contain;
 }
 
 .hc-safari-on-nav-spacer {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
 }
 
+/* Card is 361 of a 402-wide frame, so ~20px gutters. */
 .hc-safari-on-bottom {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 0 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: 0 20px calc(20px + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
   min-height: 0;
 }
 
 .hc-safari-on-card {
   background: #fff;
-  border-radius: 40px;
-  padding: 28px 22px 20px;
+  border-radius: 47px;
+  padding: 50px 17px 29px;
   box-sizing: border-box;
   width: 100%;
 }
 
+/* Title and subtitle are 10px apart on a narrow centred measure. */
 .hc-safari-on-title {
-  margin: 0 0 10px;
-  padding-top: 3px;
+  margin: 0 auto 10px;
+  max-width: 290px;
   font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
   font-weight: 700;
   font-size: 36px;
@@ -17551,12 +17764,13 @@ body:has(.hc-fr-success) {
 }
 
 .hc-safari-on-subtitle {
-  margin: 0 0 40px;
+  margin: 0 auto 40px;
+  max-width: 308px;
   font-family: 'Baikal-Regular', var(--hc-font);
   font-weight: 400;
-  font-size: 16px;
-  line-height: 20px;
-  color: #666;
+  font-size: 14px;
+  line-height: normal;
+  color: #888;
   text-align: center;
 }
 
@@ -17571,33 +17785,32 @@ body:has(.hc-fr-success) {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 12px;
+  gap: 18px;
 }
 
+/* Icons are 23px tall in the design, each keeping its own width. */
 .hc-safari-on-feature-icon {
-  width: 28px;
-  height: 28px;
-  margin-top: 2px;
+  width: 24px;
+  height: 23px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
 .hc-safari-on-feature-icon-wrap {
-  width: 28px;
-  height: 28px;
-  margin-top: 2px;
+  width: 21.231px;
+  height: 23px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #ff6b35;
+  color: #d85012;
 }
 
 .hc-safari-on-feature-icon-wrap svg {
-  width: 24px;
-  height: 26px;
+  width: 100%;
+  height: 100%;
   display: block;
-  color: #ff6b35;
+  color: #d85012;
   fill: currentColor;
 }
 
@@ -17610,29 +17823,33 @@ body:has(.hc-fr-success) {
   font-family: 'Baikal-Medium', var(--hc-font);
   font-weight: 500;
   font-size: 16px;
-  line-height: 19px;
+  line-height: normal;
   color: #000;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .hc-safari-on-feature-desc {
   font-family: 'Baikal-Regular', var(--hc-font);
   font-weight: 400;
   font-size: 14px;
-  line-height: 18px;
-  color: #666;
+  line-height: normal;
+  color: #888;
 }
 
+/* Button (new): 16px padding on a natural line box, not a fixed height. */
 .hc-safari-on-cta {
   display: flex;
   width: 100%;
-  height: 53px;
+  padding: 16px;
+  box-sizing: border-box;
   border: none;
   border-radius: 100px;
   background: var(--hc-app-primary, #00c8ff);
   color: #000;
-  font-family: 'Baikal-Bold', var(--hc-font);
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
   font-size: 16px;
+  line-height: normal;
   align-items: center;
   justify-content: center;
   cursor: pointer;
@@ -17713,4 +17930,46 @@ body:has(.hc-fr-success) {
 .hc-safari-on-success-actions {
   padding-top: 8px;
   flex-shrink: 0;
+}
+
+/* The reward detail reuses the prize screen's markup, but not its root: it keeps
+   a scroll region plus a fixed redemption footer, so the 24px rhythm that
+   .hc-prize-detail applies to its own children has to be re-applied here to the
+   equivalent structure (header / media / content). */
+.hc-product-detail--prize {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow-x: hidden;
+}
+
+.hc-product-detail--prize .hc-product-detail-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* .hc-prize-detail-content's 42px gap separates the copy from the leaderboard,
+   which rewards don't have — the body is its only child. */
+.hc-product-detail--prize .hc-prize-detail-content {
+  gap: 0;
+}
+
+.hc-product-detail--prize .hc-product-detail-spacer {
+  height: 0;
+}
+
+/* Full-width blocks inside the centred body column. */
+.hc-product-detail--prize .hc-product-completed-wrap,
+.hc-product-detail--prize .hc-product-winner-auction,
+.hc-product-detail--prize .hc-product-winner-raffle,
+.hc-product-detail--prize .hc-product-ended-banner {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.hc-product-detail--prize .hc-product-points-row {
+  margin: 0;
+  text-align: center;
 }

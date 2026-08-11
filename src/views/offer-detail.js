@@ -1,4 +1,5 @@
 import * as api from '../api.js';
+import { openDirectionsPicker } from '../mapDirections.js';
 import * as analytics from '../analytics.js';
 import { hasNativeBridge, postToNative } from '../bridge.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
@@ -9,6 +10,7 @@ import { openBottomSheet } from '../base-components/BottomSheetModal.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import cardFilledSvg from '../assets/icons/card-filled.svg?raw';
 import storeSvg from '../assets/icons/store.svg?raw';
+import locationSvg from '../assets/icon-location.svg?raw';
 import crossIconUrl from '../assets/icons/cross.png';
 import checkmarkSvg from '../assets/icons/checkmark.svg?raw';
 
@@ -539,22 +541,27 @@ function buildShopDetailHtml(offer, card, user) {
     (showNew ? '<span class="hc-shop-detail-new">New</span>' : '') +
     '</div>' +
     linkedCardHtml +
+    // In-person order: the store tip leads, exclusions follow, address last.
     '<div class="hc-shop-detail-tips">' +
-    buildExclusionsHtml(offer) +
     (showInStoreTip
       ? '<div class="hc-shop-detail-tip">' +
         '<span class="hc-shop-detail-tip-icon" aria-hidden="true">' +
         storeSvg +
         '</span>' +
         '<div class="hc-shop-detail-tip-copy">' +
-        '<div class="hc-shop-detail-tip-title">Shopping in the app or store?</div>' +
+        '<div class="hc-shop-detail-tip-title">Shopping in the store?</div>' +
         '<div class="hc-shop-detail-tip-sub">Use your linked card to earn points.</div>' +
         '</div></div>'
       : '') +
+    buildExclusionsHtml(offer) +
+    buildAddressHtml(offer) +
     '</div>' +
     '</div>' +
     '<div class="hc-shop-detail-footer">' +
-    '<button type="button" class="hc-shop-detail-shop-btn" data-shop-now>Shop now</button>' +
+    // In-person taps open the map picker, not a store link, so the label says so.
+    '<button type="button" class="hc-shop-detail-shop-btn" data-shop-now>' +
+    (shouldOpenDirections(offer) ? 'Get directions' : 'Shop now') +
+    '</button>' +
     '</div>'
   );
 }
@@ -650,6 +657,14 @@ async function loadShopDetail(container, offerId) {
       offer = Object.assign({}, initialOffer || {}, fetched);
     } else {
       offer = initialOffer;
+    }
+
+    // Callers can pin the exact artwork the user tapped (the preferred-partner
+    // card passes its small mark). Applied after the merge because fetched
+    // merchant data carries its own logo and would otherwise win.
+    var logoOverride = initialPayload && initialPayload.logoOverride;
+    if (offer && logoOverride) {
+      offer = Object.assign({}, offer, { logoUrl: logoOverride });
     }
 
     if (!offer) {
@@ -790,6 +805,80 @@ function pickStoreMapsQuery(offer) {
   return name !== 'Store' ? name : '';
 }
 
+/**
+ * Full postal address for display, as opposed to pickStoreMapsQuery which is
+ * built for routing and falls back to the merchant name.
+ */
+function pickStoreDisplayAddress(offer) {
+  if (!offer) return '';
+  var store = offer.stores && offer.stores[0];
+  var pick = function (key) {
+    return offer[key] || (store && store[key]) || '';
+  };
+  var street = pickStoreStreetAddress(offer);
+  var city = pick('city');
+  var state = pick('state');
+  var postal = pick('postcode') || pick('postal_code') || pick('zip');
+  var region = [state, postal].filter(Boolean).join(' ');
+  return [street, city, region].filter(Boolean).join(', ');
+}
+
+/** In-person only — an online offer has no address worth showing. */
+function buildAddressHtml(offer) {
+  if (!offer || isClickOffer(offer)) return '';
+  var address = pickStoreDisplayAddress(offer);
+  if (!address) return '';
+  return (
+    '<div class="hc-shop-detail-tip">' +
+    '<span class="hc-shop-detail-tip-icon" aria-hidden="true">' +
+    locationSvg +
+    '</span>' +
+    '<div class="hc-shop-detail-tip-copy">' +
+    '<div class="hc-shop-detail-tip-title">Address</div>' +
+    '<div class="hc-shop-detail-tip-sub">' +
+    escapeHtml(address) +
+    '</div>' +
+    '</div></div>'
+  );
+}
+
+/** A street address on the offer or its first store — not the name fallback. */
+function pickStoreStreetAddress(offer) {
+  if (!offer) return '';
+  var store = offer.stores && offer.stores[0];
+  var address = offer.address || (store && store.address) || '';
+  return String(address || '').trim();
+}
+
+/**
+ * Destination descriptor for the shared directions picker. Coordinates route
+ * most precisely, so they win; the address is still carried through for the
+ * sheet's subtitle and as the fallback query.
+ */
+function buildOfferDirectionsDestination(offer) {
+  var point = pickStoreLatLng(offer);
+  var street = pickStoreStreetAddress(offer);
+  var query = point ? point.lat + ',' + point.lng : pickStoreMapsQuery(offer);
+  return {
+    name: pickName(offer),
+    address: street,
+    query: query,
+    lat: point ? point.lat : null,
+    lng: point ? point.lng : null,
+  };
+}
+
+/**
+ * Directions make sense when the offer is not an online click-through and we
+ * actually know where it is. Deliberately keyed off isClickOffer rather than
+ * isWildfireOffer: the latter is true for any offer merely carrying a wildfire
+ * merchant id, which a card-linked restaurant can still have.
+ */
+function shouldOpenDirections(offer) {
+  if (!offer || isClickOffer(offer)) return false;
+  return !!(pickStoreLatLng(offer) || pickStoreStreetAddress(offer));
+}
+
 function buildStoreMapsUrl(offer) {
   var point = pickStoreLatLng(offer);
   if (point) {
@@ -860,6 +949,26 @@ async function handleShopNow(offer, btn, wildlinkPromise) {
   btn.textContent = 'Opening...';
 
   try {
+    // In-person first: an offer with a physical location has nothing to open
+    // online, so hand its address to the user's map app. This sits ahead of the
+    // wildfire branch because isWildfireOffer() is true for any offer carrying a
+    // merchant id, which would otherwise swallow card-linked stores.
+    if (shouldOpenDirections(offer)) {
+      console.log('[HC shop-now] in-person → directions picker');
+      try {
+        analytics.trackEmbedOfferLinkClick(
+          Object.assign({}, analytics.offerEmbedPayload(offer), {
+            entry_point: 'embed_shop_detail_shop_now',
+            flow: 'olive_directions',
+          })
+        );
+      } catch (analyticsErr0) {
+        console.warn('[HC shop-now] analytics error', analyticsErr0);
+      }
+      openDirectionsPicker(buildOfferDirectionsDestination(offer));
+      return;
+    }
+
     if (isWildfireOffer(offer)) {
       var merchantId = pickWildfireMerchantId(offer);
       var hasToken = !!api.getAccessToken();
@@ -940,8 +1049,10 @@ async function handleShopNow(offer, btn, wildlinkPromise) {
       }
     }
 
+    // Card-linked with no known location: nothing to navigate to, so fall back
+    // to the in-app map where the user can find nearby stores.
     if (!isWildfireOffer(offer) && !isClickOffer(offer)) {
-      console.log('[HC shop-now] olive in-person → big map');
+      console.log('[HC shop-now] olive, no location → big map');
       try {
         analytics.trackEmbedOfferLinkClick(
           Object.assign({}, analytics.offerEmbedPayload(offer), {
@@ -1028,7 +1139,8 @@ async function handleShopNow(offer, btn, wildlinkPromise) {
     window.alert('Unable to open this store right now. Please try again.');
   } finally {
     btn.disabled = false;
-    btn.textContent = original || 'Shop now';
+    btn.textContent =
+      original || (shouldOpenDirections(offer) ? 'Get directions' : 'Shop now');
   }
 }
 

@@ -1,5 +1,32 @@
 import { escapeAttr, escapeHtml } from '../../base-components/html.js';
+import { getHeaderLogoUrl, hasCustomHeaderLogo } from '../../brand.js';
 import hcIconUrl from '../../assets/logos/icon.png';
+
+/**
+ * Avatar for rows with no merchant logo of their own.
+ *
+ * On a branded embed this is the school's rewards-program logo, shown bare — no
+ * circle, no fill — because a program logo cropped into a coloured disc reads as a
+ * different brand's badge. Unbranded embeds keep the Homecrowd icon in its blue circle.
+ */
+function buildFallbackAvatarHtml() {
+  if (hasCustomHeaderLogo()) {
+    return (
+      '<div class="hc-tx-avatar hc-tx-avatar--brand">' +
+      '<img src="' +
+      escapeAttr(getHeaderLogoUrl()) +
+      '" alt="" class="hc-tx-brand-icon" />' +
+      '</div>'
+    );
+  }
+  return (
+    '<div class="hc-tx-avatar hc-tx-avatar--hc">' +
+    '<img src="' +
+    escapeAttr(hcIconUrl) +
+    '" alt="" class="hc-tx-hc-icon" />' +
+    '</div>'
+  );
+}
 
 function transactionMerchantDisplayName(transaction) {
   if (!transaction) return '';
@@ -52,11 +79,7 @@ export function buildTransactionItemHtml(transaction, helpers) {
     var points = Number(transaction.points_earned != null ? transaction.points_earned : transaction.points) || 0;
     return (
       '<div class="hc-tx-row">' +
-      '<div class="hc-tx-avatar hc-tx-avatar--hc">' +
-      '<img src="' +
-      escapeAttr(hcIconUrl) +
-      '" alt="" class="hc-tx-hc-icon" />' +
-      '</div>' +
+      buildFallbackAvatarHtml() +
       '<div class="hc-tx-left">' +
       '<div class="hc-tx-title">' +
       escapeHtml(title) +
@@ -92,9 +115,7 @@ export function buildTransactionItemHtml(transaction, helpers) {
     ? '<div class="hc-tx-avatar hc-tx-avatar--merchant"><img src="' +
       escapeAttr(logoUrl) +
       '" alt="" class="hc-tx-avatar-img" /></div>'
-    : '<div class="hc-tx-avatar hc-tx-avatar--hc"><img src="' +
-      escapeAttr(hcIconUrl) +
-      '" alt="" class="hc-tx-hc-icon" /></div>';
+    : buildFallbackAvatarHtml();
 
   var rightHtml = '';
   if (transaction.isStripeRewardPurchase) {

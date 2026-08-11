@@ -234,7 +234,7 @@ export function renderRedemptionConfirmation(container, rewardId) {
   if (showEntryQuantitySelector) {
     qtyHtml =
       '<div class="hc-rc-qty">' +
-      '<div class="hc-rc-qty-label">Entries to buy</div>' +
+      '<div class="hc-rc-qty-label">Entries to redeem</div>' +
       '<div class="hc-rc-qty-row">' +
       '<button type="button" class="hc-rc-qty-btn" id="hc-rc-qty-minus" aria-label="Decrease">−</button>' +
       '<span class="hc-rc-qty-num" id="hc-rc-qty-val">1</span>' +
@@ -254,7 +254,7 @@ export function renderRedemptionConfirmation(container, rewardId) {
     confirmText = raffleDrawingDatePassed
       ? 'This raffle has ended and is no longer accepting entries.'
       : showEntryQuantitySelector
-        ? 'Are you sure you want to buy entries for this raffle? Your points will be spent and entries cannot be undone.'
+        ? 'Are you sure you want to redeem entries for this raffle? Your points will be spent and entries cannot be undone.'
         : 'Are you sure you want to enter this raffle? You will be entered into the drawing and your entry cannot be undone.';
   } else {
     confirmText = 'Are you sure you want to redeem this item? This action cannot be undone.';
@@ -381,7 +381,7 @@ export function renderRedemptionConfirmation(container, rewardId) {
           'This raffle has ended and is no longer accepting entries.';
       } else if (selectedQuantity > 1) {
         confirmTextEl.textContent =
-          'Are you sure you want to buy ' +
+          'Are you sure you want to redeem ' +
           selectedQuantity +
           ' entries for this raffle? Your points will be spent and entries cannot be undone.';
       } else {

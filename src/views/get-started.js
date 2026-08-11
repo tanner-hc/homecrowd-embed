@@ -8,9 +8,11 @@ import { escapeAttr, escapeHtml } from '../base-components/html.js';
 import {
   darkenHex,
   getEmbedSchoolId,
+  getHeaderLogoUrl,
   getSchoolColor,
   getSchoolName,
   getWelcomeScreenImageUrl,
+  hasCustomHeaderLogo,
   hasSchoolBrand,
 } from '../brand.js';
 
@@ -48,6 +50,14 @@ export function renderGetStarted(container) {
   var schoolColor = schoolMode ? getSchoolColor() : '';
   var schoolName = schoolMode ? getSchoolName() : '';
   var brandSchool = schoolName ? String(schoolName).trim().toUpperCase() : '';
+  // Branded embeds lead with the school's own program mark; the bundled
+  // Homecrowd wordmark is the fallback when no brand config came back.
+  var hasProgramLogo = schoolMode && hasCustomHeaderLogo();
+  var logoUrl = hasProgramLogo ? getHeaderLogoUrl() : headerUrl;
+  var logoAlt = hasProgramLogo ? schoolName || 'School brand' : 'Homecrowd';
+  var logoClass = hasProgramLogo
+    ? 'hc-get-started-logo hc-get-started-logo--brand'
+    : 'hc-get-started-logo';
   var rootClass = schoolMode ? 'hc-get-started hc-get-started--school' : 'hc-get-started';
   var rootStyle = schoolColor
     ? ' style="--hc-get-started-primary: ' + escapeAttr(schoolColor) + ';"'
@@ -62,8 +72,12 @@ export function renderGetStarted(container) {
     '>' +
     '<div class="hc-get-started-top">' +
     '<img src="' +
-    escapeAttr(headerUrl) +
-    '" alt="Homecrowd" class="hc-get-started-logo" />' +
+    escapeAttr(logoUrl) +
+    '" alt="' +
+    escapeAttr(logoAlt) +
+    '" class="' +
+    logoClass +
+    '" />' +
     '<h1 class="hc-get-started-headline">Turn everyday spending<br />into team support</h1>' +
     '<p class="hc-get-started-subtitle">No extra cost. No donations. Just the purchases<br />you already make.</p>' +
     '</div>' +

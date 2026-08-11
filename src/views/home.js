@@ -37,7 +37,7 @@ import {
 import {
   buildHomeFeaturedStoresHtml,
   bindHomeFeaturedStores,
-  normalizeFeaturedStores,
+  normalizeOnlineStores,
 } from '../components/Dashboard/HomeFeaturedStores.js';
 import { buildTransactionItemHtml } from '../components/Dashboard/TransactionItem.js';
 import { buildPurchasesFootnoteHtml } from '../purchasesFootnote.js';
@@ -51,6 +51,8 @@ var prizeCountdownCleanup = null;
 
 var SETUP_COMPLETE_SHOWN_KEY = '@setup_complete_celebration_shown';
 var SETUP_CHECKLIST_SEEN_KEY = '@setup_checklist_seen';
+// Home shows a preview; the full history lives on /activity-log.
+var HOME_RECENT_ACTIVITY_LIMIT = 6;
 
 var HOMECROWD_ACTIVITY_KINDS = {
   setup_task_reward: true,
@@ -206,33 +208,14 @@ function mergeRecentActivity(purchases, bonuses) {
   return list;
 }
 
-function filterRecentTransactions(transactions, searchText) {
-  var list = Array.isArray(transactions) ? transactions.slice() : [];
-  var q = String(searchText || '').trim().toLowerCase();
-  if (!q) return list;
-  return list.filter(function (t) {
-    var blob = [
-      t.display_title,
-      t.merchant_name,
-      t.wildfire_merchant_name,
-      t.olive_merchant_name,
-      t.reward_name,
-      t.raw_descriptor,
-      t.description,
-      String(t.amount != null ? t.amount : ''),
-      String(t.points_earned != null ? t.points_earned : t.points != null ? t.points : ''),
-      getPaymentMethodHome(t),
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
-    return blob.indexOf(q) >= 0;
-  });
-}
-
-function buildHomeRecentActivityBodyHtml(transactions, searchText) {
-  var filtered = filterRecentTransactions(transactions, searchText);
-  if (!transactions.length) {
+function buildHomeRecentActivityBodyHtml(transactions) {
+  // mergeRecentActivity already sorts newest-first, so this is the 6 most
+  // recent. "View all" opens /activity-log for the rest.
+  var list = (Array.isArray(transactions) ? transactions : []).slice(
+    0,
+    HOME_RECENT_ACTIVITY_LIMIT
+  );
+  if (!list.length) {
     return (
       '<div class="hc-home-activity-empty">' +
       '<div class="hc-home-activity-empty-title">No purchases yet</div>' +
@@ -240,18 +223,10 @@ function buildHomeRecentActivityBodyHtml(transactions, searchText) {
       '</div>'
     );
   }
-  if (!filtered.length) {
-    return (
-      '<div class="hc-home-activity-empty">' +
-      '<div class="hc-home-activity-empty-title">No matches</div>' +
-      '<div class="hc-home-activity-empty-sub">Try a different store name, amount, or keyword.</div>' +
-      '</div>'
-    );
-  }
   var html = '';
   var i;
-  for (i = 0; i < filtered.length; i++) {
-    html += buildTransactionItemHtml(filtered[i], {
+  for (i = 0; i < list.length; i++) {
+    html += buildTransactionItemHtml(list[i], {
       getPaymentMethod: getPaymentMethodHome,
       formatDate: formatTransactionDateHome,
     });
@@ -262,14 +237,15 @@ function buildHomeRecentActivityBodyHtml(transactions, searchText) {
 function mountHomeRecentActivity(container) {
   var txs = container._hcHomeRecentTransactions;
   if (!Array.isArray(txs)) txs = [];
-  var searchEl = container.querySelector('#hc-home-activity-search');
-  var bodyEl = container.querySelector('#hc-home-activity-body');
-  if (!searchEl || !bodyEl) return;
-  function sync() {
-    bodyEl.innerHTML = buildHomeRecentActivityBodyHtml(txs, searchEl.value);
+  var viewAllEl = container.querySelector('#hc-home-activity-view-all');
+  if (viewAllEl) {
+    viewAllEl.addEventListener('click', function () {
+      navigate('/activity-log');
+    });
   }
-  searchEl.addEventListener('input', sync);
-  sync();
+  var bodyEl = container.querySelector('#hc-home-activity-body');
+  if (!bodyEl) return;
+  bodyEl.innerHTML = buildHomeRecentActivityBodyHtml(txs);
 }
 
 function storageGet(key) {
@@ -392,16 +368,15 @@ function buildHomeHtml(ctx) {
     buildHomeFeaturedStoresHtml({
       stores: ctx.featuredStores,
       loading: ctx.featuredLoading,
-      // These offers only pay out on a linked card, so the chip states a fact
-      // about them rather than a setup step — it shows either way.
-      linkedCardRequired: true,
     }) +
     '</div>';
 
   var recentActivityHtml =
     '<div class="hc-home-activity">' +
+    '<div class="hc-home-activity-header">' +
     '<div class="hc-home-activity-title">Recent activity</div>' +
-    '<input type="search" id="hc-home-activity-search" class="hc-home-activity-search" placeholder="Search transactions" autocomplete="off" />' +
+    '<button type="button" class="hc-home-activity-view-all" id="hc-home-activity-view-all">View all</button>' +
+    '</div>' +
     '<div id="hc-home-activity-body" class="hc-home-activity-body"></div>' +
     '</div>';
 
@@ -455,7 +430,9 @@ async function fetchDashboardPayload() {
     api.getUserActivityLog({ limit: 50 }).catch(function () {
       return [];
     }),
-    api.getFeaturedOffers('click').catch(function () {
+    // Shop online row: first 20 of the online catalog, same as Marketplace.
+    // Over-fetched because logo-less merchants are dropped in normalization.
+    api.getWildfireOffers(1, 60).catch(function () {
       return null;
     }),
     api.getFirstRewards().catch(function () {
@@ -559,7 +536,7 @@ async function fetchDashboardPayload() {
       ? profileSchool.tier_config.tiers
       : [];
 
-  var featuredStores = normalizeFeaturedStores(featuredRes, { onlineOnly: true });
+  var featuredStores = normalizeOnlineStores(featuredRes, 20);
 
   return {
     user: latestUser,
@@ -605,13 +582,14 @@ function bindHomeInteractions(container, ctx) {
 
   var milestonesRoot = container.querySelector('.hc-milestones');
   if (milestonesRoot) {
+    // The row and the Redeem pill both open the reward's own page; redeeming is
+    // confirmed from there rather than dropping straight into the redeem flow.
+    var openFirstReward = function (id) {
+      navigate('/first-rewards/' + encodeURIComponent(id) + '?from=home');
+    };
     bindPointsMilestonesCard(milestonesRoot, {
-      onPressMilestone: function (id) {
-        navigate('/first-rewards/' + encodeURIComponent(id) + '?from=home');
-      },
-      onRedeem: function (id) {
-        navigate('/first-rewards/' + encodeURIComponent(id) + '/redeem?from=home');
-      },
+      onPressMilestone: openFirstReward,
+      onRedeem: openFirstReward,
     });
   }
 

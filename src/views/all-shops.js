@@ -7,7 +7,9 @@ import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { getPointMultiplierValue } from '../pointMultiplier.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
 import { hasNativeBridge, postToNative } from '../bridge.js';
-import starSvg from '../assets/icons/star.svg?raw';
+import storeSvg from '../assets/icons/store.svg?raw';
+import bagSvg from '../assets/icons/bag.svg?raw';
+import locationSvg from '../assets/icon-location.svg?raw';
 import chevronRightSvg from '../assets/icons/chevron-right.svg?raw';
 
 var CHANNEL_LABEL = {
@@ -15,6 +17,12 @@ var CHANNEL_LABEL = {
   in_app: 'In-app',
   online: 'Online',
 };
+
+// The wildfire endpoint clamps pageSize to min(200, ...), so one request is one
+// batch. The feed runs to ~6,800 merchants, which is why this list pages rather
+// than loading everything the way the superuser admin screen can.
+var PAGE_SIZE = 200;
+var SEARCH_DEBOUNCE_MS = 300;
 
 function pickCardlinkedList(response) {
   if (!response) return [];
@@ -33,6 +41,15 @@ function pickWildfireClickList(response) {
   if (Array.isArray(response.results) && response.results.length) return response.results;
   if (Array.isArray(response)) return response;
   return [];
+}
+
+/** Mirrors pickWildfirePagination in offers.js. */
+function pickWildfirePagination(response) {
+  if (!response || !response.pagination) return null;
+  return {
+    currentPage: Number(response.pagination.currentPage) || 1,
+    hasMore: !!response.pagination.hasMoreClick,
+  };
 }
 
 function pickFeaturedList(response) {
@@ -218,34 +235,54 @@ function buildShopRowHtml(shop) {
   );
 }
 
-function isFeaturedShop(shop) {
-  if (!shop) return false;
-  if (shop.isFeatured) return true;
-  if (shop.top_featured || shop.bottom_featured) return true;
-  return String(shop.listKey || '').indexOf('featured-') === 0;
+/** Mirrors the carousel's ordering so the list reads in the same sequence. */
+function preferredOrderOf(shop) {
+  if (!shop) return 0;
+  var raw =
+    shop.preferred_order != null
+      ? shop.preferred_order
+      : shop.preferredOrder != null
+        ? shop.preferredOrder
+        : shop.top_order != null
+          ? shop.top_order
+          : shop.topOrder;
+  return Number(raw) || 0;
 }
 
-function filterShops(shops, query, topRatedOnly) {
+/**
+ * "Online" here means a click-through offer rather than a card-linked one —
+ * wildfire shops normalize to the in_app channel, so match on both.
+ */
+function isOnlineShop(shop) {
+  if (!shop) return false;
+  var channel = String(shop.shopChannel || '').toLowerCase();
+  if (channel === 'in_app' || channel === 'online') return true;
+  var type = String(shop.offerType || shop.offer_type || '').toLowerCase();
+  return type === 'click' || type === 'click_sso' || type === 'online';
+}
+
+/** Card-linked shops you visit, as opposed to click-through online offers. */
+function isInPersonShop(shop) {
+  if (!shop) return false;
+  var channel = String(shop.shopChannel || '').toLowerCase();
+  if (channel === 'in_person') return true;
+  var type = String(shop.offerType || shop.offer_type || '').toLowerCase();
+  return type === 'cardlinked' || type === 'card_linked' || type === 'card-linked';
+}
+
+/**
+ * Local match across name / category / description / tags. Wildfire results are
+ * already narrowed server-side by `?q=`, so this mostly serves the in-memory
+ * preferred partners and keeps both sets consistent.
+ */
+function filterShops(shops, query) {
   var q = String(query || '')
     .trim()
     .toLowerCase();
-  var list = shops.filter(function (shop) {
-    if (topRatedOnly && !isFeaturedShop(shop)) return false;
-    if (!q) return true;
+  if (!q) return shops;
+  return shops.filter(function (shop) {
     return getMerchantHaystack(shop).indexOf(q) >= 0;
   });
-  if (topRatedOnly) {
-    list = list.slice().sort(function (a, b) {
-      var aTop = a.top_featured ? 1 : 0;
-      var bTop = b.top_featured ? 1 : 0;
-      if (bTop !== aTop) return bTop - aTop;
-      var aOrder = Number(a.top_order != null ? a.top_order : a.topOrder) || 0;
-      var bOrder = Number(b.top_order != null ? b.top_order : b.topOrder) || 0;
-      if (bOrder !== aOrder) return bOrder - aOrder;
-      return (getPointMultiplierValue(b) || 0) - (getPointMultiplierValue(a) || 0);
-    });
-  }
-  return list;
 }
 
 function openShop(shop) {
@@ -283,22 +320,73 @@ function openShop(shop) {
 export function renderAllShops(container) {
   var params = parseRouteParams();
   var autoFocus = params.autoFocusSearch === '1' || params.autoFocusSearch === 'true';
-  var topRatedOnly = false;
+  // Each section's "View all" lands here scoped to that section's set.
+  var preferredOnly = params.preferred === '1' || params.preferred === 'true';
+  var onlineOnly = params.channel === 'online';
+  var inPersonOnly = params.channel === 'in_person';
   var allShops = [];
 
-  function buildFiltersHtml() {
+  // Which sources this scope draws on. Wildfire is the only paged one; preferred
+  // partners come back unpaginated and card-linked is a single fetch.
+  var usesWildfirePaging = !preferredOnly && !inPersonOnly;
+  var includesPreferred = !onlineOnly && !inPersonOnly;
+
+  var preferredShops = [];
+  var wildfireShops = [];
+  var wildfirePage = 0;
+  var wildfireHasMore = usesWildfirePaging;
+  var loadingPage = false;
+  var activeQuery = '';
+  var renderedCount = 0;
+  var sentinelObserver = null;
+  var searchTimer = null;
+
+  /** Active pill standing in for the scope the user arrived with. */
+  function scopePillHtml(id, icon, label, iconClass) {
     return (
       '<div class="hc-all-shops-filters">' +
-      '<button type="button" class="hc-all-shops-top-rated' +
-      (topRatedOnly ? ' hc-all-shops-top-rated--active' : '') +
-      '" id="hc-all-shops-top-rated">' +
-      '<span class="hc-all-shops-top-rated-icon" aria-hidden="true">' +
-      starSvg +
+      '<button type="button" class="hc-all-shops-top-rated hc-all-shops-top-rated--active"' +
+      ' id="' +
+      id +
+      '" aria-pressed="true">' +
+      '<span class="hc-all-shops-top-rated-icon' +
+      (iconClass ? ' ' + iconClass : '') +
+      '" aria-hidden="true">' +
+      icon +
       '</span>' +
-      '<span>Top Rated</span>' +
+      '<span>' +
+      escapeHtml(label) +
+      '</span>' +
       '</button>' +
       '</div>'
     );
+  }
+
+  function buildFiltersHtml() {
+    // Top Rated ranks within the full catalog; inside a scoped list it would
+    // only ever remove rows the user came here to see. The active scope pill
+    // takes its place, and clearing it drops back to the full catalog.
+    if (preferredOnly) {
+      return scopePillHtml(
+        'hc-all-shops-preferred',
+        storeSvg,
+        'Partners',
+        'hc-all-shops-preferred-icon'
+      );
+    }
+    if (onlineOnly) {
+      return scopePillHtml('hc-all-shops-online', bagSvg, 'Online');
+    }
+    if (inPersonOnly) {
+      return scopePillHtml(
+        'hc-all-shops-inperson',
+        locationSvg,
+        'In person',
+        'hc-all-shops-inperson-icon'
+      );
+    }
+    // Unscoped catalog carries no pill.
+    return '';
   }
 
   function mountShell() {
@@ -309,7 +397,13 @@ export function renderAllShops(container) {
       '<div class="hc-all-shops-search">' +
       SearchBar({
         id: 'hc-all-shops-search',
-        placeholder: 'Search anything',
+        placeholder: preferredOnly
+          ? 'Search preferred partners'
+          : onlineOnly
+            ? 'Search online shops'
+            : inPersonOnly
+              ? 'Search in-person shops'
+              : 'Search anything',
         value: '',
       }) +
       '</div>' +
@@ -330,52 +424,219 @@ export function renderAllShops(container) {
   }
 
   function bindFilters() {
-    var topRatedBtn = container.querySelector('#hc-all-shops-top-rated');
-    if (topRatedBtn) {
-      topRatedBtn.addEventListener('click', function () {
-        topRatedOnly = !topRatedOnly;
-        var slot = container.querySelector('#hc-all-shops-filters-slot');
-        if (slot) {
-          slot.innerHTML = buildFiltersHtml();
-          bindFilters();
-        }
-        renderList();
+    // Deselecting the only filter on the screen means "show everything".
+    var scopeBtn = container.querySelector(
+      '#hc-all-shops-preferred, #hc-all-shops-online, #hc-all-shops-inperson'
+    );
+    if (scopeBtn) {
+      scopeBtn.addEventListener('click', function () {
+        navigate('/offers/all-shops');
       });
     }
   }
 
-  function renderList() {
-    var bodyEl = container.querySelector('#hc-all-shops-body');
+  function emptyLabel() {
+    if (preferredOnly) return 'No preferred partners found';
+    if (onlineOnly) return 'No online shops found';
+    if (inPersonOnly) return 'No in-person shops found';
+    return 'No shops found';
+  }
+
+  function syncAllShops() {
+    var merged = dedupeShops([].concat(preferredShops, wildfireShops));
+    allShops = onlineOnly ? merged.filter(isOnlineShop) : merged;
+  }
+
+  function currentQuery() {
     var searchEl = container.querySelector('#hc-all-shops-search');
-    if (!bodyEl) return;
-    var filtered = filterShops(
-      allShops,
-      searchEl ? searchEl.value : '',
-      topRatedOnly
+    return searchEl ? searchEl.value : '';
+  }
+
+  function sentinelHtml() {
+    if (!wildfireHasMore) return '';
+    return (
+      '<div id="hc-all-shops-sentinel" class="hc-all-shops-sentinel">' +
+      (loadingPage ? LoadingSpinner({ text: 'Loading more...' }) : '') +
+      '</div>'
     );
-    if (!filtered.length) {
-      bodyEl.innerHTML = '<div class="hc-all-shops-empty">No shops found</div>';
+  }
+
+  /**
+   * `append` reuses the existing rows and only adds the new tail, so scrolling
+   * through several thousand merchants doesn't rebuild the whole list each time.
+   * Ordering is append-only (dedupe and filter both preserve it), so everything
+   * already on screen keeps its position.
+   */
+  function renderList(append) {
+    var bodyEl = container.querySelector('#hc-all-shops-body');
+    if (!bodyEl) return;
+    var filtered = filterShops(allShops, currentQuery());
+    var listEl = bodyEl.querySelector('.hc-all-shops-list');
+
+    if (append && listEl) {
+      if (filtered.length > renderedCount) {
+        listEl.insertAdjacentHTML(
+          'beforeend',
+          filtered.slice(renderedCount).map(buildShopRowHtml).join('')
+        );
+        renderedCount = filtered.length;
+      }
+      var sentinel = bodyEl.querySelector('#hc-all-shops-sentinel');
+      if (sentinel) sentinel.outerHTML = sentinelHtml();
+      observeSentinel();
       return;
     }
+
+    if (!filtered.length) {
+      bodyEl.innerHTML = loadingPage
+        ? LoadingSpinner({ text: 'Loading shops...' })
+        : '<div class="hc-all-shops-empty">' + emptyLabel() + '</div>';
+      renderedCount = 0;
+      observeSentinel();
+      return;
+    }
+
     bodyEl.innerHTML =
       '<div class="hc-all-shops-list">' +
       filtered.map(buildShopRowHtml).join('') +
-      '</div>';
-    bodyEl.querySelectorAll('[data-all-shop]').forEach(function (row) {
-      row.addEventListener('click', function () {
-        try {
-          openShop(JSON.parse(row.getAttribute('data-all-shop')));
-        } catch (_e) {}
+      '</div>' +
+      sentinelHtml();
+    renderedCount = filtered.length;
+    observeSentinel();
+  }
+
+  // Delegated so appended rows need no rebinding and can't be double-bound.
+  function bindRowClicks() {
+    var bodyEl = container.querySelector('#hc-all-shops-body');
+    if (!bodyEl) return;
+    bodyEl.addEventListener('click', function (e) {
+      var row = e.target && e.target.closest && e.target.closest('[data-all-shop]');
+      if (!row) return;
+      try {
+        openShop(JSON.parse(row.getAttribute('data-all-shop')));
+      } catch (_e) {}
+    });
+  }
+
+  function observeSentinel() {
+    if (sentinelObserver) {
+      sentinelObserver.disconnect();
+      sentinelObserver = null;
+    }
+    if (!wildfireHasMore || typeof IntersectionObserver === 'undefined') return;
+    var bodyEl = container.querySelector('#hc-all-shops-body');
+    var sentinel = container.querySelector('#hc-all-shops-sentinel');
+    if (!bodyEl || !sentinel) return;
+    sentinelObserver = new IntersectionObserver(
+      function (entries) {
+        var visible = entries.some(function (entry) {
+          return entry.isIntersecting;
+        });
+        if (visible) loadMorePage();
+      },
+      // Start the next request before the user actually hits the bottom.
+      { root: bodyEl, rootMargin: '400px' }
+    );
+    sentinelObserver.observe(sentinel);
+  }
+
+  function fetchPreferred() {
+    return api
+      .getFeaturedOffers(null, { is_preferred_partner: true })
+      .catch(function () {
+        return null;
+      })
+      .then(function (response) {
+        preferredShops = pickFeaturedList(response)
+          .filter(function (m) {
+            return m && m.is_active !== false;
+          })
+          .map(normalizeFeaturedShop)
+          .sort(function (a, b) {
+            return preferredOrderOf(b) - preferredOrderOf(a);
+          });
       });
+  }
+
+  function fetchWildfirePage() {
+    if (loadingPage || !wildfireHasMore) return Promise.resolve();
+    loadingPage = true;
+    var requestedPage = wildfirePage + 1;
+    var queryAtRequest = activeQuery;
+    return api
+      .getWildfireOffers(requestedPage, PAGE_SIZE, activeQuery)
+      .catch(function () {
+        return null;
+      })
+      .then(function (response) {
+        // A newer search superseded this request — its state was already reset.
+        if (queryAtRequest !== activeQuery) return;
+        var pagination = pickWildfirePagination(response);
+        wildfirePage = pagination ? pagination.currentPage : requestedPage;
+        wildfireHasMore = pagination ? pagination.hasMore : false;
+        wildfireShops = wildfireShops.concat(
+          pickWildfireClickList(response).map(function (item) {
+            return normalizeWildfireShop(item, 'in_app');
+          })
+        );
+      })
+      .then(function () {
+        loadingPage = false;
+      });
+  }
+
+  function loadMorePage() {
+    if (loadingPage || !wildfireHasMore) return;
+    fetchWildfirePage().then(function () {
+      if (!container.isConnected) return;
+      syncAllShops();
+      renderList(true);
+    });
+    // Reflect the in-flight state straight away.
+    var sentinel = container.querySelector('#hc-all-shops-sentinel');
+    if (sentinel) sentinel.innerHTML = LoadingSpinner({ text: 'Loading more...' });
+  }
+
+  /**
+   * Wildfire search runs on the server (`?q=`) so it reaches the whole feed, not
+   * just the pages already pulled. Preferred partners are all in memory, so they
+   * keep filtering locally.
+   */
+  function runSearch() {
+    if (!usesWildfirePaging) {
+      renderList();
+      return;
+    }
+    var next = String(currentQuery() || '').trim();
+    if (next === activeQuery) {
+      renderList();
+      return;
+    }
+    activeQuery = next;
+    wildfireShops = [];
+    wildfirePage = 0;
+    wildfireHasMore = true;
+    loadingPage = false;
+    syncAllShops();
+    renderList();
+    fetchWildfirePage().then(function () {
+      if (!container.isConnected) return;
+      syncAllShops();
+      renderList();
     });
   }
 
   mountShell();
   bindFilters();
 
+  bindRowClicks();
+
   var searchEl = container.querySelector('#hc-all-shops-search');
   if (searchEl) {
-    searchEl.addEventListener('input', renderList);
+    searchEl.addEventListener('input', function () {
+      if (searchTimer) window.clearTimeout(searchTimer);
+      searchTimer = window.setTimeout(runSearch, SEARCH_DEBOUNCE_MS);
+    });
     if (autoFocus) {
       window.setTimeout(function () {
         searchEl.focus();
@@ -383,29 +644,44 @@ export function renderAllShops(container) {
     }
   }
 
-  Promise.all([
-    api.getOffers(1, 100, null, { includeOnline: false }).catch(function () {
-      return null;
-    }),
-    api.getWildfireOffers(1, 100).catch(function () {
-      return null;
-    }),
-    api.getFeaturedOffers().catch(function () {
-      return null;
-    }),
-  ]).then(function (results) {
-    if (!container.isConnected) return;
-    var olive = pickCardlinkedList(results[0]).map(normalizeOliveShop);
-    var wildfire = pickWildfireClickList(results[1]).map(function (item) {
-      return normalizeWildfireShop(item, 'in_app');
-    });
-    var featured = pickFeaturedList(results[2])
-      .filter(function (m) {
-        return m && m.is_active !== false;
+  window.addEventListener(
+    'hashchange',
+    function () {
+      if (searchTimer) window.clearTimeout(searchTimer);
+      if (sentinelObserver) {
+        sentinelObserver.disconnect();
+        sentinelObserver = null;
+      }
+    },
+    { once: true }
+  );
+
+  // Card-linked is a single fetch with no paging, so it stays on its own path.
+  if (inPersonOnly) {
+    api
+      .getOffers(1, 100, null, { includeOnline: false })
+      .catch(function () {
+        return null;
       })
-      .map(normalizeFeaturedShop);
-    // Featured first so Top Rated keeps the featured flags after dedupe.
-    allShops = dedupeShops([].concat(featured, olive, wildfire));
+      .then(function (response) {
+        if (!container.isConnected) return;
+        allShops = dedupeShops(
+          pickCardlinkedList(response).map(normalizeOliveShop)
+        ).filter(isInPersonShop);
+        renderList();
+      });
+    return;
+  }
+
+  // Preferred partners come back unpaginated, so one request gets all of them;
+  // wildfire pages in behind them at PAGE_SIZE a time. Card-linked shops are
+  // deliberately not part of this list — they live under ?channel=in_person.
+  var initialLoads = [];
+  if (includesPreferred) initialLoads.push(fetchPreferred());
+  if (usesWildfirePaging) initialLoads.push(fetchWildfirePage());
+  Promise.all(initialLoads).then(function () {
+    if (!container.isConnected) return;
+    syncAllShops();
     renderList();
   });
 }

@@ -4,6 +4,54 @@ import cardFilledSvg from '../../assets/icons/card-filled.svg?raw';
 
 var FEATURED_STORE_TILE_BG = '#FFFFFF';
 
+/**
+ * Shapes raw Wildfire merchants for the "Shop online" row, which reads
+ * small_logo_url / name and presses through to the merchant id. Logo-less
+ * entries are dropped because the tile is logo-only, so `limit` is applied
+ * after filtering rather than to the raw page.
+ *
+ * @param {*} response
+ * @param {number} [limit]
+ */
+export function normalizeOnlineStores(response, limit) {
+  var data;
+  if (response && Array.isArray(response.click)) data = response.click;
+  else if (response && Array.isArray(response.results)) data = response.results;
+  else if (Array.isArray(response)) data = response;
+  else data = [];
+
+  var seen = {};
+  var out = [];
+  data.forEach(function (item) {
+    if (!item || item.is_active === false) return;
+    var logoUri =
+      item.small_logo_url || item.large_logo_url || item.logoUrl || item.logo || '';
+    if (!logoUri) return;
+    var key = item.id != null ? String(item.id) : item.name || item.merchantName;
+    if (!key || seen[key]) return;
+    seen[key] = true;
+    var merchantId =
+      item.wildfireMerchantId ||
+      item.wildfire_merchant_id ||
+      item.merchantId ||
+      item.id;
+    out.push(
+      Object.assign({}, item, {
+        name: item.name || item.merchantName || '',
+        small_logo_url: logoUri,
+        large_logo_url: item.large_logo_url || logoUri,
+        offer_type: 'click',
+        offerType: 'click',
+        offerSource: 'wildfire',
+        offer_source: 'wildfire',
+        wildfireMerchantId: merchantId,
+        wildfire_merchant_id: merchantId,
+      })
+    );
+  });
+  return limit ? out.slice(0, limit) : out;
+}
+
 export function normalizeFeaturedStores(response, options) {
   options = options || {};
   var onlineOnly = options.onlineOnly !== false;
@@ -62,6 +110,27 @@ export function normalizeFeaturedStores(response, options) {
 }
 
 /**
+ * The "Linked card required" chip. Exported so screens other than this component
+ * can place it — the Shop screen renders it under "Shop in person near you".
+ * The chip states a fact about the offers rather than a setup step, so it shows
+ * regardless of whether a card is currently linked.
+ *
+ * @param {string} [className] extra class for context-specific spacing
+ */
+export function buildLinkedCardRequiredHtml(className) {
+  return (
+    '<div class="hc-featured-stores-req' +
+    (className ? ' ' + escapeHtml(className) : '') +
+    '">' +
+    '<span class="hc-featured-stores-req-icon" aria-hidden="true">' +
+    cardFilledSvg +
+    '</span>' +
+    '<span class="hc-featured-stores-req-text">Linked card required</span>' +
+    '</div>'
+  );
+}
+
+/**
  * @param {{
  *   stores?: object[],
  *   loading?: boolean,
@@ -74,15 +143,8 @@ export function buildHomeFeaturedStoresHtml(props) {
   var title = props.title || 'Earn where you already shop';
   var stores = Array.isArray(props.stores) ? props.stores : [];
 
-  // Figma 1216:13702 — sits between the section header and the store row while
-  // the user has no card linked, since these offers only pay out once one is.
   var requirementHtml = props.linkedCardRequired
-    ? '<div class="hc-featured-stores-req">' +
-      '<span class="hc-featured-stores-req-icon" aria-hidden="true">' +
-      cardFilledSvg +
-      '</span>' +
-      '<span class="hc-featured-stores-req-text">Linked card required</span>' +
-      '</div>'
+    ? buildLinkedCardRequiredHtml()
     : '';
 
   var body = '';
@@ -158,5 +220,7 @@ export function bindHomeFeaturedStores(root, handlers) {
 export default {
   buildHomeFeaturedStoresHtml,
   bindHomeFeaturedStores,
+  buildLinkedCardRequiredHtml,
   normalizeFeaturedStores,
+  normalizeOnlineStores,
 };
