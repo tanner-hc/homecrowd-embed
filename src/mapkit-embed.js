@@ -1,5 +1,6 @@
 import { load as loadMapKit } from '@apple/mapkit-loader';
 import * as api from './api.js';
+import { isIOS } from './platform.js';
 
 var mapKitDevOriginWarned = false;
 
@@ -66,6 +67,17 @@ function installMapKitConsoleAuthWatcher() {
 
 export function mapKitAuthFailureWasReported() {
   return mapKitAuthFailureReported;
+}
+
+export function shouldUseMapKitJs() {
+  if (typeof navigator === 'undefined') return false;
+  if (isIOS()) return true;
+  var ua = navigator.userAgent || '';
+  if (/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS|Android/i.test(ua)) {
+    return false;
+  }
+  if (/Safari/i.test(ua)) return true;
+  return false;
 }
 
 function getMapKitJsTokenFromEnv() {
@@ -136,6 +148,10 @@ export function ensureMapKitLoaded(token) {
 }
 
 export function preloadMapKitForEmbed() {
+  if (!shouldUseMapKitJs()) {
+    console.log('[HC MapKit] preload: skip (browser uses Leaflet)');
+    return;
+  }
   if (!api.isAuthenticated()) {
     console.log('[HC MapKit] preload: skip (not authenticated)');
     return;

@@ -6,7 +6,12 @@ import cardIconSvg from '../assets/icons/card-filled.svg?raw';
 import bagIconSvg from '../assets/icons/bag.svg?raw';
 import { resolveCardLinkStatus } from '../cardLinkStatus.js';
 import { mountBrowserExtensionInline } from './browser-extension.js';
-import { resolveMapKitTokenAsync, ensureMapKitLoaded, mapKitAuthFailureWasReported } from '../mapkit-embed.js';
+import {
+  resolveMapKitTokenAsync,
+  ensureMapKitLoaded,
+  mapKitAuthFailureWasReported,
+  shouldUseMapKitJs,
+} from '../mapkit-embed.js';
 import { hasNativeBridge, postToNative } from '../bridge.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
@@ -2812,6 +2817,11 @@ function initOffersMap(container, cardlinked) {
 
     console.log('[HC offers map] renderMap start', userLat, userLng, 'merchant pins', merchantMarkerData.length);
     container._hcOsmFallbackDone = false;
+    if (!shouldUseMapKitJs()) {
+      console.log('[HC offers map] non-iOS/non-Safari → OpenStreetMap (Leaflet)');
+      renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
+      return;
+    }
     resolveMapKitTokenAsync().then(function (mkToken) {
       if (!mkToken) {
         console.warn('[HC offers map] no MapKit token, using OpenStreetMap fallback');
@@ -3005,7 +3015,7 @@ function initOffersMap(container, cardlinked) {
     var code = err && err.code;
     var message = err && err.message;
     try {
-      console.warn('[HC offers geo] getCurrentPosition failed', code, message);
+      console.warn('[HC offers geo] getCurrentPosition failed', code, message || '');
     } catch (e) {}
     function show(state) {
       if (code === 1 && state === 'denied') {
@@ -3018,6 +3028,10 @@ function initOffersMap(container, cardlinked) {
       }
       if (code === 1 && !state) {
         window.alert(OFFERS_LOCATION_PROMPT_DENIED);
+        return;
+      }
+      if (code === 2) {
+        window.alert(OFFERS_LOCATION_PROMPT_SYSTEM_BLOCKED);
         return;
       }
       window.alert(OFFERS_LOCATION_PROMPT_GENERIC);
@@ -3043,8 +3057,35 @@ function initOffersMap(container, cardlinked) {
       if (onError) onError({ code: 0 });
       return;
     }
+    var opts = options || { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+    var lowAccuracyRetryDone = false;
+
+    function fail(err) {
+      var code = err && err.code;
+      // Safari / desktop often return POSITION_UNAVAILABLE (2) or TIMEOUT (3)
+      // when GPS high-accuracy fails; Wi-Fi / cell fix still works without it.
+      if (!lowAccuracyRetryDone && (code === 2 || code === 3) && opts.enableHighAccuracy !== false) {
+        lowAccuracyRetryDone = true;
+        try {
+          console.warn('[HC offers geo] retry getCurrentPosition without high accuracy', code);
+        } catch (e1) {}
+        try {
+          navigator.geolocation.getCurrentPosition(onSuccess, fail, {
+            enableHighAccuracy: false,
+            timeout: Math.max(Number(opts.timeout) || 0, 20000),
+            maximumAge: 60000,
+          });
+          return;
+        } catch (e2) {
+          if (onError) onError(e2);
+          return;
+        }
+      }
+      if (onError) onError(err);
+    }
+
     try {
-      navigator.geolocation.getCurrentPosition(onSuccess, onError, options);
+      navigator.geolocation.getCurrentPosition(onSuccess, fail, opts);
     } catch (e) {
       if (onError) onError(e);
     }
