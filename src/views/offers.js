@@ -2014,19 +2014,16 @@ function offersLoadScriptSequential(urls, index, done, err) {
 function ensureLeafletMapLibreGl() {
   if (
     window.L &&
+    typeof window.L.markerClusterGroup === 'function' &&
     window.maplibregl &&
-    typeof window.L.maplibreGL === 'function' &&
-    typeof window.L.markerClusterGroup === 'function'
+    typeof window.L.maplibreGL === 'function'
   ) {
     return Promise.resolve(window.L);
   }
-  if (offersLeafletMapLibreLoadPromise) {
-    return offersLeafletMapLibreLoadPromise.then(function (L) {
-      if (L && typeof L.markerClusterGroup === 'function') return L;
-      offersLeafletMapLibreLoadPromise = null;
-      return ensureLeafletMapLibreGl();
-    });
+  if (window.L && typeof window.L.markerClusterGroup === 'function') {
+    return Promise.resolve(window.L);
   }
+  if (offersLeafletMapLibreLoadPromise) return offersLeafletMapLibreLoadPromise;
 
   offersLeafletMapLibreLoadPromise = new Promise(function (resolve, reject) {
     offersMapLinkOnce('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', 'leaflet');
@@ -2055,16 +2052,16 @@ function ensureLeafletMapLibreGl() {
     }
 
     function finish() {
-      if (
-        window.L &&
-        window.maplibregl &&
-        typeof window.L.maplibreGL === 'function' &&
-        typeof window.L.markerClusterGroup === 'function'
-      ) {
-        resolve(window.L);
-      } else {
-        reject(new Error('MapLibre GL Leaflet / MarkerCluster is not available'));
+      if (!window.L) {
+        reject(new Error('Leaflet is not available'));
+        return;
       }
+      if (typeof window.L.markerClusterGroup !== 'function') {
+        console.warn('[HC offers map] MarkerCluster missing after load');
+      } else {
+        console.log('[HC offers map] Leaflet + MarkerCluster ready');
+      }
+      resolve(window.L);
     }
 
     if (urls.length === 0) {
@@ -2072,13 +2069,46 @@ function ensureLeafletMapLibreGl() {
       return;
     }
 
-    offersLoadScriptSequential(urls, 0, finish, reject);
+    offersLoadScriptSequential(urls, 0, finish, function (err) {
+      if (window.L) {
+        console.warn('[HC offers map] script load issue, continuing with Leaflet', err);
+        finish();
+        return;
+      }
+      reject(err);
+    });
   }).catch(function (e) {
     offersLeafletMapLibreLoadPromise = null;
     throw e;
   });
 
   return offersLeafletMapLibreLoadPromise;
+}
+
+function clearLeafletMapMount(mapMount) {
+  if (!mapMount) return;
+  try {
+    if (mapMount._leaflet_id) mapMount._leaflet_id = null;
+  } catch (e) {}
+  mapMount.innerHTML = '';
+}
+
+function attachOffersLeafletBaseLayer(L, map) {
+  try {
+    if (typeof L.maplibreGL === 'function' && window.maplibregl) {
+      L.maplibreGL({
+        style: getOffersMapLibreStyleUrl(),
+      }).addTo(map);
+      return 'maplibre';
+    }
+  } catch (e) {
+    console.warn('[HC offers map] MapLibre layer failed, using OSM tiles', e);
+  }
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap',
+  }).addTo(map);
+  return 'osm';
 }
 
 function tokenLooksLikeMapKitJwt(t) {
@@ -2312,20 +2342,23 @@ function applyPendingMapMerchantSelection(container) {
 
 function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker) {
   if (showUserMarker === undefined) showUserMarker = true;
+  var renderId = (container._hcLeafletRenderId = (container._hcLeafletRenderId || 0) + 1);
   ensureLeafletMapLibreGl()
     .then(function (L) {
+      if (renderId !== container._hcLeafletRenderId) return;
       destroyOffersMapInstance(container);
-      mapMount.innerHTML = '';
+      clearLeafletMapMount(mapMount);
       mapMount.classList.remove('hc-offers-map-loading');
       mapMount.removeAttribute('aria-busy');
       mapMount.classList.add('hc-offers-map-osm-fallback');
-      var map = L.map(mapMount).setView([userLat, userLng], 12);
+      var map = L.map(mapMount, { maxZoom: 19 }).setView(
+        [userLat, userLng],
+        MAP_USER_ZOOM_LEAFLET,
+      );
       container._hcLeafletMap = map;
       container._hcLeafletMerchantMarkers = [];
       container._hcMkMerchantAnnotations = [];
-      L.maplibreGL({
-        style: getOffersMapLibreStyleUrl(),
-      }).addTo(map);
+      attachOffersLeafletBaseLayer(L, map);
 
       var userIcon = leafletMapPinIcon(L, MAP_PIN_USER_COLOR);
       var userMarker = null;
@@ -2386,22 +2419,30 @@ function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMar
         map.setView([userLat, userLng], MAP_USER_ZOOM_LEAFLET, { animate: false });
       }
       window.setTimeout(function () {
-        map.invalidateSize();
-        var fittedCenter = map.getCenter();
-        container._hcLastRegionFetchCenter = { lat: fittedCenter.lat, lng: fittedCenter.lng };
-        map.on('moveend', function () {
-          var c = map.getCenter();
-          var b = map.getBounds();
-          handleLiveMapRegionChange(
-            container,
-            { lat: c.lat, lng: c.lng },
-            Math.abs(b.getNorth() - b.getSouth()),
-          );
-        });
+        if (renderId !== container._hcLeafletRenderId) return;
+        if (container._hcLeafletMap !== map) return;
+        try {
+          map.invalidateSize();
+          var fittedCenter = map.getCenter();
+          container._hcLastRegionFetchCenter = { lat: fittedCenter.lat, lng: fittedCenter.lng };
+          map.on('moveend', function () {
+            var c = map.getCenter();
+            var b = map.getBounds();
+            handleLiveMapRegionChange(
+              container,
+              { lat: c.lat, lng: c.lng },
+              Math.abs(b.getNorth() - b.getSouth()),
+            );
+          });
+        } catch (e) {
+          console.warn('[HC offers map] leaflet post-layout failed', e);
+        }
         notifyMapRenderDone(container);
       }, 100);
     })
-    .catch(function () {
+    .catch(function (err) {
+      if (renderId !== container._hcLeafletRenderId) return;
+      console.error('[HC offers map] Leaflet failed', err);
       destroyOffersMapInstance(container);
       mapMount.classList.remove('hc-offers-map-loading');
       mapMount.removeAttribute('aria-busy');
