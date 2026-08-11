@@ -4,6 +4,7 @@ import { escapeAttr, escapeHtml } from '../base-components/html.js';
 import { formatNumber } from '../formatNumber.js';
 import { normalizeMilestones } from '../components/Dashboard/PointsMilestonesCard.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
+import { showSuccess } from '../base-components/toastApi.js';
 import { formatPhoneNumber, isValidEmail, isValidPhone } from '../contact-validation.js';
 import { getHeaderLogoUrl, hasCustomHeaderLogo } from '../brand.js';
 import wordmarkUrl from '../assets/logos/homecrowd-wordmark.svg';
@@ -333,10 +334,11 @@ function bindForm(container, milestone, returnTo) {
         contactMethod: method,
         contactValue: value,
       });
-      container.innerHTML = buildSuccessHtml(milestone);
-      container.querySelector('[data-fr-continue]').addEventListener('click', function () {
-        navigate(returnTo);
-      });
+      // No confirmation screen — land back where the user started and say so
+      // with a toast. The toast host lives on document.body, so it outlives
+      // this view being torn down.
+      showSuccess('Reward redeemed');
+      navigate(returnTo);
     } catch (err) {
       submitting = false;
       redeemBtn.disabled = false;

@@ -124,6 +124,7 @@ function normalizeReward(r) {
     auction_info: Object.keys(auction_info).length ? auction_info : null,
     images: r.images || [],
     image_url: r.image_url || r.imageUrl,
+    is_featured: !!(r.isFeatured || r.is_featured),
     is_locked: !!(r.is_locked || r.isLocked),
     is_active: r.is_active !== false && r.enabled !== false,
   };
@@ -420,8 +421,30 @@ async function loadRewards(container, routeEpoch) {
       return normalizeMediaUrl(path);
     }
 
+    // Featured rewards lead the page, above the prizes, and are held back from
+    // the catalogue below so they never appear twice.
+    var featuredRewards = formattedRewards.filter(function (r) {
+      return r && r.id != null && r.is_featured && r.is_active !== false;
+    });
+    if (featuredRewards.length) {
+      html += '<div class="hc-prize-cards hc-rewards-featured">';
+      featuredRewards.forEach(function (r) {
+        html += buildPrizeCardHtml({
+          label: 'Featured',
+          title: r.title,
+          imageUrl: getRewardImageUrl(r, getImageUrl),
+          rewardId: r.id,
+        });
+      });
+      html += '</div>';
+    }
+
     if (weeklyRewardItem || overallRewardItem) {
-      html += '<div class="hc-prize-cards">';
+      // Two prizes sit side by side; a lone one still spans the full width.
+      html +=
+        '<div class="hc-prize-cards' +
+        (weeklyRewardItem && overallRewardItem ? ' hc-prize-cards--pair' : '') +
+        '">';
       if (weeklyRewardItem) {
         html += buildPrizeCardHtml({
           kind: 'weekly',
@@ -462,7 +485,7 @@ async function loadRewards(container, routeEpoch) {
     // overlaps this list.
     var nowMs = Date.now();
     var otherRewards = formattedRewards.filter(function (r) {
-      return r && r.id != null && r.is_active !== false;
+      return r && r.id != null && r.is_active !== false && !r.is_featured;
     });
     if (otherRewards.length) {
       var rewardSections = groupRewardsByDate(otherRewards, nowMs).map(function (section) {

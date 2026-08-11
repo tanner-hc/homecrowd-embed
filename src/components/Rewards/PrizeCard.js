@@ -20,7 +20,8 @@ import calendarSvg from '../../assets/icon-calendar.svg?raw';
 export function buildPrizeCardHtml(props) {
   props = props || {};
   var overall = props.kind === 'overall';
-  var label = overall ? 'Season Prize' : 'Weekly Prize';
+  // Featured rewards reuse this card with their own label; prizes derive theirs.
+  var label = props.label || (overall ? 'Season Prize' : 'Weekly Prize');
   // Weekly counts down, the season ends on a date — hence the different glyphs.
   var icon = overall ? calendarSvg : stopwatchSvg;
 

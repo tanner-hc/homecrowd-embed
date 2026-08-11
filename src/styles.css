@@ -16868,6 +16868,34 @@ body:has(.hc-fr-success) {
   gap: 24px;
 }
 
+/* Featured rewards lead the page; this separates them from the prize cards. */
+.hc-rewards-featured {
+  margin-bottom: 24px;
+}
+
+/* Weekly and season prizes sit side by side. At a 402px viewport with 20px
+   gutters this makes each card ~175px wide against the shared 245px height —
+   the portrait proportion the layout calls for. */
+.hc-prize-cards--pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* The title's fixed 238px measure and the right-aligned status chip both assume
+   a full-width card, so they need reining in at half the width. */
+.hc-prize-cards--pair .hc-prize-card-title {
+  width: auto;
+  right: 9.5px;
+  font-size: 30px;
+}
+
+.hc-prize-cards--pair .hc-prize-card-status {
+  right: auto;
+  left: 9.5px;
+  top: 38px;
+}
+
 /* Catalogue reward rows. Figma 973:6212 — 117px artwork at a 12px radius, 13px
    from the text column, which pads 18px vertically so the block centres against
    the square. Gray 2 #EBEBEB chip with Grey 4 #888888 label. */
