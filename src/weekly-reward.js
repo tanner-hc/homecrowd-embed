@@ -190,16 +190,27 @@ function pickWeekEndsAt(leaderboardRes, prize) {
     if (leaderboardRes.weekEndsAt) return leaderboardRes.weekEndsAt;
   }
   if (prize && typeof prize === 'object') {
-    return prize.week_end_date || prize.weekEndDate || null;
+    // week_end_at is a real UTC instant; week_end_date is the school-local
+    // mirror kept for older clients, so it only reads correctly for a viewer in
+    // the school's own timezone. Prefer the instant wherever the row has one.
+    return (
+      prize.week_end_at || prize.weekEndAt || prize.week_end_date || prize.weekEndDate || null
+    );
   }
   return null;
 }
 
 function resolveTargetMs(weekEndsAt, prize) {
+  var isPrize = prize && typeof prize === 'object';
+  var instant = isPrize ? prize.week_end_at || prize.weekEndAt : null;
+  if (instant) {
+    var parsed = Date.parse(instant);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
   return parsePeriodEndTimestamp(
     weekEndsAt,
-    prize && typeof prize === 'object' ? prize.week_end_date || prize.weekEndDate : null,
-    prize && typeof prize === 'object' ? prize.week_end_time || prize.weekEndTime : null,
+    isPrize ? prize.week_end_date || prize.weekEndDate : null,
+    isPrize ? prize.week_end_time || prize.weekEndTime : null,
   );
 }
 
@@ -340,7 +351,10 @@ function pickOverallRows(leaderboardRes) {
 
 function resolveOverallPeriodTargetMs(leaderboardRes, prize) {
   var raw =
-    (prize && typeof prize === 'object' && (prize.overall_ends_at || prize.end_date || prize.endDate)) ||
+    // end_at is the real UTC instant; end_date is the school-local mirror, which
+    // only reads correctly for a viewer in the school's own timezone.
+    (prize && typeof prize === 'object' &&
+      (prize.end_at || prize.endAt || prize.overall_ends_at || prize.end_date || prize.endDate)) ||
     (leaderboardRes && (leaderboardRes.overall_period_ends_at || leaderboardRes.overallPeriodEndsAt)) ||
     null;
   return parsePeriodEndTimestamp(
@@ -710,7 +724,13 @@ export async function buildOverallRewardContext(leaderboardRes) {
     targetMs: oTargetMs,
     periodKind: 'overall',
     prizeId: oPrizeForMeta.id != null ? String(oPrizeForMeta.id) : null,
-    periodEndsAt: oPrizeForMeta.overall_ends_at || oPrizeForMeta.end_date || oPrizeForMeta.endDate || null,
+    periodEndsAt:
+      oPrizeForMeta.end_at ||
+      oPrizeForMeta.endAt ||
+      oPrizeForMeta.overall_ends_at ||
+      oPrizeForMeta.end_date ||
+      oPrizeForMeta.endDate ||
+      null,
     periodEndDateOnly: oPrizeForMeta.end_date || oPrizeForMeta.endDate || null,
     periodEndTime: oPrizeForMeta.end_time || oPrizeForMeta.endTime || null,
   });
@@ -730,7 +750,10 @@ export function buildLeaderboardModalOptions(meta, leaderboardRes) {
     rewardDescription: meta.description || '',
     rewardImageUrl: meta.imageUrl || null,
     periodEndsAt: isOverall
-      ? (meta.periodEndsAt || (prize && (prize.overall_ends_at || prize.end_date || prize.endDate)) || null)
+      ? meta.periodEndsAt ||
+        (prize &&
+          (prize.end_at || prize.endAt || prize.overall_ends_at || prize.end_date || prize.endDate)) ||
+        null
       : meta.weekEndsAt || weekEndsAt || null,
     periodEndDateOnly: isOverall
       ? meta.periodEndDateOnly || (prize && (prize.end_date || prize.endDate)) || null
@@ -943,13 +966,17 @@ export function openWeeklyLeaderboardModal(options) {
     if (leaderboardType === 'overall') {
       rows = pickOverallRows(res);
       if (prize.end_date) periodEndDateOnly = prize.end_date;
-      if (prize.overall_ends_at || prize.end_date) {
-        periodEndsAt = prize.overall_ends_at || prize.end_date;
+      // The UTC instant first; the naive pair stays as the fallback for a prize
+      // that predates it.
+      if (prize.end_at || prize.overall_ends_at || prize.end_date) {
+        periodEndsAt = prize.end_at || prize.overall_ends_at || prize.end_date;
       }
       if (prize.end_time) periodEndTime = prize.end_time;
     } else {
       rows = pickRows(res);
-      if (res.week_ends_at || res.weekEndsAt) {
+      if (prize.week_end_at || prize.weekEndAt) {
+        periodEndsAt = prize.week_end_at || prize.weekEndAt;
+      } else if (res.week_ends_at || res.weekEndsAt) {
         periodEndsAt = res.week_ends_at || res.weekEndsAt;
       } else if (prize.week_end_date) {
         periodEndDateOnly = prize.week_end_date;
