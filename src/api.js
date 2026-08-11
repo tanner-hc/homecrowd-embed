@@ -1,3 +1,5 @@
+import { getEmbedSchoolId } from './brand.js';
+
 var EMBED_BASE = '/api/embed/v1';
 
 function resolveApiBaseUrl() {
@@ -453,28 +455,35 @@ export async function logout() {
 export async function resendVerificationEmail() {
   return request('/api/users/resend-verification-email/', {
     method: 'POST',
-    body: JSON.stringify({}),
+    body: JSON.stringify({ school_id: getEmbedSchoolId() || undefined }),
   });
 }
 
 export async function changePassword(payload) {
   return request('/api/auth/change-password/', {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(
+      Object.assign({}, payload || {}, { school_id: getEmbedSchoolId() || undefined }),
+    ),
   });
 }
 
 export async function forgotPassword(email) {
   return request('/api/auth/forgot-password/', {
     method: 'POST',
-    body: JSON.stringify({ email: email }),
+    body: JSON.stringify({
+      email: email,
+      school_id: getEmbedSchoolId() || undefined,
+    }),
   });
 }
 
 export async function resetPassword(payload) {
   return request('/api/auth/reset-password/', {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(
+      Object.assign({}, payload || {}, { school_id: getEmbedSchoolId() || undefined }),
+    ),
   });
 }
 
@@ -756,7 +765,10 @@ export async function sendReferralInviteEmail(email) {
   var clean = String(email || '').trim();
   return request('/api/users/users/invite-friend/', {
     method: 'POST',
-    body: JSON.stringify({ email: clean }),
+    body: JSON.stringify({
+      email: clean,
+      school_id: getEmbedSchoolId() || undefined,
+    }),
   });
 }
 
