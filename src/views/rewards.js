@@ -539,14 +539,12 @@ async function loadRewards(container, routeEpoch) {
 
     var milestonesRoot = container.querySelector('.hc-milestones');
     if (milestonesRoot) {
+      var openFirstReward = function (id) {
+        window.location.hash = '#/first-rewards/' + encodeURIComponent(id) + '?from=rewards';
+      };
       bindPointsMilestonesCard(milestonesRoot, {
-        onPressMilestone: function (id) {
-          window.location.hash = '#/first-rewards/' + encodeURIComponent(id) + '?from=rewards';
-        },
-        onRedeem: function (id) {
-          window.location.hash =
-            '#/first-rewards/' + encodeURIComponent(id) + '/redeem?from=rewards';
-        },
+        onPressMilestone: openFirstReward,
+        onRedeem: openFirstReward,
       });
     }
 
