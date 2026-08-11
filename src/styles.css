@@ -1369,11 +1369,6 @@ html.hc-embed--no-school-brand .hc-login-card {
   line-height: normal;
   border-radius: 999px;
   border: none;
-  /* The admin's login-button picker feeds --hc-login-button. This used to read
-     --hc-welcome-card-bg, which is the school's solid colour and ignores that
-     picker entirely; it also tied with the .hc-login-container .hc-btn-primary
-     rule below on specificity, so the winner came down to source order. Falling
-     back to the school colour keeps unconfigured schools looking right. */
   background: var(--hc-login-button, var(--hc-welcome-card-bg, #e00122));
   color: var(--hc-login-button-text, #ffffff);
   font-family: 'Baikal-Medium', var(--hc-font);
