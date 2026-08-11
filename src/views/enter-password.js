@@ -98,6 +98,8 @@ export function renderEnterPassword(container, onSuccess) {
           password: passwordResult.data,
           password_confirm: passwordResult.data,
           accepted_terms_and_policies: true,
+          registration_source: 'homecrowd_embedded',
+          school_id: schoolId || undefined,
         })
         .then(function (response) {
           var user = response && response.user ? response.user : null;
