@@ -16895,9 +16895,11 @@ body:has(.hc-fr-success) {
   font-size: 30px;
 }
 
+/* Still dropped to a second row — at half width the chip and the label can't
+   share the top line — but flush right, mirroring the label's 9.5px inset. */
 .hc-prize-cards--pair .hc-prize-card-status {
-  right: auto;
-  left: 9.5px;
+  left: auto;
+  right: 9.5px;
   top: 38px;
 }
 
