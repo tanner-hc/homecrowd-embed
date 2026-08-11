@@ -1746,6 +1746,10 @@ function showSelectedMapMerchant(container, merchant) {
     });
   }
   syncSelectedMerchantPinStyles(container, merchant);
+  var location = pickMerchantLatLng(merchant);
+  if (location) {
+    focusOffersMap(container, location.lat, location.lng);
+  }
 }
 
 function shouldIgnoreMapDismiss(container) {
@@ -2449,6 +2453,9 @@ function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merc
       map.addEventListener('error', onMapKitFallbackTrigger);
     } catch (e4) {}
     map.addAnnotations(annotations);
+    if (showUserMarker) {
+      focusOffersMap(container, userLat, userLng);
+    }
     console.log('[HC offers map] annotations:', annotations.length);
     try {
       map.addEventListener('select', function (event) {
