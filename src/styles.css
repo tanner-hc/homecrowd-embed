@@ -14561,6 +14561,12 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-pp {
   font-family: var(--hc-font);
+  /* Card width and the gap left for the neighbouring card's peek. The slide and
+     the track's centring inset both derive from these, so they cannot drift
+     apart the way two hardcoded copies did. */
+  --hc-pp-card-w: 320px;
+  --hc-pp-card-peek: 36px;
+  --hc-pp-slide-w: min(var(--hc-pp-card-w), calc(100% - var(--hc-pp-card-peek)));
 }
 
 /* Section header — Figma 1219:18159. Title and "View all" sit on a shared
@@ -14609,10 +14615,8 @@ button.hc-shop-detail-cats--expandable {
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  /* Centring inset must be derived from the same 316px cap the slide uses —
-     this was still solving for the old 340px width, so the card sat off-centre
-     and the peek on either side was uneven. */
-  padding: 0 max(20px, calc((100% - min(316px, calc(100% - 52px))) / 2)) 4px;
+  /* Same slide width the card uses, so the peek stays even on both sides. */
+  padding: 0 max(20px, calc((100% - var(--hc-pp-slide-w)) / 2)) 4px;
 }
 
 .hc-pp-track::-webkit-scrollbar {
@@ -14620,7 +14624,7 @@ button.hc-shop-detail-cats--expandable {
 }
 
 .hc-pp-slide {
-  flex: 0 0 min(316px, calc(100% - 52px));
+  flex: 0 0 var(--hc-pp-slide-w);
   scroll-snap-align: center;
 }
 
@@ -14755,7 +14759,8 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-pp-skeleton {
   margin: 0 20px;
-  height: 182px;
+  /* Matches the loaded card's height so the row doesn't jump on load. */
+  height: 184px;
   border-radius: 12px;
   background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
   background-size: 200% 100%;

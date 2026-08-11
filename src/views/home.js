@@ -38,6 +38,7 @@ import {
   buildHomeFeaturedStoresHtml,
   bindHomeFeaturedStores,
   normalizeOnlineStores,
+  openFeaturedStore,
 } from '../components/Dashboard/HomeFeaturedStores.js';
 import { buildTransactionItemHtml } from '../components/Dashboard/TransactionItem.js';
 import { buildPurchasesFootnoteHtml } from '../purchasesFootnote.js';
@@ -290,7 +291,41 @@ function buildRewardDetailHash(rewardMeta, source) {
  * The rewards screen's prize card, reused so both screens match. Home shows the
  * weekly prize only — the season prize lives on the rewards screen.
  */
+/**
+ * First featured, still-redeemable reward from the catalogue. `enabled` already
+ * folds in is_active and inventory, so it is the right gate here.
+ */
+function pickFeaturedReward(catalogRes) {
+  var list = Array.isArray(catalogRes)
+    ? catalogRes
+    : (catalogRes && catalogRes.results) || [];
+  for (var i = 0; i < list.length; i++) {
+    var r = list[i];
+    if (r && r.id != null && (r.isFeatured || r.is_featured) && r.enabled !== false) {
+      return r;
+    }
+  }
+  return null;
+}
+
+/**
+ * The headline tile. A featured reward takes the slot when there is one; the
+ * weekly prize is the fallback so the spot is never empty.
+ */
 function buildRewardTilesHtml(ctx) {
+  if (ctx.featuredReward) {
+    return (
+      '<div class="hc-prize-cards hc-home-prize-cards">' +
+      buildPrizeCardHtml({
+        label: 'Active Reward',
+        title: ctx.featuredReward.title,
+        imageUrl: ctx.featuredReward.imageUrl || ctx.featuredReward.image_url,
+        rewardId: ctx.featuredReward.id,
+      }) +
+      '</div>'
+    );
+  }
+
   var showWeeklyTile = ctx.leaderboardSectionActive && ctx.weeklyReward && ctx.weeklyReward.rewardId;
   if (!showWeeklyTile) return '';
   return (
@@ -399,8 +434,8 @@ function buildHomeHtml(ctx) {
     buildWelcomeSectionHtml(user, { setupIncomplete: showUnlockSetup }) +
     (setupHtml ? '<div class="hc-home-setup-wrap">' + setupHtml + '</div>' : '') +
     milestonesHtml +
-    featuredHtml +
     buildRewardTilesHtml(ctx) +
+    featuredHtml +
     recentActivityHtml +
     activityFootnoteHtml +
     '</div>' +
@@ -438,6 +473,10 @@ async function fetchDashboardPayload() {
     api.getFirstRewards().catch(function () {
       return null;
     }),
+    // Featured rewards headline the page in place of the weekly prize tile.
+    api.getRewardsCatalog().catch(function () {
+      return null;
+    }),
   ]);
 
   var freshUser = parallel[0];
@@ -449,6 +488,7 @@ async function fetchDashboardPayload() {
   var activityLogRes = parallel[6];
   var featuredRes = parallel[7];
   var firstRewardsRes = parallel[8];
+  var rewardsCatalogRes = parallel[9];
 
   var latestUser = mergeUserSchoolColor(freshUser, profileUser);
   try {
@@ -550,6 +590,7 @@ async function fetchDashboardPayload() {
     transactions: transactionsForList,
     leaderboardSectionActive: leaderboardSectionActive,
     weeklyReward: weeklyReward,
+    featuredReward: pickFeaturedReward(rewardsCatalogRes),
     tierConfigTiers: tierConfigTiers,
     pointsSummary: pointsSummary,
     milestones: normalizeMilestones(firstRewardsRes),
@@ -597,10 +638,17 @@ function bindHomeInteractions(container, ctx) {
   if (featuredRoot) {
     bindHomeFeaturedStores(featuredRoot, {
       onSeeAll: function () {
-        navigate('/offers');
+        navigate('/offers/all-shops?channel=online');
       },
-      onStorePress: function () {
-        navigate('/offers');
+      // Open the store itself, the same as the Shop screen's row — these used
+      // to dump the user on /offers regardless of which tile they tapped.
+      onStorePress: function (id) {
+        var store = (ctx.featuredStores || []).find(function (s) {
+          return String(s.id) === String(id);
+        });
+        if (!openFeaturedStore(store)) {
+          navigate('/offers/all-shops?channel=online');
+        }
       },
     });
   }
@@ -621,7 +669,14 @@ function bindHomeInteractions(container, ctx) {
   }
 
   bindPrizeCards(container, {
-    onPress: function () {
+    onPress: function (rewardId) {
+      // A featured reward is an ordinary catalogue reward, so it routes to the
+      // normal detail page rather than the weekly-prize route.
+      if (ctx.featuredReward) {
+        if (!rewardId) return;
+        window.location.hash = '#/rewards/' + encodeURIComponent(rewardId) + '?from=home';
+        return;
+      }
       if (!ctx.weeklyReward) return;
       window.location.hash = buildRewardDetailHash(ctx.weeklyReward, 'home');
     },

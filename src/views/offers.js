@@ -34,6 +34,7 @@ import {
   bindHomeFeaturedStores,
   buildLinkedCardRequiredHtml,
   normalizeOnlineStores,
+  openFeaturedStore,
 } from '../components/Dashboard/HomeFeaturedStores.js';
 import {
   buildBottomFeaturedGridHtml,
@@ -437,40 +438,9 @@ function populateMarketplaceFeaturedShops(container, stores) {
       var store = (stores || []).find(function (s) {
         return String(s.id) === String(id);
       });
-      if (!store) {
-        navigate('/offers/all-shops?categoryId=all');
-        return;
+      if (!openFeaturedStore(store)) {
+        navigate('/offers/all-shops?channel=online');
       }
-      var merchantId =
-        store.wildfireMerchantId ||
-        store.wildfire_merchant_id ||
-        store.offer_id ||
-        store.offerId;
-      var offerPayload = Object.assign({}, store, {
-        offer_type: 'click',
-        offerType: 'click',
-        offerSource: 'wildfire',
-        offer_source: 'wildfire',
-        wildfireMerchantId: merchantId,
-        wildfire_merchant_id: merchantId,
-        offer_id: merchantId || store.offer_id,
-      });
-      var routeId = merchantId || store.offer_id || store.id;
-      if (!routeId) {
-        navigate('/offers/all-shops?categoryId=all');
-        return;
-      }
-      try {
-        sessionStorage.setItem(
-          'hc_offer_detail_initial',
-          JSON.stringify({
-            offerId: String(routeId),
-            offer: offerPayload,
-            preloadWildlink: true,
-          })
-        );
-      } catch (_e) {}
-      window.location.hash = '#/offers/' + encodeURIComponent(routeId);
     },
   });
 }
@@ -1299,7 +1269,7 @@ function computeMapKitRegionLikeStoreMap(userLat, userLng, merchantPoints) {
     withDist.sort(function (a, b) {
       return a.d - b.d;
     });
-    var closest = withDist.slice(0, 5);
+    var closest = withDist.slice(0, MAP_NEARBY_PINS_IN_VIEW);
     var lats = [userLat];
     var lngs = [userLng];
     closest.forEach(function (pt) {
@@ -1341,6 +1311,9 @@ function computeMapKitRegionLikeStoreMap(userLat, userLng, merchantPoints) {
 
 var MAP_PIN_USER_COLOR = '#007AFF';
 var MAP_PIN_MERCHANT_COLOR = '#AF52DE';
+// The opening view frames the user plus this many of the nearest stores, so the
+// map never lands zoomed in on an empty neighbourhood.
+var MAP_NEARBY_PINS_IN_VIEW = 5;
 
 var OFFERS_MAP_PAN_DEBOUNCE_MS = 600;
 
@@ -2194,7 +2167,6 @@ function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMar
         }).addTo(map);
       }
 
-      var merchantLayers = [];
       merchantMarkerData.forEach(function (mk) {
         var marker = L.marker([mk.lat, mk.lng], {
           icon: leafletMerchantPinIcon(L, mk, false),
@@ -2206,7 +2178,6 @@ function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMar
           }
           showSelectedMapMerchant(container, mk.merchant);
         });
-        merchantLayers.push(marker);
         container._hcLeafletMerchantMarkers.push({ marker: marker, mk: mk });
       });
 
@@ -2215,12 +2186,20 @@ function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMar
         dismissSelectedMapMerchant(container);
       });
 
-      if (showUserMarker) {
-        map.setView([userLat, userLng], 13, { animate: true });
-      } else if (merchantLayers.length > 0) {
-        map.fitBounds(L.featureGroup(merchantLayers).getBounds().pad(0.2));
+      // Same framing rule as the MapKit path: fit the user plus the nearest
+      // stores rather than dropping straight onto the user's own coordinates.
+      if (merchantMarkerData.length > 0) {
+        var box = computeMapKitRegionLikeStoreMap(
+          showUserMarker ? userLat : NaN,
+          showUserMarker ? userLng : NaN,
+          merchantMarkerData,
+        );
+        map.fitBounds([
+          [box.centerLat - box.spanLat / 2, box.centerLng - box.spanLon / 2],
+          [box.centerLat + box.spanLat / 2, box.centerLng + box.spanLon / 2],
+        ]);
       } else {
-        map.setView([userLat, userLng], 13);
+        map.setView([userLat, userLng], 13, { animate: !!showUserMarker });
       }
       window.setTimeout(function () {
         map.invalidateSize();
@@ -2377,9 +2356,14 @@ function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merc
   });
   container._hcMkMerchantAnnotations = merchantAnnotations;
 
-  var regionBox = showUserMarker
-    ? { centerLat: userLat, centerLng: userLng, spanLat: 0.05, spanLon: 0.05 }
-    : computeMapKitRegionLikeStoreMap(NaN, NaN, merchantMarkerData);
+  // Framing the user alone would zoom past the pins; the helper widens the box
+  // to take in the nearest stores, and still falls back to a plain user-centred
+  // span when there are none.
+  var regionBox = computeMapKitRegionLikeStoreMap(
+    showUserMarker ? userLat : NaN,
+    showUserMarker ? userLng : NaN,
+    merchantMarkerData,
+  );
   var mapCenterCoord = new Coord(regionBox.centerLat, regionBox.centerLng);
   var startSpan = new Span(regionBox.spanLat, regionBox.spanLon);
   var M = mapkit.Map;

@@ -1,7 +1,12 @@
 import { escapeAttr, escapeHtml } from '../../base-components/html.js';
 import * as api from '../../api.js';
 
+// How long each partner rests before the carousel advances itself. Also the
+// idle delay before autoplay resumes after a manual swipe.
 var AUTO_MS = 3000;
+// How long the glide to the next card takes. Native `behavior: 'smooth'` has no
+// duration control, so autoplay tweens scrollLeft itself to get a slower slide.
+var SLIDE_MS = 800;
 
 function pickList(raw) {
   if (Array.isArray(raw)) return raw;
@@ -242,6 +247,9 @@ export function mountPreferredPartnersCarousel(root, handlers) {
   var settleTimer = null;
   var jumping = false;
   var autoAnimating = false;
+  var slideRaf = null;
+  var snapSuspended = false;
+  var prevSnapType = '';
   var autoMs = handlers.autoplayMs != null ? handlers.autoplayMs : AUTO_MS;
 
   function getGap() {
@@ -279,12 +287,61 @@ export function mountPreferredPartnersCarousel(root, handlers) {
     return Math.max(0, left + slides[i].offsetWidth / 2 - track.clientWidth / 2);
   }
 
+  function cancelSlideAnim() {
+    if (slideRaf != null) {
+      window.cancelAnimationFrame(slideRaf);
+      slideRaf = null;
+    }
+    if (snapSuspended) {
+      track.style.scrollSnapType = prevSnapType || '';
+      snapSuspended = false;
+    }
+  }
+
+  /**
+   * Tweens scrollLeft over SLIDE_MS. Snap is suspended for the duration so the
+   * browser doesn't yank the track to a snap point mid-glide, and restored at
+   * the end — the final offset is a snap point anyway.
+   */
+  function animateScrollLeft(to) {
+    cancelSlideAnim();
+    var from = track.scrollLeft;
+    var delta = to - from;
+    if (!delta) return;
+
+    prevSnapType = track.style.scrollSnapType;
+    track.style.scrollSnapType = 'none';
+    snapSuspended = true;
+
+    var startTs = null;
+    function step(ts) {
+      if (destroyed) {
+        cancelSlideAnim();
+        return;
+      }
+      if (startTs == null) startTs = ts;
+      var t = Math.min(1, (ts - startTs) / SLIDE_MS);
+      // easeInOutCubic — over a long duration a linear slide reads mechanical.
+      var eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      track.scrollLeft = from + delta * eased;
+      if (t < 1) {
+        slideRaf = window.requestAnimationFrame(step);
+        return;
+      }
+      slideRaf = null;
+      track.scrollLeft = to;
+      cancelSlideAnim();
+    }
+    slideRaf = window.requestAnimationFrame(step);
+  }
+
   function setScrollLeft(left, smooth) {
     if (!track) return;
-    if (smooth && typeof track.scrollTo === 'function') {
-      track.scrollTo({ left: left, behavior: 'smooth' });
+    if (smooth) {
+      animateScrollLeft(left);
       return;
     }
+    cancelSlideAnim();
     track.scrollLeft = left;
   }
 
@@ -371,11 +428,12 @@ export function mountPreferredPartnersCarousel(root, handlers) {
       autoAnimating = true;
       goTo(index + 1, true);
       if (settleTimer) window.clearTimeout(settleTimer);
+      // Must outlast the glide, or the loop would be normalised mid-slide.
       settleTimer = window.setTimeout(function () {
         autoAnimating = false;
         syncIndexFromScroll();
         normalizeLoopPosition();
-      }, 480);
+      }, SLIDE_MS + 120);
     }, autoMs);
   }
 
@@ -383,6 +441,9 @@ export function mountPreferredPartnersCarousel(root, handlers) {
     paused = true;
     autoAnimating = false;
     stopAuto();
+    // Hand the track back to the user immediately; a running tween would fight
+    // the swipe and leave snap suspended.
+    cancelSlideAnim();
     if (resumeTimer) window.clearTimeout(resumeTimer);
     resumeTimer = window.setTimeout(function () {
       paused = false;
@@ -453,6 +514,7 @@ export function mountPreferredPartnersCarousel(root, handlers) {
     destroy: function () {
       destroyed = true;
       stopAuto();
+      cancelSlideAnim();
       if (resumeTimer) window.clearTimeout(resumeTimer);
       if (settleTimer) window.clearTimeout(settleTimer);
     },

@@ -430,7 +430,7 @@ async function loadRewards(container, routeEpoch) {
       html += '<div class="hc-prize-cards hc-rewards-featured">';
       featuredRewards.forEach(function (r) {
         html += buildPrizeCardHtml({
-          label: 'Featured',
+          label: 'Current Reward',
           title: r.title,
           imageUrl: getRewardImageUrl(r, getImageUrl),
           rewardId: r.id,

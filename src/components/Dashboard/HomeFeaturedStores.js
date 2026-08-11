@@ -110,6 +110,50 @@ export function normalizeFeaturedStores(response, options) {
 }
 
 /**
+ * Opens a featured store's offer detail, seeding the payload so the page can
+ * paint before its own fetch lands and preload the wildlink. Shared so the home
+ * and Shop rows behave identically.
+ *
+ * @param {object} store a store from normalizeOnlineStores
+ * @returns {boolean} false when there is no id to route to, so the caller can
+ *   fall back to a list rather than navigating nowhere
+ */
+export function openFeaturedStore(store) {
+  if (!store) return false;
+  var merchantId =
+    store.wildfireMerchantId ||
+    store.wildfire_merchant_id ||
+    store.offer_id ||
+    store.offerId;
+  var routeId = merchantId || store.offer_id || store.id;
+  if (!routeId) return false;
+
+  var offerPayload = Object.assign({}, store, {
+    offer_type: 'click',
+    offerType: 'click',
+    offerSource: 'wildfire',
+    offer_source: 'wildfire',
+    wildfireMerchantId: merchantId,
+    wildfire_merchant_id: merchantId,
+    offer_id: merchantId || store.offer_id,
+  });
+
+  try {
+    sessionStorage.setItem(
+      'hc_offer_detail_initial',
+      JSON.stringify({
+        offerId: String(routeId),
+        offer: offerPayload,
+        preloadWildlink: true,
+      }),
+    );
+  } catch (_e) {}
+
+  window.location.hash = '#/offers/' + encodeURIComponent(routeId);
+  return true;
+}
+
+/**
  * The "Linked card required" chip. Exported so screens other than this component
  * can place it — the Shop screen renders it under "Shop in person near you".
  * The chip states a fact about the offers rather than a setup step, so it shows
