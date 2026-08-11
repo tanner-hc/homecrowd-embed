@@ -55,6 +55,8 @@ import { getSetupRewardPoints } from '../setup-rewards.js';
 import lockIconUrl from '../assets/icons/lock_icon.png';
 
 var MAP_OFFERS_PAGE_SIZE = 150;
+var MAP_USER_ZOOM_LEAFLET = 13;
+var MAP_USER_SPAN_DEG = 0.05;
 
 var trophyIconSvg =
   '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
@@ -1317,36 +1319,13 @@ function computeMapKitRegionLikeStoreMap(userLat, userLng, merchantPoints) {
   var merchants = (merchantPoints || []).filter(function (pt) {
     return pt && Number.isFinite(pt.lat) && Number.isFinite(pt.lng);
   });
-  if (Number.isFinite(userLat) && Number.isFinite(userLng) && merchants.length > 0) {
-    var withDist = merchants.map(function (pt) {
-      return {
-        lat: pt.lat,
-        lng: pt.lng,
-        d: milesBetween(userLat, userLng, pt.lat, pt.lng),
-      };
-    });
-    withDist.sort(function (a, b) {
-      return a.d - b.d;
-    });
-    var closest = withDist;
-    var lats = [userLat];
-    var lngs = [userLng];
-    closest.forEach(function (pt) {
-      lats.push(pt.lat);
-      lngs.push(pt.lng);
-    });
-    var minLat = Math.min.apply(null, lats);
-    var maxLat = Math.max.apply(null, lats);
-    var minLon = Math.min.apply(null, lngs);
-    var maxLon = Math.max.apply(null, lngs);
-    var centerLat = (minLat + maxLat) / 2;
-    var centerLng = (minLon + maxLon) / 2;
-    var deltaLat = Math.max((maxLat - minLat) * 1.35, 0.04);
-    var deltaLon = Math.max((maxLon - minLon) * 1.35, 0.04);
-    return { centerLat: centerLat, centerLng: centerLng, spanLat: deltaLat, spanLon: deltaLon };
-  }
   if (Number.isFinite(userLat) && Number.isFinite(userLng)) {
-    return { centerLat: userLat, centerLng: userLng, spanLat: 0.05, spanLon: 0.05 };
+    return {
+      centerLat: userLat,
+      centerLng: userLng,
+      spanLat: MAP_USER_SPAN_DEG,
+      spanLon: MAP_USER_SPAN_DEG,
+    };
   }
   if (merchants.length > 0) {
     var lats2 = merchants.map(function (p) {
@@ -1536,7 +1515,7 @@ function focusOffersMap(container, lat, lng) {
 
   var lf = container._hcLeafletMap;
   if (lf && typeof lf.setView === 'function') {
-    lf.setView([lat, lng], 13, { animate: true });
+    lf.setView([lat, lng], MAP_USER_ZOOM_LEAFLET, { animate: true });
     return;
   }
 
@@ -1547,7 +1526,7 @@ function focusOffersMap(container, lat, lng) {
       var Region = window.mapkit.CoordinateRegion;
       var Span = window.mapkit.CoordinateSpan;
       var center = new Coord(lat, lng);
-      var span = new Span(0.05, 0.05);
+      var span = new Span(MAP_USER_SPAN_DEG, MAP_USER_SPAN_DEG);
       var region = new Region(center, span);
       if (typeof mk.setRegionAnimated === 'function') {
         mk.setRegionAnimated(region, true);
@@ -2395,18 +2374,16 @@ function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMar
         dismissSelectedMapMerchant(container);
       });
 
-      if (merchantMarkerData.length > 0) {
-        var box = computeMapKitRegionLikeStoreMap(
-          showUserMarker ? userLat : NaN,
-          showUserMarker ? userLng : NaN,
-          merchantMarkerData,
-        );
+      if (showUserMarker && Number.isFinite(userLat) && Number.isFinite(userLng)) {
+        map.setView([userLat, userLng], MAP_USER_ZOOM_LEAFLET, { animate: true });
+      } else if (merchantMarkerData.length > 0) {
+        var box = computeMapKitRegionLikeStoreMap(NaN, NaN, merchantMarkerData);
         map.fitBounds([
           [box.centerLat - box.spanLat / 2, box.centerLng - box.spanLon / 2],
           [box.centerLat + box.spanLat / 2, box.centerLng + box.spanLon / 2],
         ]);
       } else {
-        map.setView([userLat, userLng], 13, { animate: !!showUserMarker });
+        map.setView([userLat, userLng], MAP_USER_ZOOM_LEAFLET, { animate: false });
       }
       window.setTimeout(function () {
         map.invalidateSize();
