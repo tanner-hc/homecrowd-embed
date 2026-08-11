@@ -9,6 +9,7 @@ import { navigate, getRoute, onRouteChange, startRouter, nextNavEpoch } from './
 import {
   applyBrandConfig,
   clearBrandConfig,
+  getEmbedSchoolId,
   hasCustomHeaderLogo,
   renderBrandLockup,
   setEmbedSchoolId,
@@ -180,7 +181,7 @@ async function applySchoolConfig(nextSchoolId) {
  * @returns {Promise<boolean>} whether a school logo became available
  */
 async function ensureBrandConfigForUser(currentUser) {
-  if (hasCustomHeaderLogo()) return false;
+  if (hasCustomHeaderLogo() || getEmbedSchoolId()) return false;
   var school = currentUser && (currentUser.active_school || currentUser.activeSchool);
   var activeSchoolId = school && school.id;
   if (!activeSchoolId) return false;
@@ -1065,9 +1066,9 @@ function render(route) {
     appEl.innerHTML = '';
     renderLogin(appEl, async function (u, loginMeta) {
       var assignSchoolId =
-        (loginMeta && loginMeta.signupSchoolId
+        loginMeta && loginMeta.signupSchoolId
           ? String(loginMeta.signupSchoolId).trim()
-          : '') || schoolId;
+          : '';
       var linkData = readPendingPasswordLink();
       if (linkData && linkData.token) {
         await api.linkSchoolEmail({
