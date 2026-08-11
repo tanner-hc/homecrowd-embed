@@ -4487,6 +4487,36 @@ html.hc-embed--no-school-brand .hc-login-card {
   border: none !important;
 }
 
+.hc-map-cluster {
+  width: var(--hc-cluster-size, 40px);
+  height: var(--hc-cluster-size, 40px);
+  border-radius: 999px;
+  background: #00c8ff;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+  color: #ffffff;
+  font-family: 'Baikal-Bold', var(--hc-font);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.hc-offers-map-mount .marker-cluster {
+  background: rgba(0, 200, 255, 0.22);
+}
+
+.hc-offers-map-mount .marker-cluster div {
+  background: #00c8ff;
+  color: #ffffff;
+  font-family: 'Baikal-Bold', var(--hc-font);
+  font-weight: 700;
+}
+
 .hc-merchant-pin {
   display: flex;
   flex-direction: column;

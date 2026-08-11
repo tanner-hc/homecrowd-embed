@@ -1,6 +1,7 @@
 import { getEmbedSchoolId } from './brand.js';
 
 var EMBED_BASE = '/api/embed/v1';
+var MAP_OFFERS_PAGE_SIZE_DEFAULT = 150;
 
 function resolveApiBaseUrl() {
   var env =
@@ -637,7 +638,8 @@ export async function addCardDirect(cardData) {
 // --- Offers ---
 
 export async function getOffers(page, pageSize, userLocation, options) {
-  var params = 'page=' + (page || 1) + '&pageSize=' + (pageSize || 50);
+  var size = pageSize == null ? MAP_OFFERS_PAGE_SIZE_DEFAULT : pageSize;
+  var params = 'page=' + (page || 1) + '&pageSize=' + encodeURIComponent(String(size));
   if (
     userLocation &&
     userLocation.latitude != null &&
