@@ -208,7 +208,7 @@ export function buildHomeFeaturedStoresHtml(props) {
             escapeAttr(FEATURED_STORE_TILE_BG) +
             '">' +
             '<span class="hc-featured-store-logo-clip">' +
-            '<img src="' +
+            '<img data-hc-ph="store" src="' +
             escapeAttr(logoUri) +
             '" alt="" class="hc-featured-store-logo" />' +
             '</span>' +

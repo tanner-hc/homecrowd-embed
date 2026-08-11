@@ -150,7 +150,7 @@ export function buildShopByCategoryHtml(props) {
   var chips = SHOP_CATEGORIES.map(function (cat) {
     var selected = cat.id === selectedId;
     var iconHtml = cat.iconPng
-      ? '<img src="' + cat.iconPng + '" alt="" class="hc-shop-cat-png" />'
+      ? '<img data-hc-ph="none" src="' + cat.iconPng + '" alt="" class="hc-shop-cat-png" />'
       : '<span class="hc-shop-cat-svg" aria-hidden="true">' + (cat.iconSvg || '') + '</span>';
     return (
       '<button type="button" class="hc-shop-cat-chip' +

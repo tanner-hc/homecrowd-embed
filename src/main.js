@@ -51,6 +51,7 @@ import { renderSecuritySettings } from './views/security-settings.js';
 import { renderChangePassword } from './views/change-password.js';
 import { renderInviteFriend } from './views/invite-friend.js';
 import { renderActivityLog } from './views/activity-log.js';
+import { renderCardDraw } from './views/card-draw.js';
 import { renderBrowserExtension } from './views/browser-extension.js';
 import { renderSupport } from './views/support.js';
 import { renderUploadReceipt } from './views/upload-receipt.js';
@@ -60,6 +61,7 @@ import { renderForgotPassword } from './views/forgot-password.js';
 import { renderResetPassword } from './views/reset-password.js';
 import { renderSchoolSelection } from './views/school-selection.js';
 import LoadingSpinner from './base-components/LoadingSpinner.js';
+import { installImageFallback } from './base-components/imageFallback.js';
 import { preloadMapKitForEmbed } from './mapkit-embed.js';
 import houseFilledSvg from './assets/icons/house-filled.svg?raw';
 import giftFilledSvg from './assets/icons/gift-filled.svg?raw';
@@ -67,6 +69,9 @@ import bagSvg from './assets/icons/bag.svg?raw';
 
 import planeSvg from './assets/icons/plane-filled.svg?raw';
 import playFilledSvg from './assets/icons/play-filled.svg?raw';
+
+// Registered before the first render so no view can paint a broken image.
+installImageFallback();
 
 var appEl = document.getElementById('app');
 var user = null;
@@ -1364,6 +1369,8 @@ function render(route) {
     renderInviteFriend(contentEl);
   } else if (pathOnly === '/activity-log') {
     renderActivityLog(contentEl);
+  } else if (pathOnly === '/card-draw') {
+    renderCardDraw(contentEl);
   } else if (pathOnly === '/browser-extension') {
     renderBrowserExtension(contentEl);
   } else if (pathOnly === '/support') {
@@ -1457,6 +1464,7 @@ function renderLayout(route) {
   var isRewardsPage = pathOnly === '/rewards';
   var isRewardDetailRoot = /^\/rewards\/[^/]+$/.test(pathOnly);
   var isActivityLogPage = pathOnly === '/activity-log';
+  var isCardDrawPage = pathOnly === '/card-draw';
   var hideBrandLockup =
     isTravelPage ||
     isHomePage ||
@@ -1465,6 +1473,7 @@ function renderLayout(route) {
     isRewardsPage ||
     isRewardDetailRoot ||
     isActivityLogPage ||
+    isCardDrawPage ||
     isPrizeDetailPage ||
     isLinkCardIntroPage ||
     isAddCardPage ||
@@ -1475,7 +1484,10 @@ function renderLayout(route) {
     isPreviewPage ||
     isLinkCardIntroPage ||
     isAddCardPage ||
-    isSafariOnPage;
+    isSafariOnPage ||
+    // Focused full-screen flow with its own exit ("Maybe later"); the tab bar
+    // would otherwise sit over the actions pinned to the bottom.
+    isCardDrawPage;
   var flushTopContentClass =
     pathOnly === '/invite-friend' ||
     pathOnly === '/support' ||
@@ -1490,8 +1502,10 @@ function renderLayout(route) {
     isRewardsPage ||
     // Screens rendering their own sticky AppHeader need padding-top: 0, or the
     // scroller's 8px top padding leaves a strip above the header where content
-    // shows through as it scrolls past.
-    isActivityLogPage
+    // shows through as it scrolls past. Card draw is full-bleed dark, so the
+    // strip would show as a white band above it.
+    isActivityLogPage ||
+    isCardDrawPage
       ? ' hc-content--flush-top'
       : '';
 

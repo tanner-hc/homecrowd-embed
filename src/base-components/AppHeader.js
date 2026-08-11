@@ -37,7 +37,7 @@ function setProfileAvatar(profileBtn, avatarUri) {
   if (!profileBtn) return;
   if (avatarUri) {
     profileBtn.innerHTML =
-      '<img src="' + escapeAttr(String(avatarUri)) + '" alt="" class="hc-app-header-avatar" />';
+      '<img data-hc-ph="person" src="' + escapeAttr(String(avatarUri)) + '" alt="" class="hc-app-header-avatar" />';
   } else if (!profileBtn.querySelector('img') && !profileBtn.querySelector('svg')) {
     profileBtn.innerHTML = personSvg;
   }
@@ -59,7 +59,7 @@ export function buildAppHeaderHtml(props) {
   }
   var avatarUri = props.avatarUri != null ? props.avatarUri : pickAvatar(props.user);
   var avatarInner = avatarUri
-    ? '<img src="' + escapeAttr(String(avatarUri)) + '" alt="" class="hc-app-header-avatar" />'
+    ? '<img data-hc-ph="person" src="' + escapeAttr(String(avatarUri)) + '" alt="" class="hc-app-header-avatar" />'
     : personSvg;
 
   // Left slot is the back control on detail screens and the page title

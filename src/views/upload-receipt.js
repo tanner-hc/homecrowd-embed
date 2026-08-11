@@ -165,7 +165,7 @@ export function renderUploadReceipt(container) {
   html += '<div id="hc-upload-receipt-preview" class="hc-upload-receipt-preview-card is-hidden" hidden>';
   html += '<div class="hc-upload-receipt-preview-media-wrap">';
   html +=
-    '<img id="hc-upload-receipt-preview-img" class="hc-upload-receipt-preview-image is-hidden" alt="Receipt preview" hidden />';
+    '<img data-hc-ph="image" id="hc-upload-receipt-preview-img" class="hc-upload-receipt-preview-image is-hidden" alt="Receipt preview" hidden />';
   html +=
     '<div id="hc-upload-receipt-preview-file" class="hc-upload-receipt-preview-file is-hidden" hidden></div>';
   html += '<div class="hc-upload-receipt-preview-badge">Ready to submit</div>';

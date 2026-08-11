@@ -35,7 +35,7 @@ function schoolSelectionShellHtml(state) {
         var selected = id === state.selectedSchoolId;
         var disabled = state.lockedSchoolId && id !== state.lockedSchoolId;
         var imageHtml = school.image
-          ? '<img src="' +
+          ? '<img data-hc-ph="school" src="' +
             escapeAttr(String(school.image)) +
             '" alt="" class="hc-school-selection-card-image" />'
           : '';

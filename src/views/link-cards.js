@@ -163,7 +163,7 @@ function renderSuccess(container, earnedPoints) {
     '<div class="hc-add-card-success-content">' +
     '<div class="hc-add-card-success-logo-stage">' +
     '<div class="hc-add-card-success-logo-wrap" data-success-logo>' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     escapeAttr(hcIconUrl) +
     '" alt="" class="hc-add-card-success-logo" />' +
     '</div>' +
@@ -353,7 +353,7 @@ export function renderLinkCards(container) {
       '<button type="button" class="hc-add-card-back" id="hc-add-card-back" aria-label="Back">' +
       chevronLeftSvg +
       '</button>' +
-      '<img src="' +
+      '<img data-hc-ph="none" src="' +
       escapeAttr(headerUrl) +
       '" alt="HomeCrowd" class="hc-add-card-logo" />' +
       '<div class="hc-add-card-nav-spacer" aria-hidden="true"></div>' +
@@ -371,12 +371,12 @@ export function renderLinkCards(container) {
       '<div class="hc-add-card-field">' +
       '<label class="hc-add-card-label" for="hc-ac-number">Card number</label>' +
       '<div class="hc-add-card-input-wrap">' +
-      '<img src="' +
+      '<img data-hc-ph="none" src="' +
       escapeAttr(cardIconUrl) +
       '" alt="" class="hc-add-card-card-icon" width="24" height="18" />' +
       '<input id="hc-ac-number" name="cc-number" class="hc-add-card-input hc-add-card-input--flex" type="text" inputmode="numeric" autocomplete="cc-number" maxlength="19" placeholder="Card number" />' +
       '<button type="button" class="hc-add-card-camera" id="hc-ac-camera" aria-label="Scan card">' +
-      '<img src="' +
+      '<img data-hc-ph="none" src="' +
       escapeAttr(cameraIconUrl) +
       '" alt="" width="22" height="22" />' +
       '</button>' +

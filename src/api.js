@@ -733,6 +733,17 @@ export async function recordDailyVisit() {
   });
 }
 
+/**
+ * Daily Card Draw. The server owns the randomness and the once-per-day rule, so
+ * a repeat call is a normal 200 with already_drawn: true rather than an error.
+ * @returns {Promise<{success:boolean, already_drawn:boolean, points_awarded:number, new_balance:number}>}
+ */
+export async function drawCard() {
+  return request('/api/rewards/card-draw/', {
+    method: 'POST',
+  });
+}
+
 export async function getReferralCampaign() {
   return request('/api/users/users/referral-campaign/');
 }

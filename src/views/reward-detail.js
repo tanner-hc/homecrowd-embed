@@ -32,6 +32,7 @@ import medalSvg from '../assets/icon-medal.svg?raw';
 import shieldSvg from '../assets/icons/shield.svg?raw';
 import unlockSvg from '../assets/icon-unlock.svg?raw';
 import giftSvg from '../assets/icon-gift-outline.svg?raw';
+import { enableDragScroll } from '../base-components/dragScroll.js';
 
 var weeklyDetailLiveCleanup = null;
 
@@ -206,14 +207,14 @@ function buildRewardMediaHtml(images, overlayHtml) {
         .map(function (url) {
           return (
             '<div class="hc-prize-detail-slide">' +
-            '<img class="hc-prize-detail-img" src="' +
+            '<img data-hc-ph="gift" class="hc-prize-detail-img" src="' +
             escapeAttr(url) +
             '" alt="" /></div>'
           );
         })
         .join('')
     : '<div class="hc-prize-detail-slide">' +
-      '<div class="hc-prize-detail-img hc-prize-detail-img--ph"></div></div>';
+      '<div class="hc-prize-detail-img hc-prize-detail-img--ph hc-img-ph hc-img-ph--gift"></div></div>';
 
   var dots = '';
   if (urls.length > 1) {
@@ -358,11 +359,13 @@ function buildHowToUnlockCopy(o) {
 function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsResponse, weeklyReward, navSource) {
   var getUrl = function (path) {
     if (!path) return null;
-    if (typeof path === 'string' && path.indexOf('s3://') === 0) {
-      return path.replace('s3://', 'https://');
-    }
+    // Specific bucket first: the generic s3:// branch below swallows it
+    // otherwise, which is the order the other reward views already use.
     if (typeof path === 'string' && path.indexOf('s3://app.gethomecrowd.com/') === 0) {
       return path.replace('s3://app.gethomecrowd.com/', 'https://app.gethomecrowd.com/');
+    }
+    if (typeof path === 'string' && path.indexOf('s3://') === 0) {
+      return path.replace('s3://', 'https://');
     }
     return path;
   };
@@ -1162,6 +1165,8 @@ function syncDetailScrollPadding(container) {
 function initPrizeCarouselDots(container) {
   var track = container.querySelector('.hc-prize-detail-track');
   if (!track) return;
+  // Before the dot check: the track is worth dragging whenever it overflows.
+  enableDragScroll(track);
   var dots = container.querySelectorAll('.hc-prize-detail-dot');
   if (dots.length < 2) return;
   track.addEventListener('scroll', function () {

@@ -46,10 +46,10 @@ export function buildBottomFeaturedGridHtml(props) {
         renderPointMultiplierBadgeHtml(merchant, 'overlay', true) +
         '<span class="hc-bottom-featured-row">' +
         (logo
-          ? '<img src="' +
+          ? '<img data-hc-ph="store" src="' +
             escapeAttr(logo) +
             '" alt="" class="hc-bottom-featured-logo" />'
-          : '<span class="hc-bottom-featured-logo hc-bottom-featured-logo--ph"></span>') +
+          : '<span class="hc-bottom-featured-logo hc-bottom-featured-logo--ph hc-img-ph hc-img-ph--store"></span>') +
         '<span class="hc-bottom-featured-name">' +
         escapeHtml(merchant.name || '') +
         '</span>' +

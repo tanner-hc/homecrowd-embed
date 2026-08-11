@@ -34,10 +34,10 @@ export function buildRewardListRowHtml(props) {
   }
 
   var thumb = props.imageUrl
-    ? '<img class="hc-reward-row-img" src="' +
+    ? '<img data-hc-ph="gift" class="hc-reward-row-img" src="' +
       escapeAttr(String(props.imageUrl)) +
       '" alt="" />'
-    : '<span class="hc-reward-row-img hc-reward-row-img--ph"></span>';
+    : '<span class="hc-reward-row-img hc-reward-row-img--ph hc-img-ph hc-img-ph--gift"></span>';
 
   return (
     '<button type="button" class="hc-reward-row" data-reward-id="' +

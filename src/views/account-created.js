@@ -49,7 +49,7 @@ export function renderAccountCreated(container, options) {
     '<div class="hc-account-created-banner-placeholder" aria-hidden="true"></div>' +
     '</div>' +
     '<div class="hc-account-created-content">' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     escapeAttr(hcIconUrl) +
     '" alt="Homecrowd" class="hc-account-created-logo" />' +
     '<h1 class="hc-account-created-title">Account created!</h1>' +

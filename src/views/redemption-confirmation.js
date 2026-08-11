@@ -148,7 +148,7 @@ export function renderRedemptionConfirmation(container, rewardId) {
 
   var imageUrl = getProductImageUrl(product);
   var imgBlock = imageUrl
-    ? '<div class="hc-rc-image-wrap"><img class="hc-rc-image" src="' +
+    ? '<div class="hc-rc-image-wrap"><img data-hc-ph="gift" class="hc-rc-image" src="' +
       escapeAttr(imageUrl) +
       '" alt="" /></div>'
     : '<div class="hc-rc-image-ph"><span class="hc-rc-image-ph-text">No Image</span></div>';

@@ -34,7 +34,7 @@ async function loadCards(container) {
     });
     html += '</div>';
 
-    var noCostTagSvg = '<img src="' + zeroTagUrl + '" alt="" />';
+    var noCostTagSvg = '<img data-hc-ph="none" src="' + zeroTagUrl + '" alt="" />';
     var heartSvg =
       '<svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
       '<path d="M18 30.5l-1.85-1.7C9.4 22.7 5 18.7 5 13.85A6.85 6.85 0 0 1 11.85 7c2.1 0 4.1 1 5.4 2.55l.75.9.75-.9A7.07 7.07 0 0 1 24.15 7 6.85 6.85 0 0 1 31 13.85c0 4.85-4.4 8.85-11.15 14.95L18 30.5z" fill="#2f5d36"/>' +
@@ -65,7 +65,7 @@ async function loadCards(container) {
     html += '</div>';
 
     html += '<div class="hc-security-banner">';
-    html += '<div class="hc-security-icon"><img src="' + shieldIconUrl + '" width="24" height="24" alt="" /></div>';
+    html += '<div class="hc-security-icon"><img data-hc-ph="none" src="' + shieldIconUrl + '" width="24" height="24" alt="" /></div>';
     html += '<div class="hc-security-content">';
     html += '<div class="hc-security-title">Your data is secure</div>';
     html +=
@@ -78,7 +78,7 @@ async function loadCards(container) {
       activeCards.forEach(function (card) {
         html += '<div class="hc-card-item">';
         html += '<div class="hc-card-item-content">';
-        html += '<div class="hc-card-item-icon"><img src="' + cardFilledIconUrl + '" width="20" height="20" alt="" /></div>';
+        html += '<div class="hc-card-item-icon"><img data-hc-ph="none" src="' + cardFilledIconUrl + '" width="20" height="20" alt="" /></div>';
         html += '<div class="hc-card-item-details">';
         html += '<div class="hc-card-item-number">*** ' + escapeHtml(card.last4) + '</div>';
         if (card.nickname) {
@@ -102,11 +102,11 @@ async function loadCards(container) {
     html += '<div class="hc-cards-add-section">';
     html += '<div class="hc-cards-card-type-row">';
     html += '<a href="#/cards/link-intro?type=visa" class="hc-cards-card-type-btn" aria-label="Add Visa card">';
-    html += '<img src="' + visaLogoUrl + '" alt="" class="hc-cards-card-type-logo hc-cards-card-type-logo--visa" />';
+    html += '<img data-hc-ph="card" src="' + visaLogoUrl + '" alt="" class="hc-cards-card-type-logo hc-cards-card-type-logo--visa" />';
     html += '<span class="hc-cards-card-type-text">Add visa</span>';
     html += '</a>';
     html += '<a href="#/cards/link-intro?type=mastercard" class="hc-cards-card-type-btn" aria-label="Add Mastercard">';
-    html += '<img src="' + mastercardLogoUrl + '" alt="" class="hc-cards-card-type-logo hc-cards-card-type-logo--mastercard" />';
+    html += '<img data-hc-ph="card" src="' + mastercardLogoUrl + '" alt="" class="hc-cards-card-type-logo hc-cards-card-type-logo--mastercard" />';
     html += '<span class="hc-cards-card-type-text">Add Mastercard</span>';
     html += '</a>';
     html += '</div>';

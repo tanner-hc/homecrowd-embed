@@ -1,6 +1,15 @@
 import { escapeAttr, escapeHtml } from '../../base-components/html.js';
-import { getHeaderLogoUrl, hasCustomHeaderLogo } from '../../brand.js';
+import { getHeaderLogoUrl, getProgramName, hasCustomHeaderLogo } from '../../brand.js';
 import hcIconUrl from '../../assets/logos/icon.png';
+
+/**
+ * Who issued a points row — the school's rewards program ("Utah Rewards") on a
+ * branded embed, falling back to Homecrowd only when no brand config loaded.
+ * These rows are the program's own bonuses, so they should carry its name.
+ */
+function issuerLabel() {
+  return getProgramName() || 'Homecrowd';
+}
 
 /**
  * Avatar for rows with no merchant logo of their own.
@@ -13,7 +22,7 @@ function buildFallbackAvatarHtml() {
   if (hasCustomHeaderLogo()) {
     return (
       '<div class="hc-tx-avatar hc-tx-avatar--brand">' +
-      '<img src="' +
+      '<img data-hc-ph="school" src="' +
       escapeAttr(getHeaderLogoUrl()) +
       '" alt="" class="hc-tx-brand-icon" />' +
       '</div>'
@@ -21,7 +30,7 @@ function buildFallbackAvatarHtml() {
   }
   return (
     '<div class="hc-tx-avatar hc-tx-avatar--hc">' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     escapeAttr(hcIconUrl) +
     '" alt="" class="hc-tx-hc-icon" />' +
     '</div>'
@@ -65,6 +74,7 @@ export function buildTransactionItemHtml(transaction, helpers) {
     transaction.activity_kind === 'setup_task_reward' ||
     transaction.activity_kind === 'incentive_campaign' ||
     transaction.activity_kind === 'homecrowd_bonus' ||
+    transaction.activity_kind === 'card_draw' ||
     (transaction.metadata && transaction.metadata.source === 'setup_task_reward') ||
     (transaction.metadata && transaction.metadata.source === 'incentive_campaign') ||
     (transaction.metadata && transaction.metadata.incentive_type === 'campaign_bonus');
@@ -74,7 +84,7 @@ export function buildTransactionItemHtml(transaction, helpers) {
       transaction.display_title ||
       transaction.description ||
       transaction.merchant_name ||
-      'Homecrowd bonus';
+      issuerLabel() + ' bonus';
     var dateLabel = formatDate(transaction.transaction_date || transaction.date);
     var points = Number(transaction.points_earned != null ? transaction.points_earned : transaction.points) || 0;
     return (
@@ -85,7 +95,7 @@ export function buildTransactionItemHtml(transaction, helpers) {
       escapeHtml(title) +
       '</div>' +
       '<div class="hc-tx-sub">' +
-      escapeHtml(dateLabel ? 'Homecrowd · ' + dateLabel : 'Homecrowd') +
+      escapeHtml(dateLabel ? issuerLabel() + ' · ' + dateLabel : issuerLabel()) +
       '</div>' +
       '</div>' +
       '<div class="hc-tx-hc-pts">' +
@@ -101,8 +111,8 @@ export function buildTransactionItemHtml(transaction, helpers) {
   var paymentInfo = paymentMethod
     ? paymentMethod + ' · ' + dateLabel2
     : dateLabel2
-      ? 'Homecrowd · ' + dateLabel2
-      : 'Homecrowd';
+      ? issuerLabel() + ' · ' + dateLabel2
+      : issuerLabel();
   var logoUrl =
     transaction.merchant_logo_url ||
     transaction.logo_url ||
@@ -112,7 +122,7 @@ export function buildTransactionItemHtml(transaction, helpers) {
     null;
 
   var avatarHtml = logoUrl
-    ? '<div class="hc-tx-avatar hc-tx-avatar--merchant"><img src="' +
+    ? '<div class="hc-tx-avatar hc-tx-avatar--merchant"><img data-hc-ph="store" src="' +
       escapeAttr(logoUrl) +
       '" alt="" class="hc-tx-avatar-img" /></div>'
     : buildFallbackAvatarHtml();

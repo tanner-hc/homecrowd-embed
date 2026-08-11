@@ -59,6 +59,7 @@ var HOMECROWD_ACTIVITY_KINDS = {
   setup_task_reward: true,
   incentive_campaign: true,
   homecrowd_bonus: true,
+  card_draw: true,
 };
 
 function isHomecrowdActivityEntry(entry) {

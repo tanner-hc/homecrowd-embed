@@ -517,7 +517,7 @@ function mountLinkCardGate(container, user, status) {
 
   openBottomSheet({
     iconHtml:
-      '<img src="' +
+      '<img data-hc-ph="none" src="' +
       lockIconUrl +
       '" alt="" class="hc-link-card-lock-icon" />',
     title: 'Almost there',
@@ -978,7 +978,7 @@ function buildFeaturedCardInner(f) {
   html += '<div class="hc-featured-img-wrap">';
   if (f.large_logo_url) {
     html +=
-      '<img class="hc-featured-img" draggable="false" src="' +
+      '<img data-hc-ph="store" class="hc-featured-img" draggable="false" src="' +
       escapeAttr(f.large_logo_url) +
       '" alt="' +
       escapeAttr(f.name) +
@@ -991,7 +991,7 @@ function buildFeaturedCardInner(f) {
   html += '<div class="hc-featured-footer">';
   if (f.small_logo_url) {
     html +=
-      '<div class="hc-featured-logo"><img draggable="false" src="' +
+      '<div class="hc-featured-logo"><img data-hc-ph="store" draggable="false" src="' +
       escapeAttr(f.small_logo_url) +
       '" width="30" height="30" alt="" /></div>';
   }
@@ -1066,7 +1066,7 @@ function renderOnlineFeaturedCarousel(items, position) {
     html += renderPointMultiplierBadgeHtml(f, 'block');
     if (f.large_logo_url) {
       html +=
-        '<img class="hc-online-card-img" draggable="false" src="' +
+        '<img data-hc-ph="store" class="hc-online-card-img" draggable="false" src="' +
         escapeAttr(f.large_logo_url) +
         '" alt="' +
         escapeAttr(f.name) +
@@ -1563,7 +1563,7 @@ function buildMerchantPinHtml(mk, selected) {
   var name = (mk && mk.name) || (mk && mk.merchant && (mk.merchant.name || mk.merchant.merchantName)) || '?';
   var initial = String(name).trim().charAt(0).toUpperCase() || '?';
   var inner = logoUrl
-    ? '<img src="' +
+    ? '<img data-hc-ph="store" src="' +
       escapeAttr(logoUrl) +
       '" alt="" class="hc-merchant-pin-img" />'
     : '<span class="hc-merchant-pin-fallback">' + escapeHtml(initial) + '</span>';
@@ -1599,7 +1599,7 @@ function leafletMerchantPinIcon(L, mk, selected) {
 function buildMapCardHomecrowdBadgeHtml() {
   return (
     '<span class="hc-map-merchant-card-hc-badge" aria-hidden="true">' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     escapeAttr(iconTransparentUrl) +
     '" alt="" />' +
     '</span>'
@@ -1616,8 +1616,8 @@ function buildSelectedMerchantCardHtml(merchant, recommended) {
     '<span class="hc-map-merchant-card-logo">' +
     (recommended ? buildMapCardHomecrowdBadgeHtml() : '') +
     (logoUrl
-      ? '<img src="' + escapeAttr(logoUrl) + '" alt="" />'
-      : '<span class="hc-map-merchant-card-logo-ph"></span>') +
+      ? '<img data-hc-ph="store" src="' + escapeAttr(logoUrl) + '" alt="" />'
+      : '<span class="hc-map-merchant-card-logo-ph hc-img-ph hc-img-ph--store"></span>') +
     '</span>' +
     '</button>' +
     '<div class="hc-map-merchant-card-content">' +
@@ -3331,7 +3331,7 @@ function renderFeaturedGrid(items) {
     html += '<div class="hc-featured-grid-row">';
     if (f.small_logo_url) {
       html +=
-        '<img class="hc-featured-grid-logo" draggable="false" src="' +
+        '<img data-hc-ph="store" class="hc-featured-grid-logo" draggable="false" src="' +
         escapeAttr(f.small_logo_url) +
         '" alt="' +
         escapeAttr(f.name) +
@@ -3402,7 +3402,7 @@ function renderMerchantCard(merchant) {
   html += renderPointMultiplierBadgeHtml(merchant, 'block');
   if (logoUrl) {
     html +=
-      '<div class="hc-merchant-img-wrap"><img class="hc-merchant-img" loading="lazy" decoding="async" src="' +
+      '<div class="hc-merchant-img-wrap"><img data-hc-ph="store" class="hc-merchant-img" loading="lazy" decoding="async" src="' +
       escapeAttr(logoUrl) +
       '" alt="' +
       escapeAttr(name) +
@@ -3410,7 +3410,7 @@ function renderMerchantCard(merchant) {
   } else {
     html +=
       '<div class="hc-merchant-img-wrap"><div class="hc-merchant-no-logo">' +
-      '<img class="hc-merchant-no-logo-icon" src="' + escapeAttr(shopIconUrl) + '" alt="" aria-hidden="true" />' +
+      '<img data-hc-ph="none" class="hc-merchant-no-logo-icon" src="' + escapeAttr(shopIconUrl) + '" alt="" aria-hidden="true" />' +
       '<div class="hc-merchant-no-logo-name">' + escapeHtml(name) + '</div>' +
       '</div></div>';
   }

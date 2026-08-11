@@ -129,7 +129,7 @@ export function buildPreferredPartnerCardHtml(partner) {
     escapeAttr(partner.name || 'Partner') +
     '">' +
     '<span class="hc-pp-card-media" aria-hidden="true">' +
-    '<img src="' +
+    '<img data-hc-ph="store" src="' +
     escapeAttr(partner.largeLogoUrl) +
     '" alt="" class="hc-pp-card-img" />' +
     '<span class="hc-pp-card-shade"></span>' +
@@ -139,7 +139,7 @@ export function buildPreferredPartnerCardHtml(partner) {
     '</span>' +
     '<span class="hc-pp-card-meta">' +
     (partner.smallLogoUrl
-      ? '<img src="' +
+      ? '<img data-hc-ph="store" src="' +
         escapeAttr(partner.smallLogoUrl) +
         '" alt="" class="hc-pp-card-logo" />'
       : '<span class="hc-pp-card-logo hc-pp-card-logo--ph"></span>') +

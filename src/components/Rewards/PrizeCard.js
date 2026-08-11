@@ -51,10 +51,10 @@ export function buildPrizeCardHtml(props) {
     escapeAttr(String(props.rewardId || '')) +
     '">' +
     (props.imageUrl
-      ? '<img class="hc-prize-card-img" src="' +
+      ? '<img data-hc-ph="gift" class="hc-prize-card-img" src="' +
         escapeAttr(String(props.imageUrl)) +
         '" alt="" />'
-      : '<span class="hc-prize-card-img hc-prize-card-img--ph"></span>') +
+      : '<span class="hc-prize-card-img hc-prize-card-img--ph hc-img-ph hc-img-ph--gift"></span>') +
     '<span class="hc-prize-card-scrim" aria-hidden="true"></span>' +
     '<span class="hc-prize-card-label">' +
     '<span class="hc-prize-card-dot" aria-hidden="true"></span>' +

@@ -8,6 +8,7 @@ import rankMedalSvg from '../../assets/icon-medal-rank.svg?raw';
 import shieldSvg from '../../assets/icons/shield.svg?raw';
 import personSvg from '../../assets/icons/person.svg?raw';
 import chevronLeftSvg from '../../assets/icons/chevron-left.svg?raw';
+import { enableDragScroll } from '../../base-components/dragScroll.js';
 
 // How many rows the leaderboard shows before "View all" is tapped.
 var COLLAPSED_ROWS = 5;
@@ -92,7 +93,7 @@ function avatarHtml(row) {
   var url = pickRowAvatar(row);
   if (url) {
     return (
-      '<span class="hc-prize-lb-avatar"><img src="' +
+      '<span class="hc-prize-lb-avatar"><img data-hc-ph="person" src="' +
       escapeAttr(url) +
       '" alt="" /></span>'
     );
@@ -251,14 +252,14 @@ function buildMediaHtml(meta, countdownLabel) {
         .map(function (url) {
           return (
             '<div class="hc-prize-detail-slide">' +
-            '<img class="hc-prize-detail-img" src="' +
+            '<img data-hc-ph="gift" class="hc-prize-detail-img" src="' +
             escapeAttr(url) +
             '" alt="" /></div>'
           );
         })
         .join('')
     : '<div class="hc-prize-detail-slide">' +
-      '<div class="hc-prize-detail-img hc-prize-detail-img--ph"></div></div>';
+      '<div class="hc-prize-detail-img hc-prize-detail-img--ph hc-img-ph hc-img-ph--gift"></div></div>';
 
   var dots = '';
   if (urls.length > 1) {
@@ -354,6 +355,7 @@ export function bindPrizeDetail(root, options) {
   if (!root) return;
 
   var track = root.querySelector('.hc-prize-detail-track');
+  if (track) enableDragScroll(track);
   var dots = root.querySelectorAll('.hc-prize-detail-dot');
   if (track && dots.length > 1) {
     track.addEventListener('scroll', function () {

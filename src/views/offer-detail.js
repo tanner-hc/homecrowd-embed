@@ -216,7 +216,7 @@ function buildLinkedCardHtml(card, avatarUri) {
       '<button type="button" class="hc-shop-detail-card-cta" data-shop-manage-card>Manage</button>' +
       '</div>' +
       (avatarUri
-        ? '<img src="' +
+        ? '<img data-hc-ph="store" src="' +
           escapeAttr(avatarUri) +
           '" alt="" class="hc-shop-detail-card-avatar" />'
         : '') +
@@ -238,7 +238,7 @@ function buildLinkedCardHtml(card, avatarUri) {
     '<button type="button" class="hc-shop-detail-card-cta" data-shop-link-card>Link</button>' +
     '</div>' +
     (avatarUri
-      ? '<img src="' +
+      ? '<img data-hc-ph="store" src="' +
         escapeAttr(avatarUri) +
         '" alt="" class="hc-shop-detail-card-avatar" />'
       : '') +
@@ -434,7 +434,7 @@ function buildExclusionsListHtml(title, items) {
   return (
     '<div class="hc-shop-detail-tip hc-shop-detail-tip--exclusions">' +
     '<span class="hc-shop-detail-tip-icon" aria-hidden="true">' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     escapeAttr(crossIconUrl) +
     '" alt="" class="hc-shop-detail-tip-icon-img" />' +
     '</span>' +
@@ -463,7 +463,7 @@ function buildExclusionsHtml(offer) {
     return (
       '<div class="hc-shop-detail-tip">' +
       '<span class="hc-shop-detail-tip-icon" aria-hidden="true">' +
-      '<img src="' +
+      '<img data-hc-ph="none" src="' +
       escapeAttr(crossIconUrl) +
       '" alt="" class="hc-shop-detail-tip-icon-img" />' +
       '</span>' +
@@ -529,7 +529,7 @@ function buildShopDetailHtml(offer, card, user) {
     '<div class="hc-shop-detail-hero">' +
     '<div class="hc-shop-detail-logo-wrap">' +
     (logo
-      ? '<img src="' +
+      ? '<img data-hc-ph="store" src="' +
         escapeAttr(logo) +
         '" alt="" class="hc-shop-detail-logo" />'
       : '<span class="hc-shop-detail-logo-ph">' + escapeHtml(initials || '?') + '</span>') +

@@ -82,7 +82,7 @@ export function renderLogin(container, onLoginSuccess, options) {
     : '';
   var logoBlock = hasCustomHeaderLogo() || schoolMode
     ? '<div class="hc-login-logo hc-login-logo--brand">' + renderBrandLockup() + '</div>'
-    : '<div class="hc-login-logo"><img src="' +
+    : '<div class="hc-login-logo"><img data-hc-ph="none" src="' +
       escapeAttr(getHeaderLogoUrl()) +
       '" alt="Homecrowd" class="hc-login-logo-img" /></div>';
   var titleLine1 = schoolMode ? 'Shop Smarter' : 'Shop Smarter.';

@@ -412,11 +412,11 @@ export function renderBrandLockup() {
   var src = getHeaderLogoUrl();
   var alt = hasCustomHeaderLogo() ? 'School brand' : 'Homecrowd';
   if (!hasCustomHeaderLogo()) {
-    return '<div class="hc-header"><img src="' + escapeHtml(src) + '" alt="' + escapeHtml(alt) + '" class="hc-header-logo" /></div>';
+    return '<div class="hc-header"><img data-hc-ph="none" src="' + escapeHtml(src) + '" alt="' + escapeHtml(alt) + '" class="hc-header-logo" /></div>';
   }
   return (
     '<div class="hc-header hc-header--brand">' +
-    '<img src="' +
+    '<img data-hc-ph="school" src="' +
     escapeHtml(src) +
     '" alt="' +
     escapeHtml(alt) +

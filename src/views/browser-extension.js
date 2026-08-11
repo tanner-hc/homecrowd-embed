@@ -53,15 +53,15 @@ function buildExtensionHeaderHtml(opts) {
   }
   html +=
     '<div class="hc-be-body-image-wrap">' +
-    '<img class="hc-be-body-image" src="' +
+    '<img data-hc-ph="none" class="hc-be-body-image" src="' +
     extensionBodyImg +
     '" alt="Find offers. Earn points. Offers show up automatically as you browse in Safari." />' +
     '<div class="hc-be-body-image-logo" data-be-body-logo aria-hidden="true"></div>' +
     '</div>';
   var compassSvg =
-    '<img src="' + safariThinUrl + '" alt="" class="hc-be-step-img hc-be-step-img--safari" />';
+    '<img data-hc-ph="none" src="' + safariThinUrl + '" alt="" class="hc-be-step-img hc-be-step-img--safari" />';
   var tagSvg =
-    '<img src="' + offerThinUrl + '" alt="" class="hc-be-step-img" />';
+    '<img data-hc-ph="none" src="' + offerThinUrl + '" alt="" class="hc-be-step-img" />';
   var trophySvg =
     '<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
     '<path d="M9 4h14v6a7 7 0 0 1-14 0V4Z" stroke="#1d6dff" stroke-width="2" stroke-linejoin="round"/>' +
@@ -178,7 +178,7 @@ function renderPopularOffersHtml(merchants) {
     html += '<span class="hc-be-popular-logo-wrap">';
     if (logo) {
       html +=
-        '<img class="hc-be-popular-logo" src="' +
+        '<img data-hc-ph="store" class="hc-be-popular-logo" src="' +
         escapeAttr(logo) +
         '" alt="' +
         escapeAttr(name) +
@@ -250,7 +250,7 @@ function setBodyImageLogo(offer) {
   var logo = offer && (offer.logoUrl || offer.logo);
   if (!logo) return;
   slot.innerHTML =
-    '<img src="' + escapeAttr(logo) + '" alt="" />';
+    '<img data-hc-ph="store" src="' + escapeAttr(logo) + '" alt="" />';
 }
 
 function bindExtensionInstallButton(installBtn) {
@@ -390,7 +390,7 @@ function renderSafariSuccess(container, earnedPoints) {
     '<div class="hc-safari-on-success">' +
     '<div class="hc-safari-on-success-toast" id="hc-safari-on-toast"></div>' +
     '<div class="hc-safari-on-success-content">' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     escapeAttr(hcIconUrl) +
     '" alt="" class="hc-safari-on-success-logo" data-safari-success-logo />' +
     '<h1 class="hc-safari-on-success-title" data-safari-success-title>You\'re<br>Earning on<br>Safari</h1>' +
@@ -441,7 +441,7 @@ function renderSafariPrompt(container, onContinue) {
     // School programs show their own mark here; the Homecrowd wordmark is the
     // fallback when no brand config came back.
     (hasCustomHeaderLogo()
-      ? '<img src="' +
+      ? '<img data-hc-ph="school" src="' +
         escapeAttr(getHeaderLogoUrl()) +
         '" alt="' +
         escapeAttr(getSchoolName() || 'School brand') +
@@ -459,7 +459,7 @@ function renderSafariPrompt(container, onContinue) {
     '</p>' +
     '<div class="hc-safari-on-features">' +
     '<div class="hc-safari-on-feature">' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     escapeAttr(presentIconUrl) +
     '" alt="" class="hc-safari-on-feature-icon" width="28" height="28" />' +
     '<div class="hc-safari-on-feature-text">' +

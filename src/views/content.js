@@ -60,8 +60,8 @@ function featuredHtml(item) {
   var image = pickImage(item);
   var badge = contentTypeBadgeMapping[item.content_type] || item.content_type || 'Content';
   var imageBlock = image
-    ? '<img src="' + escapeAttr(image) + '" alt="" class="hc-content-featured-img" />'
-    : '<div class="hc-content-featured-img hc-content-featured-img--empty"></div>';
+    ? '<img data-hc-ph="image" src="' + escapeAttr(image) + '" alt="" class="hc-content-featured-img" />'
+    : '<div class="hc-content-featured-img hc-content-featured-img--empty hc-img-ph hc-img-ph--image"></div>';
   return (
     '<button type="button" class="hc-content-featured" data-content-id="' +
     escapeAttr(item.id) +
@@ -94,8 +94,8 @@ function cardHtml(item) {
   }
   var contentType = item.content_type || '';
   var imageBlock = image
-    ? '<img src="' + escapeAttr(image) + '" alt="" class="hc-content-card-img" />'
-    : '<div class="hc-content-card-img hc-content-card-img--empty"></div>';
+    ? '<img data-hc-ph="image" src="' + escapeAttr(image) + '" alt="" class="hc-content-card-img" />'
+    : '<div class="hc-content-card-img hc-content-card-img--empty hc-img-ph hc-img-ph--image"></div>';
   return (
     '<button type="button" class="hc-content-card" data-content-id="' +
     escapeAttr(item.id) +

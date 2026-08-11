@@ -106,9 +106,9 @@ export function buildDashboardHalfCircleGaugeHtml(o) {
       escapeHtml(currentTierName) +
       '</span>' +
       (currentTierBadgeUrl
-        ? '<img class="hc-dash-tier-badge-img" src="' +
+        ? '<img data-hc-ph="none" class="hc-dash-tier-badge-img" src="' +
           escapeAttr(currentTierBadgeUrl) +
-          '" alt="" loading="lazy" decoding="async" onerror="this.style.display=\'none\'"/>'
+          '" alt="" loading="lazy" decoding="async" />'
         : '') +
       '</button>';
   }

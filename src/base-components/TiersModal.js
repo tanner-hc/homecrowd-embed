@@ -65,9 +65,9 @@ export function buildTiersModalHtml(opts) {
         ? String(tier.name).toLowerCase() === currentTierName.toLowerCase()
         : tier.level === currentTierLevel;
     var badge = tier.badge_url
-      ? '<img class="hc-tiers-modal-badge" src="' +
+      ? '<img data-hc-ph="none" class="hc-tiers-modal-badge" src="' +
         escapeAttr(tier.badge_url) +
-        '" alt="" loading="lazy" decoding="async" onerror="this.style.visibility=\'hidden\'"/>'
+        '" alt="" loading="lazy" decoding="async" />'
       : '<div class="hc-tiers-modal-badge hc-tiers-modal-badge-placeholder"></div>';
     rows +=
       '<div class="hc-tiers-modal-row' +

@@ -71,7 +71,7 @@ export function renderGetStarted(container) {
     rootStyle +
     '>' +
     '<div class="hc-get-started-top">' +
-    '<img src="' +
+    '<img data-hc-ph="school" src="' +
     escapeAttr(logoUrl) +
     '" alt="' +
     escapeAttr(logoAlt) +
@@ -90,7 +90,7 @@ export function renderGetStarted(container) {
     phoneSvg +
     '</div>' +
     (welcomeImageUrl
-      ? '<img src="' +
+      ? '<img data-hc-ph="school" src="' +
         escapeAttr(welcomeImageUrl) +
         '" alt="" class="hc-get-started-welcome-img" />'
       : '') +

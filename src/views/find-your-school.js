@@ -36,7 +36,7 @@ export function clearPendingSignupSchool() {
 function schoolRowHtml(school) {
   var location = [school.city, school.state].filter(Boolean).join(', ');
   var imageHtml = school.image
-    ? '<img src="' +
+    ? '<img data-hc-ph="school" src="' +
       escapeAttr(String(school.image)) +
       '" alt="" class="hc-find-school-result-logo" />'
     : '';
@@ -76,7 +76,7 @@ export function renderFindYourSchool(container) {
     '<button type="button" id="hc-find-school-back" class="hc-find-school-back" aria-label="Back">' +
     chevronLeftSvg +
     '</button>' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     escapeAttr(headerUrl) +
     '" alt="Homecrowd" class="hc-find-school-logo" />' +
     '<span class="hc-find-school-nav-spacer" aria-hidden="true"></span>' +
@@ -143,7 +143,7 @@ export function renderFindYourSchool(container) {
     closeActiveSheet();
     activeSheet = openBottomSheet({
       iconHtml:
-        '<img src="' +
+        '<img data-hc-ph="none" src="' +
         escapeAttr(pinErrorUrl) +
         '" alt="" class="hc-find-school-pin-icon" />',
       title: 'Sorry, we are not\navailable here yet',

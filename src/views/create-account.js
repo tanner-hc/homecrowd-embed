@@ -59,7 +59,7 @@ export function renderCreateAccount(container) {
     '<button type="button" id="hc-create-account-back" class="hc-create-account-back" aria-label="Back">' +
     chevronLeftSvg +
     '</button>' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     escapeAttr(headerUrl) +
     '" alt="Homecrowd" class="hc-create-account-logo" />' +
     '<span class="hc-create-account-nav-spacer" aria-hidden="true"></span>' +
@@ -67,14 +67,14 @@ export function renderCreateAccount(container) {
     '<div class="hc-create-account-scroll">' +
     '<h1 class="hc-create-account-title">Create an Account</h1>' +
     '<button type="button" id="hc-create-google" class="hc-create-account-social">' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     escapeAttr(googleIconUrl) +
     '" alt="" class="hc-create-account-social-icon" />' +
     '<span>Continue with Google</span>' +
     '</button>' +
     (shouldShowApple()
       ? '<button type="button" id="hc-create-apple" class="hc-create-account-social">' +
-        '<img src="' +
+        '<img data-hc-ph="none" src="' +
         escapeAttr(appleIconUrl) +
         '" alt="" class="hc-create-account-social-icon" />' +
         '<span>Continue with Apple</span>' +

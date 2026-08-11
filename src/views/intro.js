@@ -22,33 +22,33 @@ export function renderIntro(container, route) {
     '<div id="hc-intro-track" class="hc-intro-track">' +
     '<section class="hc-intro-slide">' +
     '<div class="hc-intro-column hc-intro-column--first">' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     cardImageUrl +
     '" alt="" class="hc-intro-img hc-intro-img--card" />' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     linkCardImageUrl +
     '" alt="" class="hc-intro-img hc-intro-img--link-card" />' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     screenOneImageUrl +
     '" alt="" class="hc-intro-img hc-intro-img--screen-one" />' +
     '</div>' +
     '</section>' +
     '<section class="hc-intro-slide">' +
     '<div class="hc-intro-column hc-intro-column--second">' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     arrowDownImageUrl +
     '" alt="" class="hc-intro-img hc-intro-img--arrow-down" />' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     downloadExtImageUrl +
     '" alt="" class="hc-intro-img hc-intro-img--download-ext" />' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     screenTwoImageUrl +
     '" alt="" class="hc-intro-img hc-intro-img--screen-two" />' +
     '</div>' +
     '</section>' +
     '<section class="hc-intro-slide">' +
     '<div class="hc-intro-column hc-intro-column--third">' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     screenThreeImageUrl +
     '" alt="" class="hc-intro-img hc-intro-img--screen-three" />' +
     '</div>' +

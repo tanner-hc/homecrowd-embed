@@ -85,7 +85,7 @@ function buildThumbHtml(milestone) {
   if (art) {
     return (
       '<div class="hc-milestones-thumb">' +
-      '<img src="' +
+      '<img data-hc-ph="gift" src="' +
       escapeAttr(art) +
       '" alt="" class="hc-milestones-thumb-img" />' +
       '</div>'
@@ -324,7 +324,7 @@ export function buildPointsMilestonesCardHtml(props) {
     '</div>' +
     '</div>' +
     (props.logoUrl
-      ? '<img src="' +
+      ? '<img data-hc-ph="store" src="' +
         escapeAttr(String(props.logoUrl)) +
         '" alt="" class="hc-milestones-logo" />'
       : '') +

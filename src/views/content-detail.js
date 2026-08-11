@@ -95,7 +95,7 @@ export function renderContentDetail(container, contentId) {
           '</div>';
       } else if (image) {
         html +=
-          '<div class="hc-content-detail-media"><img src="' +
+          '<div class="hc-content-detail-media"><img data-hc-ph="image" src="' +
           escapeAttr(image) +
           '" alt="" class="hc-content-detail-img" /></div>';
       } else {

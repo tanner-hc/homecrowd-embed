@@ -23,7 +23,7 @@ var METHOD_EMAIL = 'email';
 function buildLogoHtml() {
   var custom = hasCustomHeaderLogo();
   return (
-    '<img class="hc-fr-redeem-wordmark' +
+    '<img data-hc-ph="school" class="hc-fr-redeem-wordmark' +
     (custom ? ' hc-fr-redeem-wordmark--custom' : '') +
     '" src="' +
     escapeAttr(custom ? getHeaderLogoUrl() : wordmarkUrl) +
@@ -55,10 +55,10 @@ function buildHtml(milestone) {
     '</p>' +
     '</div>' +
     '<div class="hc-fr-redeem-art">' +
-    '<img class="hc-fr-redeem-glow" src="' +
+    '<img data-hc-ph="none" class="hc-fr-redeem-glow" src="' +
     escapeAttr(glowUrl) +
     '" alt="" aria-hidden="true" />' +
-    '<img class="hc-fr-redeem-gift" src="' +
+    '<img data-hc-ph="none" class="hc-fr-redeem-gift" src="' +
     escapeAttr(giftUrl) +
     '" alt="" aria-hidden="true" />' +
     '</div>' +
@@ -106,7 +106,7 @@ function buildUnavailableHtml(message) {
 function buildSuccessHtml(milestone) {
   return (
     '<div class="hc-fr-success">' +
-    '<img class="hc-fr-success-wordmark" src="' +
+    '<img data-hc-ph="none" class="hc-fr-success-wordmark" src="' +
     escapeAttr(wordmarkUrl) +
     '" alt="Homecrowd" />' +
     '<div class="hc-fr-success-copy">' +

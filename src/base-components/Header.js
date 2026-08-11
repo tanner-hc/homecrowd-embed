@@ -16,7 +16,7 @@ export default function Header(props) {
     extra +
     '">' +
     '<div class="hc-bc-header-inner">' +
-    '<img src="' +
+    '<img data-hc-ph="school" src="' +
     escapeHtml(src) +
     '" alt="' +
     alt +

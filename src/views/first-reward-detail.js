@@ -46,7 +46,7 @@ function buildCarouselHtml(milestone) {
         .map(function (url) {
           return (
             '<div class="hc-fr-detail-slide">' +
-            '<img class="hc-fr-detail-img" src="' +
+            '<img data-hc-ph="gift" class="hc-fr-detail-img" src="' +
             escapeAttr(url) +
             '" alt="" /></div>'
           );

@@ -48,7 +48,7 @@ export function openGetNotifiedModal(options) {
   sheet = openBottomSheet({
     keyboardAvoiding: true,
     iconHtml:
-      '<img src="' +
+      '<img data-hc-ph="none" src="' +
       escapeAttr(mailTwoUrl) +
       '" alt="" class="hc-get-notified-mail-icon" />',
     title: 'Get notified',

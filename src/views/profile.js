@@ -16,7 +16,6 @@ import referralIconSvg from '../assets/icons/referral.svg?raw';
 import bagIconSvg from '../assets/icons/bag.svg?raw';
 import chevronRightIconSvg from '../assets/icons/chevron-right.svg?raw';
 import { getReferralReward } from '../referral-reward.js';
-import { openTravel } from './travel.js';
 
 function svgAddClass(svgRaw, className) {
   return String(svgRaw).replace(/^<svg\s/i, '<svg class="' + className + '" ');
@@ -118,7 +117,7 @@ function profileCardHtml(user) {
     '</div>' +
     '</div>' +
     '<div class="hc-profile-card-logo-wrap">' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     escapeAttr(iconTransparentUrl) +
     '" alt="" class="hc-profile-card-logo" />' +
     '</div>' +
@@ -257,10 +256,10 @@ async function loadProfile(container) {
   if (isSuperuser) {
     html += SecondaryButton({
       leftHtml: secondaryIconHtml(bagIconSvg),
-      title: 'Travel',
-      subtitle: 'Open Access Travel platform',
+      title: 'Draw a Card',
+      subtitle: 'Daily card draw for bonus points',
       rightHtml: chevronRightHtml(),
-      id: 'hc-profile-travel',
+      id: 'hc-profile-card-draw',
     });
   }
 
@@ -324,10 +323,10 @@ async function loadProfile(container) {
     });
   }
 
-  var travelBtn = container.querySelector('#hc-profile-travel');
-  if (travelBtn) {
-    travelBtn.addEventListener('click', function () {
-      openTravel();
+  var cardDrawBtn = container.querySelector('#hc-profile-card-draw');
+  if (cardDrawBtn) {
+    cardDrawBtn.addEventListener('click', function () {
+      navigate('/card-draw');
     });
   }
 

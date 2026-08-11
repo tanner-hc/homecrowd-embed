@@ -64,7 +64,7 @@ export function mountCurvedLogoCarousel(container) {
   var html = '';
   for (var i = 0; i < LOOP_LOGOS.length; i += 1) {
     html +=
-      '<img class="hc-curved-logo" src="' +
+      '<img data-hc-ph="store" class="hc-curved-logo" src="' +
       LOOP_LOGOS[i] +
       '" alt="" draggable="false" />';
   }

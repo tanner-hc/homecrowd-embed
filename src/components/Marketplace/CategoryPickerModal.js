@@ -30,7 +30,7 @@ export function openCategoryPickerModal(options) {
     var rows = SHOP_CATEGORIES.map(function (cat) {
       var selected = draftId === cat.id;
       var iconHtml = cat.iconPng
-        ? '<img src="' +
+        ? '<img data-hc-ph="none" src="' +
           cat.iconPng +
           '" alt="" class="hc-cat-picker-icon" />'
         : '<span class="hc-cat-picker-icon hc-cat-picker-icon--svg" aria-hidden="true">' +

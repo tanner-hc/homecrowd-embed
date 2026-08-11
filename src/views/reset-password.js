@@ -64,7 +64,7 @@ export function renderResetPassword(container, route) {
     '<div class="hc-login-overlay">' +
     '<div class="hc-login-container">' +
     '<div class="hc-login-logo">' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     logoUrl +
     '" alt="Homecrowd" class="hc-login-logo-img" />' +
     '</div>' +

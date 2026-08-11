@@ -777,7 +777,7 @@ export function buildWeeklyRewardCardHtml(meta, className) {
   html += '</div>';
   if (meta.imageUrl) {
     html +=
-      '<div class="hc-weekly-reward-image-wrap"><img class="hc-weekly-reward-image" src="' +
+      '<div class="hc-weekly-reward-image-wrap"><img data-hc-ph="gift" class="hc-weekly-reward-image" src="' +
       escapeAttr(meta.imageUrl) +
       '" alt="' +
       escapeAttr(meta.title || 'Weekly Leaderboard') +
@@ -865,7 +865,7 @@ export function openWeeklyLeaderboardModal(options) {
     var html = '<div class="hc-weekly-lb-reward-hero">';
     if (rewardImageUrl) {
       html +=
-        '<div class="hc-weekly-lb-image-frame"><img class="hc-weekly-lb-reward-image" src="' +
+        '<div class="hc-weekly-lb-image-frame"><img data-hc-ph="gift" class="hc-weekly-lb-reward-image" src="' +
         escapeAttr(rewardImageUrl) +
         '" alt=""/></div>';
     }

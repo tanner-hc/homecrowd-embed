@@ -209,8 +209,8 @@ function buildShopRowHtml(shop) {
     '">' +
     '<span class="hc-all-shops-logo-wrap">' +
     (logoUri
-      ? '<img src="' + escapeAttr(logoUri) + '" alt="" class="hc-all-shops-logo" />'
-      : '<span class="hc-all-shops-logo hc-all-shops-logo--ph"></span>') +
+      ? '<img data-hc-ph="store" src="' + escapeAttr(logoUri) + '" alt="" class="hc-all-shops-logo" />'
+      : '<span class="hc-all-shops-logo hc-all-shops-logo--ph hc-img-ph hc-img-ph--store"></span>') +
     '</span>' +
     '<span class="hc-all-shops-meta">' +
     '<span class="hc-all-shops-title-row">' +

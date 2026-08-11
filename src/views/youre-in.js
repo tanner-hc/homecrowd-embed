@@ -103,7 +103,7 @@ export function renderYoureIn(container) {
     '<button type="button" id="hc-youre-in-back" class="hc-youre-in-back" aria-label="Back">' +
     chevronLeftSvg +
     '</button>' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     escapeAttr(headerUrl) +
     '" alt="Homecrowd" class="hc-youre-in-nav-logo" />' +
     '<span class="hc-youre-in-nav-spacer" aria-hidden="true"></span>' +
@@ -112,10 +112,10 @@ export function renderYoureIn(container) {
     '<div class="hc-youre-in-logo-stage">' +
     '<div class="hc-youre-in-logo-wrap" id="hc-youre-in-logo">' +
     (logoUrl
-      ? '<img src="' +
+      ? '<img data-hc-ph="school" src="' +
         escapeAttr(logoUrl) +
         '" alt="" class="hc-youre-in-school-logo" />'
-      : '<div class="hc-youre-in-school-logo-placeholder" aria-hidden="true"></div>') +
+      : '<div class="hc-youre-in-school-logo-placeholder hc-img-ph hc-img-ph--school" aria-hidden="true"></div>') +
     '</div>' +
     '<div class="hc-youre-in-confetti" id="hc-youre-in-confetti" aria-hidden="true"></div>' +
     '</div>' +

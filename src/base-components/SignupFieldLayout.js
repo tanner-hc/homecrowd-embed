@@ -40,7 +40,7 @@ export function mountSignupFieldLayout(container, options) {
     '<button type="button" class="hc-signup-field-back" id="hc-signup-field-back" aria-label="Back">' +
     chevronLeftSvg +
     '</button>' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     escapeAttr(headerUrl) +
     '" alt="Homecrowd" class="hc-signup-field-logo" />' +
     '<span class="hc-signup-field-nav-spacer" aria-hidden="true"></span>' +

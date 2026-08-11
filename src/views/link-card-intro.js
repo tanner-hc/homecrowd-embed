@@ -171,7 +171,7 @@ export function renderLinkCardIntro(container, opts) {
     '<button type="button" class="hc-lci-back" id="hc-lci-back" aria-label="Back">' +
     chevronLeftSvg +
     '</button>' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     headerUrl +
     '" alt="HomeCrowd" class="hc-lci-logo" />' +
     '<div class="hc-lci-nav-spacer" aria-hidden="true"></div>' +

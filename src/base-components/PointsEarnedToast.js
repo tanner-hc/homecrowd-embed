@@ -20,7 +20,7 @@ export function showPointsEarnedToast(mountEl, options) {
   root.setAttribute('aria-live', 'polite');
   root.innerHTML =
     '<div class="hc-points-earned-toast-banner">' +
-    '<img src="' +
+    '<img data-hc-ph="none" src="' +
     completeIconUrl +
     '" alt="" class="hc-points-earned-toast-icon" />' +
     '<span class="hc-points-earned-toast-text">You earned ' +
