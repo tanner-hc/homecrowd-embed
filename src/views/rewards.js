@@ -6,6 +6,13 @@ import { buildPurchasesFootnoteHtml } from '../purchasesFootnote.js';
 import { escapeHtml } from '../base-components/html.js';
 import { getNavEpoch } from '../router.js';
 import {
+  getRewardEndDate,
+  getRewardStartDate,
+  isFeaturedRewardLive,
+  parseDateEndOfDay,
+  parseRewardDate,
+} from '../reward-window.js';
+import {
   buildOverallRewardContext,
   buildPrizeCountdownLabel,
   buildWeeklyCountdownLabel,
@@ -128,49 +135,6 @@ function normalizeReward(r) {
     is_locked: !!(r.is_locked || r.isLocked),
     is_active: r.is_active !== false && r.enabled !== false,
   };
-}
-
-/* Ported from the mobile app's utils/rewardStartLock so the embed orders and
-   gates rewards on the same fields it does. */
-function getRewardStartDate(r) {
-  return (
-    (r && r.raffle_info && r.raffle_info.start_date) ||
-    (r && r.auction_info && r.auction_info.start_date) ||
-    null
-  );
-}
-
-function getRewardEndDate(r) {
-  return (
-    (r && r.raffle_info && r.raffle_info.drawing_date) ||
-    (r && r.auction_info && r.auction_info.end_date) ||
-    null
-  );
-}
-
-/**
- * A bare YYYY-MM-DD parses as UTC midnight, which lands on the previous day in
- * any timezone behind UTC — "Sep 25" would label itself "Thursday, Sep 24". Read
- * those as local calendar days; leave real timestamps alone.
- */
-function parseRewardDate(dateStr) {
-  if (!dateStr) return null;
-  var parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr));
-  if (parts) {
-    return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]));
-  }
-  var d = new Date(dateStr);
-  return isNaN(d.getTime()) ? null : d;
-}
-
-/** A date-only value closes at the end of that day, not at its midnight. */
-function parseDateEndOfDay(dateStr) {
-  var d = parseRewardDate(dateStr);
-  if (!d) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr))) {
-    d.setHours(23, 59, 59, 999);
-  }
-  return d;
 }
 
 /** "Friday, Sep 25" — the same heading mobile puts above each day's rewards. */
@@ -421,16 +385,22 @@ async function loadRewards(container, routeEpoch) {
       return normalizeMediaUrl(path);
     }
 
+    // One clock for the whole render, so the featured slot and the catalogue
+    // below can never disagree about what is still open.
+    var nowMs = Date.now();
+
     // Featured rewards lead the page, above the prizes, and are held back from
     // the catalogue below so they never appear twice.
+    // Featured is a flag, not a schedule: a flagged raffle whose drawing has
+    // passed, or that has not opened yet, must not hold the top slot.
     var featuredRewards = formattedRewards.filter(function (r) {
-      return r && r.id != null && r.is_featured && r.is_active !== false;
+      return isFeaturedRewardLive(r, nowMs);
     });
     if (featuredRewards.length) {
       html += '<div class="hc-prize-cards hc-rewards-featured">';
       featuredRewards.forEach(function (r) {
         html += buildPrizeCardHtml({
-          label: 'Current Reward',
+          label: 'Featured Reward',
           title: r.title,
           imageUrl: getRewardImageUrl(r, getImageUrl),
           rewardId: r.id,
@@ -483,7 +453,6 @@ async function loadRewards(container, routeEpoch) {
     // The rest of the catalogue, under the ladder. The prize cards above are
     // leaderboard rewards and the ladder is the first-reward set, so neither
     // overlaps this list.
-    var nowMs = Date.now();
     var otherRewards = formattedRewards.filter(function (r) {
       return r && r.id != null && r.is_active !== false && !r.is_featured;
     });

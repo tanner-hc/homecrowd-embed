@@ -60,10 +60,28 @@ export function buildUnlockSetupSectionHtml(props) {
   };
   var steps = getSetupSteps(includeSafari);
 
+  function stepCanExpand(step) {
+    return (
+      !doneMap[step.key] && (step.key === 'linkCard' || step.key === 'safariExtension')
+    );
+  }
+
+  /**
+   * The one step that starts open: the first thing still left to do.
+   *
+   * Step 1 is created during signup, so in practice this is step 2 until the card is
+   * linked and step 3 after. Everything else starts closed, so the list reads as a
+   * single next action rather than a wall of open panels. Once every step is done
+   * nothing opens, which is correct — there is nothing left to prompt.
+   */
+  var defaultOpenStep = steps.filter(stepCanExpand)[0] || null;
+  var defaultOpenKey = defaultOpenStep ? defaultOpenStep.key : null;
+
   var stepsHtml = steps.map(function (step) {
     var done = !!doneMap[step.key];
     var stepPoints = points[step.pointsKey] != null ? points[step.pointsKey] : 0;
-    var canExpand = !done && (step.key === 'linkCard' || step.key === 'safariExtension');
+    var canExpand = stepCanExpand(step);
+    var startsOpen = canExpand && step.key === defaultOpenKey;
     var label = done ? step.doneLabel : step.label;
     var iconHtml = done
       ? '<span class="hc-unlock-setup-done" aria-hidden="true">' + checkmarkSvg + '</span>'
@@ -99,6 +117,7 @@ export function buildUnlockSetupSectionHtml(props) {
       roleAttr +
       ' class="hc-unlock-setup-card' +
       (canExpand ? ' hc-unlock-setup-card--expandable' : '') +
+      (startsOpen ? ' hc-unlock-setup-card--open' : '') +
       '">' +
       '<div class="hc-unlock-setup-header">' +
       iconHtml +
@@ -206,8 +225,15 @@ export function bindUnlockSetupSection(root, handlers) {
   root.querySelectorAll('[data-unlock-step]').forEach(function (card) {
     var body = card.querySelector('.hc-unlock-setup-body');
     if (body) {
-      body.style.height = '0px';
-      body.style.overflow = 'hidden';
+      // The markup marks the next unfinished step open; honour that instead of
+      // collapsing everything, or the default-open card would snap shut on bind.
+      // 'auto' rather than a pixel height so animateBody's close path measures it.
+      if (card.classList.contains('hc-unlock-setup-card--open')) {
+        body.style.height = 'auto';
+      } else {
+        body.style.height = '0px';
+        body.style.overflow = 'hidden';
+      }
     }
     card.addEventListener('click', function (e) {
       if (e.target && e.target.closest && e.target.closest('[data-unlock-cta]')) {

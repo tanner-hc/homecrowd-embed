@@ -210,6 +210,9 @@ body {
 
 /* Layout */
 .hc-embed {
+  /* Positioning context for pages that let the tab bar float over their content
+     — see .hc-content--stores-map ~ .hc-tab-bar-shell. */
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
   min-height: 100%;
@@ -11024,6 +11027,14 @@ button.hc-shop-detail-cats--expandable {
 }
 
 /* The rewards screen's prize cards, sitting in home's section rhythm. */
+/* Multiple featured rewards stack at the same 12px the rewards page uses, rather
+   than .hc-prize-cards' 24px — the two screens show the same set. Both classes
+   are named because .hc-prize-cards sets the gap later in this file, so a single
+   class would tie on specificity and lose on source order. */
+.hc-prize-cards.hc-home-prize-cards--featured {
+  gap: 12px;
+}
+
 .hc-home-prize-cards {
   margin-top: 16px;
   margin-bottom: 14px;
@@ -15014,7 +15025,26 @@ button.hc-shop-detail-cats--expandable {
 .hc-stores-map-body .hc-offers-map-mount {
   height: 100%;
   min-height: 280px;
+  /* Edge to edge: the shared rule rounds and shadows the map because elsewhere it
+     is an inset card. Here it is the page. */
   border-radius: 0;
+  box-shadow: none;
+  /* Leaflet gives its panes z-index 400+ and its controls 800+. The mount is
+     `position: relative` with no z-index, so those compete directly with the tab
+     bar shell's 150 and win — the map drew over the nav. Isolating contains them
+     so the whole map stacks as one box beneath the bar. */
+  isolation: isolate;
+  z-index: 0;
+}
+
+/* The tab bar is a flex sibling of .hc-content, so in normal flow the map stops
+   above it. Lifting it out of flow lets the map run the full height and show
+   through the shell's 32px top corners. */
+.hc-content--stores-map ~ .hc-tab-bar-shell {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .hc-stores-map-body .hc-offers-location-card,
@@ -15024,6 +15054,19 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-content.hc-content--stores-map.hc-content--with-tab-bar {
   padding-bottom: 0;
+}
+
+/* The map is the page here, so it escapes the 600px reading column every other
+   screen sits in and runs to the edges of the viewport. The 8px padding-top from
+   .hc-content goes too — the --flush-top rule that would clear it is scoped to
+   #hc-content, the inner div, so it never matches this <main>. */
+.hc-content.hc-content--stores-map {
+  max-width: none;
+  padding: 0;
+}
+
+.hc-content--stores-map ~ .hc-tab-bar-shell {
+  max-width: none;
 }
 
 .hc-marketplace-categories {
@@ -16922,18 +16965,31 @@ body:has(.hc-fr-success) {
   gap: 24px;
 }
 
-/* Featured rewards lead the page; this separates them from the prize cards. */
+/* Featured rewards lead the page; this separates them from the prize cards.
+   Matched to the 12px gap between the weekly and season cards below, so the
+   whole block reads as one group rather than the featured cards sitting apart.
+   The gap overrides .hc-prize-cards' 24px for the same reason: when more than
+   one reward is featured, the space between them should match the space under
+   them. */
 .hc-rewards-featured {
-  margin-bottom: 24px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 /* Weekly and season prizes sit side by side. At a 402px viewport with 20px
-   gutters this makes each card ~175px wide against the shared 245px height —
-   the portrait proportion the layout calls for. */
+   gutters this makes each card ~175px wide against the shared 196px height. */
 .hc-prize-cards--pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+/* 80% of the 245px design height. Scoped to the pair on purpose: .hc-prize-card is
+   shared with the Current Reward card above and the home screen's, which keep the
+   full height. Everything inside anchors to an edge — label and status to the top,
+   title to the bottom — so height is the only value that changes. */
+.hc-prize-cards--pair .hc-prize-card {
+  height: 196px;
 }
 
 /* The title's fixed 238px measure and the right-aligned status chip both assume
@@ -17183,7 +17239,9 @@ body:has(.hc-fr-success) {
 /* Bottom-anchored so the title grows upward and can never run off the card.
    At the design's two lines (36px x 0.9 = 64.8px) this puts the top edge at
    169px, matching the frame; longer titles simply extend upward instead.
-   Capped at three lines so a very long one can't reach the label and pill. */
+   Capped at three lines so a very long one can't reach the label and pill —
+   which still holds on the shorter paired card, where three lines reach 88px
+   against the status chip's second row at 38px. */
 .hc-prize-card-title {
   position: absolute;
   left: 9.5px;

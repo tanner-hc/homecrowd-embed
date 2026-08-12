@@ -5,6 +5,20 @@ export function pickSchoolName(user) {
   return 'your school';
 }
 
+/**
+ * The signed-in user's own school logo.
+ *
+ * Distinct from brand.js's getHeaderLogoUrl(), which is the embed's *header* asset —
+ * usually a wordmark sized for the top bar. This is the school's mark from the school
+ * record, which is what belongs in a small round avatar.
+ */
+export function pickSchoolLogoUrl(user) {
+  if (!user || typeof user !== 'object') return '';
+  var s = user.active_school || user.activeSchool;
+  if (!s || typeof s !== 'object') return '';
+  return String(s.image || s.logo || '').trim();
+}
+
 export function pickSchoolAbbreviation(user) {
   if (!user || typeof user !== 'object') return '';
   var s = user.active_school || user.activeSchool;

@@ -14,16 +14,24 @@ function issuerLabel() {
 /**
  * Avatar for rows with no merchant logo of their own.
  *
- * On a branded embed this is the school's rewards-program logo, shown bare — no
- * circle, no fill — because a program logo cropped into a coloured disc reads as a
- * different brand's badge. Unbranded embeds keep the Homecrowd icon in its blue circle.
+ * Prefers the signed-in user's own school mark, then the embed's header logo, then
+ * the Homecrowd icon. The school mark is the better fit: the header logo is usually a
+ * wordmark shaped for the top bar and reads badly at avatar size.
+ *
+ * Shown bare — no circle, no fill — because a school or program logo cropped into a
+ * coloured disc reads as a different brand's badge. Unbranded embeds keep the
+ * Homecrowd icon in its blue circle.
+ *
+ * @param {string} [schoolLogoUrl] from pickSchoolLogoUrl(user)
  */
-function buildFallbackAvatarHtml() {
-  if (hasCustomHeaderLogo()) {
+function buildFallbackAvatarHtml(schoolLogoUrl) {
+  var brandLogo = String(schoolLogoUrl || '').trim() ||
+    (hasCustomHeaderLogo() ? getHeaderLogoUrl() : '');
+  if (brandLogo) {
     return (
       '<div class="hc-tx-avatar hc-tx-avatar--brand">' +
       '<img data-hc-ph="school" src="' +
-      escapeAttr(getHeaderLogoUrl()) +
+      escapeAttr(brandLogo) +
       '" alt="" class="hc-tx-brand-icon" />' +
       '</div>'
     );
@@ -68,6 +76,7 @@ export function buildTransactionItemHtml(transaction, helpers) {
     function () {
       return '';
     };
+  var schoolLogoUrl = helpers.schoolLogoUrl || '';
 
   var isHomecrowdBonus =
     transaction.isHomecrowdBonus ||
@@ -89,7 +98,7 @@ export function buildTransactionItemHtml(transaction, helpers) {
     var points = Number(transaction.points_earned != null ? transaction.points_earned : transaction.points) || 0;
     return (
       '<div class="hc-tx-row">' +
-      buildFallbackAvatarHtml() +
+      buildFallbackAvatarHtml(schoolLogoUrl) +
       '<div class="hc-tx-left">' +
       '<div class="hc-tx-title">' +
       escapeHtml(title) +
@@ -125,7 +134,7 @@ export function buildTransactionItemHtml(transaction, helpers) {
     ? '<div class="hc-tx-avatar hc-tx-avatar--merchant"><img data-hc-ph="store" src="' +
       escapeAttr(logoUrl) +
       '" alt="" class="hc-tx-avatar-img" /></div>'
-    : buildFallbackAvatarHtml();
+    : buildFallbackAvatarHtml(schoolLogoUrl);
 
   var rightHtml = '';
   if (transaction.isStripeRewardPurchase) {

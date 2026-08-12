@@ -41,6 +41,8 @@ import {
   openFeaturedStore,
 } from '../components/Dashboard/HomeFeaturedStores.js';
 import { buildTransactionItemHtml } from '../components/Dashboard/TransactionItem.js';
+import { pickSchoolLogoUrl } from '../school-contribution.js';
+import { isFeaturedRewardLive } from '../reward-window.js';
 import { buildPurchasesFootnoteHtml } from '../purchasesFootnote.js';
 import {
   userExtensionEnabled,
@@ -210,7 +212,7 @@ function mergeRecentActivity(purchases, bonuses) {
   return list;
 }
 
-function buildHomeRecentActivityBodyHtml(transactions) {
+function buildHomeRecentActivityBodyHtml(transactions, schoolLogoUrl) {
   // mergeRecentActivity already sorts newest-first, so this is the 6 most
   // recent. "View all" opens /activity-log for the rest.
   var list = (Array.isArray(transactions) ? transactions : []).slice(
@@ -231,6 +233,7 @@ function buildHomeRecentActivityBodyHtml(transactions) {
     html += buildTransactionItemHtml(list[i], {
       getPaymentMethod: getPaymentMethodHome,
       formatDate: formatTransactionDateHome,
+      schoolLogoUrl: schoolLogoUrl,
     });
   }
   return html;
@@ -247,7 +250,10 @@ function mountHomeRecentActivity(container) {
   }
   var bodyEl = container.querySelector('#hc-home-activity-body');
   if (!bodyEl) return;
-  bodyEl.innerHTML = buildHomeRecentActivityBodyHtml(txs);
+  bodyEl.innerHTML = buildHomeRecentActivityBodyHtml(
+    txs,
+    container._hcHomeSchoolLogoUrl || ''
+  );
 }
 
 function storageGet(key) {
@@ -303,20 +309,20 @@ function buildRewardDetailHash(rewardMeta, source) {
  * weekly prize only — the season prize lives on the rewards screen.
  */
 /**
- * First featured, still-redeemable reward from the catalogue. `enabled` already
- * folds in is_active and inventory, so it is the right gate here.
+ * Every featured reward from the catalogue that is actually live.
+ *
+ * `enabled` folds in is_active and inventory, but says nothing about dates — a
+ * flagged raffle stays enabled after its drawing. isFeaturedRewardLive adds the
+ * window check, so home and the rewards page feature the same set.
  */
-function pickFeaturedReward(catalogRes) {
+function pickFeaturedRewards(catalogRes) {
   var list = Array.isArray(catalogRes)
     ? catalogRes
     : (catalogRes && catalogRes.results) || [];
-  for (var i = 0; i < list.length; i++) {
-    var r = list[i];
-    if (r && r.id != null && (r.isFeatured || r.is_featured) && r.enabled !== false) {
-      return r;
-    }
-  }
-  return null;
+  var nowMs = Date.now();
+  return list.filter(function (r) {
+    return isFeaturedRewardLive(r, nowMs);
+  });
 }
 
 /**
@@ -324,15 +330,20 @@ function pickFeaturedReward(catalogRes) {
  * weekly prize is the fallback so the spot is never empty.
  */
 function buildRewardTilesHtml(ctx) {
-  if (ctx.featuredReward) {
+  var featured = ctx.featuredRewards || [];
+  if (featured.length) {
     return (
-      '<div class="hc-prize-cards hc-home-prize-cards">' +
-      buildPrizeCardHtml({
-        label: 'Active Reward',
-        title: ctx.featuredReward.title,
-        imageUrl: ctx.featuredReward.imageUrl || ctx.featuredReward.image_url,
-        rewardId: ctx.featuredReward.id,
-      }) +
+      '<div class="hc-prize-cards hc-home-prize-cards hc-home-prize-cards--featured">' +
+      featured
+        .map(function (reward) {
+          return buildPrizeCardHtml({
+            label: 'Featured Reward',
+            title: reward.title,
+            imageUrl: reward.imageUrl || reward.image_url,
+            rewardId: reward.id,
+          });
+        })
+        .join('') +
       '</div>'
     );
   }
@@ -601,7 +612,7 @@ async function fetchDashboardPayload() {
     transactions: transactionsForList,
     leaderboardSectionActive: leaderboardSectionActive,
     weeklyReward: weeklyReward,
-    featuredReward: pickFeaturedReward(rewardsCatalogRes),
+    featuredRewards: pickFeaturedRewards(rewardsCatalogRes),
     tierConfigTiers: tierConfigTiers,
     pointsSummary: pointsSummary,
     milestones: normalizeMilestones(firstRewardsRes),
@@ -683,7 +694,7 @@ function bindHomeInteractions(container, ctx) {
     onPress: function (rewardId) {
       // A featured reward is an ordinary catalogue reward, so it routes to the
       // normal detail page rather than the weekly-prize route.
-      if (ctx.featuredReward) {
+      if (ctx.featuredRewards && ctx.featuredRewards.length) {
         if (!rewardId) return;
         window.location.hash = '#/rewards/' + encodeURIComponent(rewardId) + '?from=home';
         return;
@@ -736,6 +747,9 @@ function loadHome(container) {
   fetchDashboardPayload()
     .then(function (ctx) {
       container._hcHomeRecentTransactions = ctx.transactions || [];
+      // Stashed beside the transactions because mountHomeRecentActivity re-renders
+      // the list on its own, without ctx in scope.
+      container._hcHomeSchoolLogoUrl = pickSchoolLogoUrl(ctx.user);
       container.innerHTML = buildHomeHtml(ctx);
       container._hcHomeCleanup = bindHomeInteractions(container, ctx);
     })
