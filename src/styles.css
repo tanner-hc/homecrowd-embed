@@ -14572,6 +14572,13 @@ button.hc-shop-detail-cats--expandable {
   z-index: 40;
 }
 
+/* Whatever leads the page sits at the scroller's own top padding — so when the
+   intro card is dismissed, the section that takes its place keeps the header's
+   24px gap instead of adding its 42px section gap on top. */
+.hc-marketplace-scroll > :first-child {
+  margin-top: 0;
+}
+
 .hc-marketplace-scroll {
   /* The sticky app header contributes 8px of the design's 24px gap. */
   padding-top: 16px;

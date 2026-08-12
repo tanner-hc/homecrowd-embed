@@ -358,10 +358,10 @@ function buildMarketplaceShell() {
     buildAppHeaderHtml({ title: 'Shop' }) +
     '<div class="hc-marketplace-scroll">' +
     // Figma 1421:9134 — the old plain heading and subheading are now the copy
-    // inside this dismissible card.
-    '<div id="hc-marketplace-earn-slot">' +
+    // inside this dismissible card. Deliberately not wrapped: dismissing it
+    // removes the node outright, so the section below becomes the scroller's
+    // first child and drops its section gap.
     buildShopEarnCardHtml({}) +
-    '</div>' +
     '<div id="hc-marketplace-preferred-partners" class="hc-marketplace-preferred-partners"></div>' +
     '<div id="hc-marketplace-featured-shops" class="hc-marketplace-featured-shops"></div>' +
     '<div id="hc-marketplace-bottom-grid" class="hc-marketplace-bottom-grid"></div>' +
