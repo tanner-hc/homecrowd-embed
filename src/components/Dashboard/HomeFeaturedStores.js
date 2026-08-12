@@ -180,12 +180,15 @@ export function buildLinkedCardRequiredHtml(className) {
  *   loading?: boolean,
  *   title?: string,
  *   linkedCardRequired?: boolean, shows the "Linked card required" chip
+ *   layout?: 'scroll'|'grid', 'grid' is the Shop screen's 4-across block
+ *     (Figma 1421:9172); home keeps the horizontal scroller
  * }} props
  */
 export function buildHomeFeaturedStoresHtml(props) {
   props = props || {};
   var title = props.title || 'Earn where you already shop';
   var stores = Array.isArray(props.stores) ? props.stores : [];
+  var gridLayout = props.layout === 'grid';
 
   var requirementHtml = props.linkedCardRequired
     ? buildLinkedCardRequiredHtml()
@@ -196,7 +199,9 @@ export function buildHomeFeaturedStoresHtml(props) {
     body = '<div class="hc-featured-stores-loader" aria-hidden="true"></div>';
   } else if (stores.length) {
     body =
-      '<div class="hc-featured-stores-row">' +
+      '<div class="hc-featured-stores-row' +
+      (gridLayout ? ' hc-featured-stores-row--grid' : '') +
+      '">' +
       stores
         .map(function (item) {
           var logoUri = item.small_logo_url || item.large_logo_url;
@@ -225,7 +230,9 @@ export function buildHomeFeaturedStoresHtml(props) {
   }
 
   return (
-    '<div class="hc-featured-stores">' +
+    '<div class="hc-featured-stores' +
+    (gridLayout ? ' hc-featured-stores--grid' : '') +
+    '">' +
     '<div class="hc-featured-stores-header' +
     (requirementHtml ? ' hc-featured-stores-header--with-req' : '') +
     '">' +

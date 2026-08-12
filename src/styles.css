@@ -14573,6 +14573,8 @@ button.hc-shop-detail-cats--expandable {
 }
 
 .hc-marketplace-scroll {
+  /* The sticky app header contributes 8px of the design's 24px gap. */
+  padding-top: 16px;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -14581,26 +14583,314 @@ button.hc-shop-detail-cats--expandable {
   padding-bottom: 24px;
 }
 
-.hc-marketplace-hero {
-  padding: 12px 20px 16px;
+/* "Earn as you shop" intro card — Figma 1421:9134. Replaces the plain heading
+   and subheading that used to sit at the top of the Shop screen. */
+.hc-shop-earn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  margin: 0 16px;
+  padding: 34px 20px;
+  border-radius: 12px;
+  background: #f0f9ff;
+  overflow: hidden;
+}
+
+/* 44px hit area flush to the card's top-right corner, around an 11px glyph. */
+.hc-shop-earn-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.hc-shop-earn-close-icon svg {
+  display: block;
+  width: 11px;
+  height: 11px;
+}
+
+/* Three 49px marks stepped 41.9px apart, so each overlaps the one before. */
+.hc-shop-earn-logos {
+  display: flex;
+  align-items: center;
+}
+
+.hc-shop-earn-logo {
+  width: 49px;
+  height: 49px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.hc-shop-earn-logo + .hc-shop-earn-logo {
+  margin-left: -7.1px;
+}
+
+.hc-shop-earn-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hc-shop-earn-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+}
+
+.hc-shop-earn-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   text-align: center;
 }
 
-.hc-marketplace-hero-title {
+.hc-shop-earn-title {
   font-size: 36px;
+  line-height: 0.9;
   font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
   font-weight: 700;
   color: #000;
-  line-height: 36px;
-  margin-bottom: 8px;
 }
 
-.hc-marketplace-hero-sub {
+.hc-shop-earn-sub {
+  max-width: 282px;
   font-size: 14px;
+  line-height: normal;
   font-family: 'Baikal-Regular', var(--hc-font);
-  color: #666;
-  line-height: 20px;
-  padding: 0 12px;
+  font-weight: 400;
+  color: #888;
+}
+
+.hc-shop-earn-cta {
+  padding: 12px 16px;
+  border: none;
+  border-radius: 100px;
+  background: var(--hc-app-primary, #00c8ff);
+  font-size: 12px;
+  line-height: normal;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+  cursor: pointer;
+}
+
+/* Grid variant of the section: it pads itself to the page gutter instead of
+   breaking out of a 20px-padded parent the way the home scroller does. */
+.hc-featured-stores--grid {
+  margin: 0;
+}
+
+.hc-featured-stores--grid .hc-featured-stores-header {
+  align-items: flex-end;
+  /* 24px to the tiles, per every section header in Figma 1421:9152. */
+  margin-bottom: 24px;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.hc-featured-stores--grid .hc-featured-stores-see-all {
+  font-size: 15px;
+  line-height: normal;
+  color: #888;
+}
+
+/* Shop online as a 4-across block instead of a scroller — Figma 1421:9172.
+   12px between columns, 18px between the two rows. */
+.hc-featured-stores-row--grid {
+  display: grid;
+  /* minmax(0,…) not 1fr: the captions are `white-space: nowrap`, so with the
+     default `auto` minimum each column would grow to fit the longest store
+     name and the tiles would blow past the page width. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px 12px;
+  overflow: visible;
+  padding: 0 16px;
+}
+
+/* The scroller sizes each tile at a fixed 72px; in the grid the column does it. */
+.hc-featured-stores-row--grid .hc-featured-store {
+  width: auto;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.hc-featured-stores-row--grid .hc-featured-store-tile {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+/* Regular 14 rather than the scroller's Medium 13 (Figma I1421:9174;3531:17834). */
+.hc-featured-stores-row--grid .hc-featured-store-name {
+  font-size: 14px;
+  line-height: normal;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-weight: 400;
+}
+
+/* Local stores under the map: full-width rows, 60px tall — Figma 1421:9208. */
+.hc-merchant-grid--rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 16px 24px;
+}
+
+.hc-merchant-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  height: 60px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  text-align: left;
+}
+
+.hc-merchant-row:hover {
+  box-shadow: none;
+}
+
+/* display:flex on the class would otherwise beat the UA sheet's [hidden] rule,
+   leaving the collapsed rows visible. */
+.hc-merchant-row[hidden] {
+  display: none;
+}
+
+.hc-merchant-row .hc-merchant-img-wrap {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  /* Brand marks with transparent backgrounds would otherwise float on white. */
+  background: #f8f8f8;
+}
+
+.hc-merchant-row .hc-merchant-img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
+}
+
+/* The no-logo fallback prints the name inside the tile; in a row that would
+   repeat the name shown beside it. */
+.hc-merchant-row .hc-merchant-no-logo-name {
+  display: none;
+}
+
+.hc-merchant-row .hc-merchant-no-logo-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.hc-merchant-row .hc-merchant-card-info {
+  flex: 1 1 auto;
+  min-width: 0;
+  /* The card stacks its text under the artwork and spaces it; the row sits
+     alongside instead. */
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.hc-merchant-row-name {
+  font-size: 16px;
+  line-height: normal;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-merchant-row .hc-merchant-location {
+  font-size: 13px;
+  line-height: normal;
+  font-family: 'Baikal-Book', var(--hc-font);
+  color: #888;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The design's 34px box holds the 6px glyph off-centre — 17px of empty space to
+   its left and 11px to its right — so the chevron lands 10px in from the row's
+   right edge rather than flush against it. */
+.hc-merchant-row-chevron {
+  display: flex;
+  flex-shrink: 0;
+  padding-left: 17px;
+  padding-right: 11px;
+}
+
+.hc-merchant-row-chevron svg {
+  display: block;
+  width: 7px;
+  height: 13px;
+}
+
+/* "Show more" under the local stores — Figma 1421:9213. */
+.hc-marketplace-stores-more {
+  display: flex;
+  justify-content: center;
+  padding: 0 16px 8px;
+}
+
+.hc-marketplace-stores-more[hidden] {
+  display: none;
+}
+
+.hc-marketplace-show-more {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px;
+  border: none;
+  border-radius: 100px;
+  background: #ebebeb;
+  font-size: 12px;
+  /* The design trims the text box to the cap height (text-box-trim), so its
+     14px padding sits against an 8px box, not a ~14px line box — that is what
+     makes the button 36px tall rather than 42. */
+  line-height: 8px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+  cursor: pointer;
+}
+
+.hc-marketplace-show-more-icon svg {
+  display: block;
+  width: 9px;
+  height: 6px;
 }
 
 .hc-marketplace-search-wrap {
@@ -14652,11 +14942,11 @@ button.hc-shop-detail-cats--expandable {
 }
 
 .hc-marketplace-preferred-partners {
-  margin-top: 8px;
-  /* Figma 1219:18157 spaces the Shop sections 43px apart. The track already
-     carries 4px of bottom padding to clear the card shadow, so this makes up
-     the remainder rather than stacking a full 43 on top of it. */
-  margin-bottom: 39px;
+  /* Figma 1421:9152 stacks the Shop sections 42px apart. The track already
+     carries 4px of bottom padding to clear the card shadow, so the bottom makes
+     up the remainder rather than stacking a full 42 on top of it. */
+  margin-top: 42px;
+  margin-bottom: 38px;
 }
 
 .hc-pp {
@@ -14677,7 +14967,7 @@ button.hc-shop-detail-cats--expandable {
   align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 20px 24px;
+  padding: 8px 16px 24px;
 }
 
 .hc-pp-title {
@@ -14716,7 +15006,7 @@ button.hc-shop-detail-cats--expandable {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   /* Same slide width the card uses, so the peek stays even on both sides. */
-  padding: 0 max(20px, calc((100% - var(--hc-pp-slide-w)) / 2)) 4px;
+  padding: 0 max(16px, calc((100% - var(--hc-pp-slide-w)) / 2)) 4px;
 }
 
 .hc-pp-track::-webkit-scrollbar {
@@ -14868,9 +15158,8 @@ button.hc-shop-detail-cats--expandable {
 }
 
 .hc-marketplace-featured-shops {
-  padding: 0 20px;
-  /* Figma 1209:6435 spaces every Shop section 43px apart. */
-  margin-bottom: 43px;
+  /* No gutter here: the grid variant pads its own header and rows to 16px. */
+  margin-bottom: 42px;
 }
 
 .hc-marketplace-featured-shops .hc-featured-stores {
@@ -14961,8 +15250,22 @@ button.hc-shop-detail-cats--expandable {
 }
 
 .hc-marketplace-map-block {
-  margin-bottom: 20px;
-  padding: 0 20px;
+  margin-bottom: 24px;
+  padding: 0 16px;
+}
+
+/* The shared map section carries its own 20px gutter for the pages that place
+   it edge-to-edge; here the block already pads to the page gutter, so a second
+   one would inset the map 36px. */
+.hc-marketplace-map-block .hc-offers-map-section {
+  margin: 0;
+}
+
+/* 186px, flat — Figma 1421:9189. The 300px default belongs to the full-screen
+   map page, where the map is the whole screen rather than a section preview. */
+.hc-marketplace-map-block .hc-offers-map-mount {
+  height: 186px;
+  box-shadow: none;
 }
 
 /* The chip carries a 20px side margin for the home screen, where it sits in an
@@ -14976,9 +15279,9 @@ button.hc-shop-detail-cats--expandable {
 .hc-marketplace-map-header {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 24px;
   gap: 12px;
 }
 
@@ -14989,18 +15292,18 @@ button.hc-shop-detail-cats--expandable {
   font-family: 'Baikal-Medium', var(--hc-font);
   font-weight: 500;
   color: #000;
-  line-height: 18px;
+  line-height: 1.2;
 }
 
 .hc-marketplace-map-view {
   border: none;
   background: transparent;
   padding: 0;
-  font-size: 14px;
+  font-size: 15px;
   font-family: 'Baikal-Regular', var(--hc-font);
   font-weight: 400;
   color: #888888;
-  line-height: 14px;
+  line-height: normal;
   cursor: pointer;
   flex-shrink: 0;
 }

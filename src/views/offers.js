@@ -4,6 +4,8 @@ import iconTransparentUrl from '../assets/icon-transparent.png';
 import shopIconUrl from '../assets/icons/store.svg';
 import cardIconSvg from '../assets/icons/card-filled.svg?raw';
 import bagIconSvg from '../assets/icons/bag.svg?raw';
+import chevronDownSvg from '../assets/icons/chevron-down-sm.svg?raw';
+import rowChevronSvg from '../assets/icons/chevron-right-sm.svg?raw';
 import { resolveCardLinkStatus } from '../cardLinkStatus.js';
 import { mountBrowserExtensionInline } from './browser-extension.js';
 import {
@@ -46,6 +48,7 @@ import {
   bindBottomFeaturedGrid,
   fetchBottomFeaturedMerchants,
 } from '../components/Marketplace/BottomFeaturedGrid.js';
+import { buildShopEarnCardHtml, bindShopEarnCard } from '../components/Marketplace/ShopEarnCard.js';
 import {
   buildPreferredPartnersCarouselHtml,
   mountPreferredPartnersCarousel,
@@ -225,14 +228,15 @@ export function renderOffers(container) {
       populateMarketplacePreferredPartners(container, [], false);
     });
 
-  // "Shop online" previews the first 20 of the online catalog, matching what its
-  // "View all" opens. It used to show only top/bottom-featured offers, which is
-  // a different (promoted) set than the list behind it.
+  // "Shop online" previews the first 8 of the online catalog — two rows of four,
+  // per Figma 1421:9172 — and its "View all" opens the rest. It used to show
+  // only top/bottom-featured offers, which is a different (promoted) set than
+  // the list behind it.
   api
     .getWildfireOffers(1, 60)
     .then(function (raw) {
       if (!container.isConnected) return;
-      populateMarketplaceFeaturedShops(container, normalizeOnlineStores(raw, 20));
+      populateMarketplaceFeaturedShops(container, normalizeOnlineStores(raw, 8));
     })
     .catch(function () {
       if (!container.isConnected) return;
@@ -257,14 +261,7 @@ export function renderOffers(container) {
     .then(function (raw) {
       if (!container.isConnected) return;
       var cardlinked = pickOliveMapStores(raw);
-      var grid = container.querySelector('#hc-stores-grid');
-      if (grid) {
-        var html = '';
-        cardlinked.forEach(function (m) {
-          html += renderMerchantCard(m);
-        });
-        grid.innerHTML = html;
-      }
+      fillStoresGrid(container.querySelector('#hc-stores-grid'), cardlinked, container);
       initOffersMap(container, cardlinked);
       container._hcStoresLoaded.grid = true;
       container._hcStoresGridHasItems = cardlinked.length > 0;
@@ -360,23 +357,34 @@ function buildMarketplaceShell() {
     '<div class="hc-offers-page hc-offers-page--marketplace">' +
     buildAppHeaderHtml({ title: 'Shop' }) +
     '<div class="hc-marketplace-scroll">' +
-    '<div class="hc-marketplace-hero">' +
-    '<div class="hc-marketplace-hero-title">Shop and earn points</div>' +
-    '<div class="hc-marketplace-hero-sub">Pay like you always do, you earn points and support your team!</div>' +
+    // Figma 1421:9134 — the old plain heading and subheading are now the copy
+    // inside this dismissible card.
+    '<div id="hc-marketplace-earn-slot">' +
+    buildShopEarnCardHtml({}) +
     '</div>' +
     '<div id="hc-marketplace-preferred-partners" class="hc-marketplace-preferred-partners"></div>' +
     '<div id="hc-marketplace-featured-shops" class="hc-marketplace-featured-shops"></div>' +
     '<div id="hc-marketplace-bottom-grid" class="hc-marketplace-bottom-grid"></div>' +
     '<div class="hc-marketplace-map-block">' +
     '<div class="hc-marketplace-map-header">' +
-    '<div class="hc-marketplace-map-title">Shop in person near you</div>' +
+    '<div class="hc-marketplace-map-title">Eat local</div>' +
     '<button type="button" class="hc-marketplace-map-view" id="hc-marketplace-view-map">View map</button>' +
     '</div>' +
     renderLocationMapSection({ includeSearch: false }) +
     buildLinkedCardRequiredHtml('hc-marketplace-map-req') +
     '</div>' +
-    '<div id="hc-stores-grid" class="hc-merchant-grid">' +
+    // Figma 1421:9207 — full-width rows under the map, not the two-up grid the
+    // search results elsewhere still use.
+    '<div id="hc-stores-grid" class="hc-merchant-grid hc-merchant-grid--rows">' +
     gridSkeletonHtml() +
+    '</div>' +
+    '<div class="hc-marketplace-stores-more" id="hc-marketplace-stores-more" hidden>' +
+    '<button type="button" class="hc-marketplace-show-more" id="hc-marketplace-show-more">' +
+    'Show more' +
+    '<span class="hc-marketplace-show-more-icon" aria-hidden="true">' +
+    chevronDownSvg +
+    '</span>' +
+    '</button>' +
     '</div>' +
     '<div class="hc-marketplace-bottom-space"></div>' +
     '</div>' +
@@ -385,7 +393,73 @@ function buildMarketplaceShell() {
   );
 }
 
+/** The card layout a given grid wants, from the class on the grid itself. */
+function merchantCardOptionsFor(grid) {
+  return grid && grid.classList && grid.classList.contains('hc-merchant-grid--rows')
+    ? { layout: 'row' }
+    : null;
+}
+
+/**
+ * Fills a stores grid in whichever layout that grid uses — the Shop screen's
+ * list is rows, every other grid is the two-up card.
+ *
+ * Reading the layout off the element matters because the map re-renders this
+ * same grid from several places that only have the node, and any of them
+ * writing plain cards would silently replace the rows.
+ *
+ * @param {HTMLElement} grid
+ * @param {object[]} list
+ * @param {HTMLElement} [container] re-applies the "Show more" collapse
+ */
+function fillStoresGrid(grid, list, container) {
+  if (!grid) return;
+  var opts = merchantCardOptionsFor(grid);
+  var html = '';
+  (Array.isArray(list) ? list : []).forEach(function (m) {
+    html += renderMerchantCard(m, opts);
+  });
+  grid.innerHTML = html;
+  if (container) applyMarketplaceStoresReveal(container);
+}
+
+/** How many local stores show at first, and how many each "Show more" adds. */
+var MARKETPLACE_STORES_PAGE = 15;
+
+/**
+ * Collapses the local-store list to one page and shows the reveal control only
+ * while something is still hidden (Figma 1421:9213). Re-run after each render,
+ * since the list is replaced wholesale when results arrive.
+ */
+function applyMarketplaceStoresReveal(container) {
+  var grid = container.querySelector('#hc-stores-grid');
+  var moreWrap = container.querySelector('#hc-marketplace-stores-more');
+  if (!grid || !moreWrap) return;
+  var rows = grid.querySelectorAll('.hc-merchant-row');
+  var shown = container._hcStoresShown || MARKETPLACE_STORES_PAGE;
+  container._hcStoresShown = shown;
+  rows.forEach(function (row, idx) {
+    row.hidden = idx >= shown;
+  });
+  moreWrap.hidden = rows.length <= shown;
+}
+
 function wireMarketplaceInteractions(container) {
+  var showMore = container.querySelector('#hc-marketplace-show-more');
+  if (showMore) {
+    showMore.addEventListener('click', function () {
+      container._hcStoresShown =
+        (container._hcStoresShown || MARKETPLACE_STORES_PAGE) + MARKETPLACE_STORES_PAGE;
+      applyMarketplaceStoresReveal(container);
+    });
+  }
+
+  bindShopEarnCard(container, {
+    onExplore: function () {
+      navigate('/offers/all-shops?channel=online');
+    },
+  });
+
   var viewMap = container.querySelector('#hc-marketplace-view-map');
   if (viewMap) {
     viewMap.addEventListener('click', function () {
@@ -443,13 +517,46 @@ function populateMarketplacePreferredPartners(container, partners, loading) {
   });
 }
 
+/**
+ * Drops the first three store marks into the intro card's cluster. The card
+ * renders with the shell, before any store data exists, so it starts bare and
+ * fills in once the online catalogue lands.
+ */
+function fillShopEarnLogos(container, stores) {
+  var card = container.querySelector('[data-shop-earn]');
+  if (!card || card.querySelector('.hc-shop-earn-logos')) return;
+  var logos = (Array.isArray(stores) ? stores : [])
+    .map(function (item) {
+      return (item && (item.small_logo_url || item.large_logo_url)) || '';
+    })
+    .filter(Boolean)
+    .slice(0, 3);
+  if (!logos.length) return;
+  var html = logos
+    .map(function (url) {
+      return (
+        '<span class="hc-shop-earn-logo"><img data-hc-ph="store" src="' +
+        escapeAttr(String(url)) +
+        '" alt="" /></span>'
+      );
+    })
+    .join('');
+  var cluster = document.createElement('div');
+  cluster.className = 'hc-shop-earn-logos';
+  cluster.setAttribute('aria-hidden', 'true');
+  cluster.innerHTML = html;
+  card.insertBefore(cluster, card.querySelector('.hc-shop-earn-body'));
+}
+
 function populateMarketplaceFeaturedShops(container, stores) {
   var wrap = container.querySelector('#hc-marketplace-featured-shops');
   if (!wrap) return;
   wrap.innerHTML = buildHomeFeaturedStoresHtml({
     title: 'Shop online',
     stores: stores,
+    layout: 'grid',
   });
+  fillShopEarnLogos(container, stores);
   bindHomeFeaturedStores(wrap, {
     onSeeAll: function () {
       navigate('/offers/all-shops?channel=online');
@@ -2967,13 +3074,7 @@ function initOffersMap(container, cardlinked) {
   }
 
   function renderStoresGridFromList(list) {
-    var grid = document.getElementById('hc-stores-grid');
-    if (!grid) return;
-    var gridHtml = '';
-    list.forEach(function (m) {
-      gridHtml += renderMerchantCard(m);
-    });
-    grid.innerHTML = gridHtml;
+    fillStoresGrid(document.getElementById('hc-stores-grid'), list, container);
   }
 
   function withUserDistances(list) {
@@ -3026,14 +3127,8 @@ function initOffersMap(container, cardlinked) {
   container._hcOnMapRegionPanned = fetchOffersForMapRegion;
 
   function restoreStoresGridFromCache() {
-    var grid = document.getElementById('hc-stores-grid');
-    if (!grid) return;
     var list = Array.isArray(container._hcCardlinkedStores) ? container._hcCardlinkedStores : [];
-    var gridHtml = '';
-    list.forEach(function (m) {
-      gridHtml += renderMerchantCard(m);
-    });
-    grid.innerHTML = gridHtml;
+    fillStoresGrid(document.getElementById('hc-stores-grid'), list, container);
   }
 
   function setMapSearchLoading(active) {
@@ -3277,14 +3372,7 @@ function initOffersMap(container, cardlinked) {
         );
         resetOffersMapStores(container);
         container._hcCardlinkedStores = list;
-        var grid = document.getElementById('hc-stores-grid');
-        if (grid) {
-          var gridHtml = '';
-          list.forEach(function (m) {
-            gridHtml += renderMerchantCard(m);
-          });
-          grid.innerHTML = gridHtml;
-        }
+        fillStoresGrid(document.getElementById('hc-stores-grid'), list, container);
         rebindStoresSearchClean(list);
         showNoStoresIfEmpty(list);
       })
@@ -3634,7 +3722,7 @@ function bindSearch(inputId, gridId, allMerchants, container) {
       setSearching(false);
       grid.innerHTML = '';
       allMerchants.forEach(function (m) {
-        grid.innerHTML += renderMerchantCard(m);
+        grid.innerHTML += renderMerchantCard(m, merchantCardOptionsFor(grid));
       });
       if (isOnline && container) renderOnlineLoadMore(container);
       return;
@@ -3666,7 +3754,7 @@ function bindSearch(inputId, gridId, allMerchants, container) {
             renderResultHeader(list.length, q);
             grid.innerHTML = '';
             list.forEach(function (m) {
-              grid.innerHTML += renderMerchantCard(m);
+              grid.innerHTML += renderMerchantCard(m, merchantCardOptionsFor(grid));
             });
           })
           .catch(function (err) {
@@ -3694,7 +3782,7 @@ function bindSearch(inputId, gridId, allMerchants, container) {
     renderResultHeader(filtered.length, q);
     grid.innerHTML = '';
     filtered.forEach(function (m) {
-      grid.innerHTML += renderMerchantCard(m);
+      grid.innerHTML += renderMerchantCard(m, merchantCardOptionsFor(grid));
     });
   });
 }
@@ -3758,7 +3846,14 @@ function formatDistanceMiles(d) {
   return Math.round(d) + ' mi';
 }
 
-function renderMerchantCard(merchant) {
+/**
+ * @param {object} merchant
+ * @param {{ layout?: 'card'|'row' }} [options] 'row' is the Shop screen's
+ *   full-width list under the map (Figma 1421:9208); everywhere else keeps the
+ *   two-up card.
+ */
+function renderMerchantCard(merchant, options) {
+  var rowLayout = !!(options && options.layout === 'row');
   var logoUrl = merchant.logoUrl || merchant.logo || '';
   var name = merchant.name || merchant.merchantName || 'Unknown';
   var isOnline = !!(merchant.isOnline || merchant.reach === 'online_only');
@@ -3778,7 +3873,9 @@ function renderMerchantCard(merchant) {
   var detailId = offerType === 'olive' && merchant.offerId ? String(merchant.offerId) : '';
   var wildfireId = merchant.wildfireMerchantId || '';
   var html =
-    '<div class="hc-merchant-card"' +
+    '<div class="hc-merchant-card' +
+    (rowLayout ? ' hc-merchant-row' : '') +
+    '"' +
     (detailId ? ' data-offer-id="' + escapeAttr(detailId) + '"' : '') +
     ' data-offer-type="' +
     offerType +
@@ -3796,7 +3893,9 @@ function renderMerchantCard(merchant) {
       }),
     ) +
     '">';
-  html += renderPointMultiplierBadgeHtml(merchant, 'block');
+  // The design's local rows carry no multiplier chip; as a block element it
+  // would also land between the artwork and the text.
+  if (!rowLayout) html += renderPointMultiplierBadgeHtml(merchant, 'block');
   if (logoUrl) {
     html +=
       '<div class="hc-merchant-img-wrap"><img data-hc-ph="store" class="hc-merchant-img" loading="lazy" decoding="async" src="' +
@@ -3812,11 +3911,19 @@ function renderMerchantCard(merchant) {
       '</div></div>';
   }
   html += '<div class="hc-merchant-card-info">';
+  if (rowLayout) {
+    html += '<div class="hc-merchant-row-name">' + escapeHtml(name) + '</div>';
+  }
   if (location || distance) {
     var line = location && distance ? location + ' · ' + distance : location || distance;
     html += '<div class="hc-merchant-location">' + escapeHtml(line) + '</div>';
   }
-  html += '</div></div>';
+  html += '</div>';
+  if (rowLayout) {
+    html +=
+      '<span class="hc-merchant-row-chevron" aria-hidden="true">' + rowChevronSvg + '</span>';
+  }
+  html += '</div>';
   return html;
 }
 
