@@ -56,7 +56,10 @@ import lockIconUrl from '../assets/icons/lock_icon.png';
 
 var MAP_OFFERS_PAGE_SIZE = 150;
 var MAP_USER_ZOOM_LEAFLET = 13;
-var MAP_USER_SPAN_DEG = 0.05;
+var MAP_USER_SPAN_DEG = 0.001;
+var MAP_INITIAL_NEARBY_STORES = 3;
+var MAP_LEAFLET_DISABLE_CLUSTERING_AT_ZOOM = 9;
+var MAPKIT_CLUSTER_MIN_LATITUDE_DELTA = 0.55;
 
 var trophyIconSvg =
   '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
@@ -1284,6 +1287,40 @@ function milesBetween(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
+function logOffersMapViewportDistance(source, centerLat, latDelta, lngDelta) {
+  if (
+    !Number.isFinite(centerLat) ||
+    !Number.isFinite(latDelta) ||
+    !Number.isFinite(lngDelta)
+  ) {
+    return;
+  }
+  var halfLat = Math.abs(latDelta) / 2;
+  var halfLng = Math.abs(lngDelta) / 2;
+  var heightMiles = milesBetween(
+    centerLat - halfLat,
+    0,
+    centerLat + halfLat,
+    0,
+  );
+  var widthMiles = milesBetween(
+    centerLat,
+    -halfLng,
+    centerLat,
+    halfLng,
+  );
+  var radiusMiles = Math.sqrt(
+    widthMiles * widthMiles + heightMiles * heightMiles,
+  ) / 2;
+  console.log(
+    '[HC offers map] viewport distance',
+    source,
+    'width=' + widthMiles.toFixed(1) + 'mi',
+    'height=' + heightMiles.toFixed(1) + 'mi',
+    'radius≈' + radiusMiles.toFixed(1) + 'mi',
+  );
+}
+
 function storeMapMerchantAddressDescription(m) {
   if (!m || typeof m !== 'object') return '';
   if (m.address) {
@@ -1319,6 +1356,36 @@ function computeMapKitRegionLikeStoreMap(userLat, userLng, merchantPoints) {
   var merchants = (merchantPoints || []).filter(function (pt) {
     return pt && Number.isFinite(pt.lat) && Number.isFinite(pt.lng);
   });
+  if (Number.isFinite(userLat) && Number.isFinite(userLng) && merchants.length > 0) {
+    var closest = merchants
+      .map(function (pt) {
+        return {
+          lat: pt.lat,
+          lng: pt.lng,
+          distance: milesBetween(userLat, userLng, pt.lat, pt.lng),
+        };
+      })
+      .sort(function (a, b) {
+        return a.distance - b.distance;
+      })
+      .slice(0, MAP_INITIAL_NEARBY_STORES);
+    var nearbyLats = [userLat];
+    var nearbyLngs = [userLng];
+    closest.forEach(function (pt) {
+      nearbyLats.push(pt.lat);
+      nearbyLngs.push(pt.lng);
+    });
+    var nearbyMinLat = Math.min.apply(null, nearbyLats);
+    var nearbyMaxLat = Math.max.apply(null, nearbyLats);
+    var nearbyMinLng = Math.min.apply(null, nearbyLngs);
+    var nearbyMaxLng = Math.max.apply(null, nearbyLngs);
+    return {
+      centerLat: (nearbyMinLat + nearbyMaxLat) / 2,
+      centerLng: (nearbyMinLng + nearbyMaxLng) / 2,
+      spanLat: Math.max((nearbyMaxLat - nearbyMinLat) * 1.4, 0.005),
+      spanLon: Math.max((nearbyMaxLng - nearbyMinLng) * 1.4, 0.005),
+    };
+  }
   if (Number.isFinite(userLat) && Number.isFinite(userLng)) {
     return {
       centerLat: userLat,
@@ -1350,6 +1417,21 @@ function computeMapKitRegionLikeStoreMap(userLat, userLng, merchantPoints) {
 var MAP_PIN_USER_COLOR = '#007AFF';
 var MAP_PIN_MERCHANT_COLOR = '#AF52DE';
 var MAP_MERCHANT_CLUSTER_ID = 'hc-merchant';
+
+function syncMapKitMerchantClustering(container, region) {
+  var span = region && region.span;
+  if (!span || !Number.isFinite(span.latitudeDelta)) return;
+  var clusteringIdentifier =
+    span.latitudeDelta > MAPKIT_CLUSTER_MIN_LATITUDE_DELTA
+      ? MAP_MERCHANT_CLUSTER_ID
+      : null;
+  (container._hcMkMerchantAnnotations || []).forEach(function (annotation) {
+    if (!annotation) return;
+    try {
+      annotation.clusteringIdentifier = clusteringIdentifier;
+    } catch (e) {}
+  });
+}
 
 var OFFERS_MAP_PAN_DEBOUNCE_MS = 600;
 
@@ -1400,6 +1482,7 @@ function addMerchantPinsToLiveMap(container, merchants) {
       });
       mk.addAnnotations(anns);
       container._hcMkMerchantAnnotations = container._hcMkMerchantAnnotations.concat(anns);
+      syncMapKitMerchantClustering(container, mk.region);
     } catch (e) {
       console.warn('[HC offers map] addAnnotations failed', e);
     }
@@ -1417,6 +1500,7 @@ function addMerchantPinsToLiveMap(container, merchants) {
           maxClusterRadius: 56,
           spiderfyOnMaxZoom: true,
           zoomToBoundsOnClick: true,
+          disableClusteringAtZoom: MAP_LEAFLET_DISABLE_CLUSTERING_AT_ZOOM,
         });
         lf.addLayer(cluster);
         container._hcLeafletClusterGroup = cluster;
@@ -1466,15 +1550,7 @@ function handleLiveMapRegionChange(container, center, spanLatDeg) {
   }, OFFERS_MAP_PAN_DEBOUNCE_MS);
 }
 
-var OFFERS_MAPTILER_KEY = 'WADYe8GJ68RPlAoT3jNC';
-var OFFERS_LEAFLET_MAPLIBRE_STYLE =
-  'https://api.maptiler.com/maps/base-v4/style.json?key=' + OFFERS_MAPTILER_KEY;
-
-function getOffersMapLibreStyleUrl() {
-  return OFFERS_LEAFLET_MAPLIBRE_STYLE;
-}
-
-var offersLeafletMapLibreLoadPromise = null;
+var offersLeafletLoadPromise = null;
 
 function destroyOffersMapInstance(container) {
   if (container._hcRegionDebounce) {
@@ -2011,23 +2087,14 @@ function offersLoadScriptSequential(urls, index, done, err) {
   document.body.appendChild(s);
 }
 
-function ensureLeafletMapLibreGl() {
-  if (
-    window.L &&
-    typeof window.L.markerClusterGroup === 'function' &&
-    window.maplibregl &&
-    typeof window.L.maplibreGL === 'function'
-  ) {
-    return Promise.resolve(window.L);
-  }
+function ensureLeafletLoaded() {
   if (window.L && typeof window.L.markerClusterGroup === 'function') {
     return Promise.resolve(window.L);
   }
-  if (offersLeafletMapLibreLoadPromise) return offersLeafletMapLibreLoadPromise;
+  if (offersLeafletLoadPromise) return offersLeafletLoadPromise;
 
-  offersLeafletMapLibreLoadPromise = new Promise(function (resolve, reject) {
+  offersLeafletLoadPromise = new Promise(function (resolve, reject) {
     offersMapLinkOnce('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', 'leaflet');
-    offersMapLinkOnce('https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css', 'maplibre-gl');
     offersMapLinkOnce(
       'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css',
       'markercluster',
@@ -2040,12 +2107,6 @@ function ensureLeafletMapLibreGl() {
     var urls = [];
     if (!window.L) {
       urls.push('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js');
-    }
-    if (!window.maplibregl) {
-      urls.push('https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js');
-    }
-    if (!window.L || typeof window.L.maplibreGL !== 'function') {
-      urls.push('https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.0/leaflet-maplibre-gl.js');
     }
     if (!window.L || typeof window.L.markerClusterGroup !== 'function') {
       urls.push('https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js');
@@ -2078,11 +2139,11 @@ function ensureLeafletMapLibreGl() {
       reject(err);
     });
   }).catch(function (e) {
-    offersLeafletMapLibreLoadPromise = null;
+    offersLeafletLoadPromise = null;
     throw e;
   });
 
-  return offersLeafletMapLibreLoadPromise;
+  return offersLeafletLoadPromise;
 }
 
 function clearLeafletMapMount(mapMount) {
@@ -2094,20 +2155,18 @@ function clearLeafletMapMount(mapMount) {
 }
 
 function attachOffersLeafletBaseLayer(L, map) {
-  try {
-    if (typeof L.maplibreGL === 'function' && window.maplibregl) {
-      L.maplibreGL({
-        style: getOffersMapLibreStyleUrl(),
-      }).addTo(map);
-      return 'maplibre';
-    }
-  } catch (e) {
-    console.warn('[HC offers map] MapLibre layer failed, using OSM tiles', e);
-  }
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  var layer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; OpenStreetMap',
-  }).addTo(map);
+    crossOrigin: true,
+  });
+  layer.on('tileerror', function (event) {
+    console.warn(
+      '[HC offers map] OSM tile failed',
+      event && event.coords ? event.coords : '',
+    );
+  });
+  layer.addTo(map);
   return 'osm';
 }
 
@@ -2343,7 +2402,7 @@ function applyPendingMapMerchantSelection(container) {
 function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker) {
   if (showUserMarker === undefined) showUserMarker = true;
   var renderId = (container._hcLeafletRenderId = (container._hcLeafletRenderId || 0) + 1);
-  ensureLeafletMapLibreGl()
+  ensureLeafletLoaded()
     .then(function (L) {
       if (renderId !== container._hcLeafletRenderId) return;
       destroyOffersMapInstance(container);
@@ -2376,6 +2435,7 @@ function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMar
               maxClusterRadius: 56,
               spiderfyOnMaxZoom: true,
               zoomToBoundsOnClick: true,
+              disableClusteringAtZoom: MAP_LEAFLET_DISABLE_CLUSTERING_AT_ZOOM,
             })
           : null;
       container._hcLeafletClusterGroup = clusterGroup;
@@ -2407,14 +2467,19 @@ function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMar
         dismissSelectedMapMerchant(container);
       });
 
-      if (showUserMarker && Number.isFinite(userLat) && Number.isFinite(userLng)) {
-        map.setView([userLat, userLng], MAP_USER_ZOOM_LEAFLET, { animate: true });
-      } else if (merchantMarkerData.length > 0) {
-        var box = computeMapKitRegionLikeStoreMap(NaN, NaN, merchantMarkerData);
-        map.fitBounds([
-          [box.centerLat - box.spanLat / 2, box.centerLng - box.spanLon / 2],
-          [box.centerLat + box.spanLat / 2, box.centerLng + box.spanLon / 2],
-        ]);
+      if (merchantMarkerData.length > 0) {
+        var box = computeMapKitRegionLikeStoreMap(
+          showUserMarker ? userLat : NaN,
+          showUserMarker ? userLng : NaN,
+          merchantMarkerData,
+        );
+        map.fitBounds(
+          [
+            [box.centerLat - box.spanLat / 2, box.centerLng - box.spanLon / 2],
+            [box.centerLat + box.spanLat / 2, box.centerLng + box.spanLon / 2],
+          ],
+          { animate: false },
+        );
       } else {
         map.setView([userLat, userLng], MAP_USER_ZOOM_LEAFLET, { animate: false });
       }
@@ -2424,10 +2489,23 @@ function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMar
         try {
           map.invalidateSize();
           var fittedCenter = map.getCenter();
+          var fittedBounds = map.getBounds();
           container._hcLastRegionFetchCenter = { lat: fittedCenter.lat, lng: fittedCenter.lng };
+          logOffersMapViewportDistance(
+            'Leaflet',
+            fittedCenter.lat,
+            Math.abs(fittedBounds.getNorth() - fittedBounds.getSouth()),
+            Math.abs(fittedBounds.getEast() - fittedBounds.getWest()),
+          );
           map.on('moveend', function () {
             var c = map.getCenter();
             var b = map.getBounds();
+            logOffersMapViewportDistance(
+              'Leaflet',
+              c.lat,
+              Math.abs(b.getNorth() - b.getSouth()),
+              Math.abs(b.getEast() - b.getWest()),
+            );
             handleLiveMapRegionChange(
               container,
               { lat: c.lat, lng: c.lng },
@@ -2589,6 +2667,13 @@ function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merc
   );
   var mapCenterCoord = new Coord(regionBox.centerLat, regionBox.centerLng);
   var startSpan = new Span(regionBox.spanLat, regionBox.spanLon);
+  var clusterAtStart =
+    startSpan.latitudeDelta > MAPKIT_CLUSTER_MIN_LATITUDE_DELTA
+      ? MAP_MERCHANT_CLUSTER_ID
+      : null;
+  merchantAnnotations.forEach(function (annotation) {
+    annotation.clusteringIdentifier = clusterAtStart;
+  });
   var M = mapkit.Map;
 
   function createMapAndAnnotations() {
@@ -2715,10 +2800,28 @@ function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merc
         if (c) {
           container._hcLastRegionFetchCenter = { lat: c.latitude, lng: c.longitude };
         }
+        var initialSpan = map.region && map.region.span;
+        if (c && initialSpan) {
+          logOffersMapViewportDistance(
+            'MapKit',
+            c.latitude,
+            initialSpan.latitudeDelta,
+            initialSpan.longitudeDelta,
+          );
+        }
         map.addEventListener('region-change-end', function () {
           try {
             var cc = map.center;
             var span = map.region && map.region.span;
+            if (span) {
+              syncMapKitMerchantClustering(container, map.region);
+              logOffersMapViewportDistance(
+                'MapKit',
+                cc.latitude,
+                span.latitudeDelta,
+                span.longitudeDelta,
+              );
+            }
             handleLiveMapRegionChange(
               container,
               { lat: cc.latitude, lng: cc.longitude },
