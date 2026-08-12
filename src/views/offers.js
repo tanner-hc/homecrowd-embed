@@ -1858,7 +1858,7 @@ function buildSelectedMerchantCardHtml(merchant, recommended) {
     '<span class="hc-map-merchant-card-logo">' +
     (recommended ? buildMapCardHomecrowdBadgeHtml() : '') +
     (logoUrl
-      ? '<img data-hc-ph="store" src="' + escapeAttr(logoUrl) + '" alt="" />'
+      ? '<img data-hc-ph="store" data-hc-square src="' + escapeAttr(logoUrl) + '" alt="" />'
       : '<span class="hc-map-merchant-card-logo-ph hc-img-ph hc-img-ph--store"></span>') +
     '</span>' +
     '</button>' +
@@ -2064,7 +2064,9 @@ function createMapKitMerchantAnnotation(mapkit, mk, container) {
     return el;
   };
   var pinW = 40;
-  var pinH = 50;
+  // The teardrop is 25x28.5 in the design — 1.14 tall for its width — and the
+  // point is the bottom of the shape, so the box is the shape.
+  var pinH = 46;
   var ann = new Ann(new Coord(mk.lat, mk.lng), factory, {
     size: { width: pinW, height: pinH },
     anchorOffset: new DOMPoint(0, -pinH),
@@ -3898,7 +3900,10 @@ function renderMerchantCard(merchant, options) {
   if (!rowLayout) html += renderPointMultiplierBadgeHtml(merchant, 'block');
   if (logoUrl) {
     html +=
-      '<div class="hc-merchant-img-wrap"><img data-hc-ph="store" class="hc-merchant-img" loading="lazy" decoding="async" src="' +
+      '<div class="hc-merchant-img-wrap"><img data-hc-ph="store"' +
+      // Only the row tile is square; the two-up card's wrapper is 100x80.
+      (rowLayout ? ' data-hc-square' : '') +
+      ' class="hc-merchant-img" loading="lazy" decoding="async" src="' +
       escapeAttr(logoUrl) +
       '" alt="' +
       escapeAttr(name) +

@@ -4525,24 +4525,36 @@ html.hc-embed--no-school-brand .hc-login-card {
   flex-direction: column;
   align-items: center;
   pointer-events: auto;
+  /* Teardrop: a circle that converges to a point at the bottom centre. */
+  --hc-pin-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 25 28.5'%3E%3Cpath d='M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 16 12.5 16S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z' fill='%23000'/%3E%3C/svg%3E");
   --hc-pin-size: 40px;
   --hc-pin-border: 2.5px;
   --hc-pin-tip-w: 8px;
   --hc-pin-tip-h: 10px;
 }
 
+/* Figma 1421:9188 — a single teardrop filled edge to edge by the merchant's own
+   artwork: Ulta is a solid orange drop, Best Buy blue, Walgreens red. No white
+   plate and no ring, so the brand colour is what reads at pin size.
+
+   Masked rather than built from a circle plus a triangle, because the point has
+   to be filled by the same image — a separate tip element would have to guess
+   the artwork's colour. */
 .hc-merchant-pin-head {
   width: var(--hc-pin-size);
-  height: var(--hc-pin-size);
-  border-radius: 999px;
+  height: calc(var(--hc-pin-size) * 1.14);
   overflow: hidden;
-  background: #e5e5e5;
-  border: var(--hc-pin-border) solid #ffffff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+  background: #fff;
   box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
+  -webkit-mask-image: var(--hc-pin-mask);
+  mask-image: var(--hc-pin-mask);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
 }
 
 .hc-merchant-pin-img {
@@ -4560,18 +4572,9 @@ html.hc-embed--no-school-brand .hc-login-card {
   line-height: 1;
 }
 
+/* The teardrop mask draws the point, so the separate tip is redundant. */
 .hc-merchant-pin-tip {
-  width: 0;
-  height: 0;
-  margin-top: calc(-1 * var(--hc-pin-border));
-  border-style: solid;
-  border-left-width: var(--hc-pin-tip-w);
-  border-right-width: var(--hc-pin-tip-w);
-  border-top-width: var(--hc-pin-tip-h);
-  border-left-color: transparent;
-  border-right-color: transparent;
-  border-top-color: #ffffff;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.12));
+  display: none;
 }
 
 .hc-offers-map-merchant-card {
@@ -4684,7 +4687,9 @@ html.hc-embed--no-school-brand .hc-login-card {
   height: 72px;
   border-radius: 14px;
   overflow: visible;
-  background: #f2f2f2;
+  /* White like the other square logo plates, so the space a letterboxed logo
+     leaves reads as part of the artwork rather than a grey plate behind it. */
+  background: #fff;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -4695,13 +4700,6 @@ html.hc-embed--no-school-brand .hc-login-card {
 .hc-map-merchant-card-logo-ph {
   border-radius: 14px;
   overflow: hidden;
-}
-
-.hc-map-merchant-card-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
 }
 
 .hc-map-merchant-card-logo-ph {
@@ -5227,16 +5225,9 @@ html.hc-embed--no-school-brand .hc-login-card {
   justify-content: center;
 }
 
-/* Sized by max-* rather than stretched and cropped — see the note on
-   .hc-merchant-row .hc-merchant-img. `cover` chopped any logo that was not
-   square; this shrinks it to fit and rounds the artwork's own corners. */
+/* Sizing comes from img[data-hc-square]; only the radius is local to this tile. */
 .hc-shop-detail-logo {
-  width: auto;
-  height: auto;
-  max-width: 100%;
-  max-height: 100%;
   border-radius: 24px;
-  display: block;
 }
 
 .hc-shop-detail-logo-ph {
@@ -14828,20 +14819,8 @@ button.hc-shop-detail-cats--expandable {
   background: #fff;
 }
 
-/* `contain`, not `cover`: a logo that is not square would otherwise be cropped
-   to fill the tile. Square brand artwork still fills it edge to edge — only
-   wider or taller marks shrink to fit, leaving white around them. */
-/* Sized by max-* rather than stretched to 100% with object-fit.
-   `border-radius` clips at the element's box, so with a stretched 60x60 img the
-   radius rounds the box's corners while the letterboxed artwork sits untouched
-   inside it. Letting the img shrink to the artwork makes the two the same box,
-   so the radius lands on what is actually visible. The wrapper centres it and
-   fills the rest of the 60x60 with white. */
+/* Sizing comes from img[data-hc-square]; only the radius is local to this tile. */
 .hc-merchant-row .hc-merchant-img {
-  width: auto;
-  height: auto;
-  max-width: 100%;
-  max-height: 100%;
   border-radius: 12px;
 }
 
@@ -18590,6 +18569,48 @@ body:has(.hc-fr-success) {
    so a failed placeholder never costs another network request.
 --------------------------------------------------------------------------- */
 .hc-img-ph,
+/* ── Square logo tiles ──
+   Both the Eat local row tile (.hc-merchant-img-wrap, 60x60) and the offer detail
+   hero (.hc-shop-detail-logo-wrap, 112x112) are square white plates that centre
+   their logo. Scaling the logo until its LONGER side fills the plate leaves the
+   shorter side letterboxed by the white, so the composite always reads as a
+   square — whether the source art was wider, taller, or smaller than the plate.
+
+   Sized to the artwork rather than stretched to 100%/100% with object-fit:
+   border-radius clips at the element's box, so a stretched img would round the
+   plate's corners while the artwork's own corners stayed square inside it, which
+   shows on any logo with a coloured background. Hugging the artwork makes element
+   and mark the same box, so the radius lands on real pixels.
+
+   Which side is longer is a property of the decoded bitmap, so imageSquare.js adds
+   --wide / --tall on load. Until then the max-* pair holds the old behaviour: fits
+   inside the plate, never overflows, never upscales. */
+img[data-hc-square] {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Only the dominant axis is set; the other stays auto, and the max-* pair above
+   remains as a backstop so neither can overflow the plate. */
+img[data-hc-square].hc-img-square--wide {
+  width: 100%;
+}
+
+img[data-hc-square].hc-img-square--tall {
+  height: 100%;
+}
+
+/* A failed image keeps its element but carries a 1x1 pixel as its src, which the
+   rules above would collapse to a 1px box — leaving the grey tile and its icon
+   nothing to paint on. */
+img[data-hc-square][data-hc-ph-applied='1'] {
+  width: 100%;
+  height: 100%;
+}
+
 img.hc-img-ph {
   background-color: #EBEBEB;
   background-repeat: no-repeat;

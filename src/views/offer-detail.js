@@ -529,7 +529,7 @@ function buildShopDetailHtml(offer, card, user) {
     '<div class="hc-shop-detail-hero">' +
     '<div class="hc-shop-detail-logo-wrap">' +
     (logo
-      ? '<img data-hc-ph="store" src="' +
+      ? '<img data-hc-ph="store" data-hc-square src="' +
         escapeAttr(logo) +
         '" alt="" class="hc-shop-detail-logo" />'
       : '<span class="hc-shop-detail-logo-ph">' + escapeHtml(initials || '?') + '</span>') +
