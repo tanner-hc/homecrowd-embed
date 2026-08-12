@@ -11,11 +11,12 @@
     "deploy:prod": "aws codebuild start-build --project-name homecrowd-embed-prod"
   },
   "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "vite": "^6.0.0"
   },
   "dependencies": {
-    "@apple/mapkit-loader": "^0.2.1",
     "lottie-web": "^5.13.0",
+    "maplibre-gl": "^6.3.0",
     "tesseract.js": "^5.1.1"
   }
 }

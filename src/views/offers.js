@@ -8,12 +8,7 @@ import chevronDownSvg from '../assets/icons/chevron-down-sm.svg?raw';
 import rowChevronSvg from '../assets/icons/chevron-right-sm.svg?raw';
 import { resolveCardLinkStatus } from '../cardLinkStatus.js';
 import { mountBrowserExtensionInline } from './browser-extension.js';
-import {
-  resolveMapKitTokenAsync,
-  ensureMapKitLoaded,
-  mapKitAuthFailureWasReported,
-  shouldUseMapKitJs,
-} from '../mapkit-embed.js';
+import { ensureMapLibreLoaded, OPENFREEMAP_STYLE_URL } from '../openfreemap.js';
 import { hasNativeBridge, postToNative } from '../bridge.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
@@ -57,12 +52,14 @@ import {
 import { getSetupRewardPoints } from '../setup-rewards.js';
 import lockIconUrl from '../assets/icons/lock_icon.png';
 
-var MAP_OFFERS_PAGE_SIZE = 150;
-var MAP_USER_ZOOM_LEAFLET = 13;
+var MAP_OFFERS_PAGE_SIZE = 300;
+var MAP_USER_ZOOM = 13;
 var MAP_USER_SPAN_DEG = 0.001;
-var MAP_INITIAL_NEARBY_STORES = 3;
-var MAP_LEAFLET_DISABLE_CLUSTERING_AT_ZOOM = 9;
-var MAPKIT_CLUSTER_MIN_LATITUDE_DELTA = 0.55;
+var MAP_INITIAL_NEARBY_STORES = 4;
+var MAP_MAX_ZOOM = 19;
+var MAP_CLUSTER_MAX_ZOOM = 5;
+var MAP_CLUSTER_RADIUS = 56;
+var MAP_CLUSTER_ANIM_MS = 280;
 
 var trophyIconSvg =
   '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
@@ -1448,7 +1445,7 @@ function merchantDistanceMiles(m, userLat, userLng) {
   return NaN;
 }
 
-function storeMapMerchantMapKitSubtitle(m, userLat, userLng) {
+function storeMapMerchantSubtitle(m, userLat, userLng) {
   var addr = storeMapMerchantAddressDescription(m).trim();
   var d = merchantDistanceMiles(m, userLat, userLng);
   if (addr && Number.isFinite(d)) {
@@ -1459,7 +1456,7 @@ function storeMapMerchantMapKitSubtitle(m, userLat, userLng) {
   return '';
 }
 
-function computeMapKitRegionLikeStoreMap(userLat, userLng, merchantPoints) {
+function computeMapRegionLikeStoreMap(userLat, userLng, merchantPoints) {
   var merchants = (merchantPoints || []).filter(function (pt) {
     return pt && Number.isFinite(pt.lat) && Number.isFinite(pt.lng);
   });
@@ -1476,8 +1473,8 @@ function computeMapKitRegionLikeStoreMap(userLat, userLng, merchantPoints) {
         return a.distance - b.distance;
       })
       .slice(0, MAP_INITIAL_NEARBY_STORES);
-    var nearbyLats = [userLat];
-    var nearbyLngs = [userLng];
+    var nearbyLats = [];
+    var nearbyLngs = [];
     closest.forEach(function (pt) {
       nearbyLats.push(pt.lat);
       nearbyLngs.push(pt.lng);
@@ -1489,8 +1486,8 @@ function computeMapKitRegionLikeStoreMap(userLat, userLng, merchantPoints) {
     return {
       centerLat: (nearbyMinLat + nearbyMaxLat) / 2,
       centerLng: (nearbyMinLng + nearbyMaxLng) / 2,
-      spanLat: Math.max((nearbyMaxLat - nearbyMinLat) * 1.4, 0.005),
-      spanLon: Math.max((nearbyMaxLng - nearbyMinLng) * 1.4, 0.005),
+      spanLat: Math.max((nearbyMaxLat - nearbyMinLat) * 1.15, 0.004),
+      spanLon: Math.max((nearbyMaxLng - nearbyMinLng) * 1.15, 0.004),
     };
   }
   if (Number.isFinite(userLat) && Number.isFinite(userLng)) {
@@ -1522,23 +1519,6 @@ function computeMapKitRegionLikeStoreMap(userLat, userLng, merchantPoints) {
 }
 
 var MAP_PIN_USER_COLOR = '#007AFF';
-var MAP_PIN_MERCHANT_COLOR = '#AF52DE';
-var MAP_MERCHANT_CLUSTER_ID = 'hc-merchant';
-
-function syncMapKitMerchantClustering(container, region) {
-  var span = region && region.span;
-  if (!span || !Number.isFinite(span.latitudeDelta)) return;
-  var clusteringIdentifier =
-    span.latitudeDelta > MAPKIT_CLUSTER_MIN_LATITUDE_DELTA
-      ? MAP_MERCHANT_CLUSTER_ID
-      : null;
-  (container._hcMkMerchantAnnotations || []).forEach(function (annotation) {
-    if (!annotation) return;
-    try {
-      annotation.clusteringIdentifier = clusteringIdentifier;
-    } catch (e) {}
-  });
-}
 
 var OFFERS_MAP_PAN_DEBOUNCE_MS = 600;
 
@@ -1571,6 +1551,25 @@ function mergeOffersMapStores(container, list) {
   return added;
 }
 
+function registerOffersMapPins(container, markerData) {
+  if (!container._hcMapPinData) container._hcMapPinData = {};
+  var added = 0;
+  (markerData || []).forEach(function (mk) {
+    if (!mk || !mk.key) return;
+    if (container._hcMapPinData[mk.key]) {
+      container._hcMapPinData[mk.key] = mk;
+      return;
+    }
+    container._hcMapPinData[mk.key] = mk;
+    added++;
+  });
+  return added;
+}
+
+function resetOffersMapPins(container) {
+  container._hcMapPinData = {};
+}
+
 function addMerchantPinsToLiveMap(container, merchants) {
   var loc = container._hcMapUserLoc || {};
   var data = [];
@@ -1579,61 +1578,8 @@ function addMerchantPinsToLiveMap(container, merchants) {
     if (item) data.push(item);
   });
   if (!data.length) return;
-
-  var mk = container._hcMkMap;
-  if (mk && window.mapkit) {
-    try {
-      if (!container._hcMkMerchantAnnotations) container._hcMkMerchantAnnotations = [];
-      var anns = data.map(function (d) {
-        return createMapKitMerchantAnnotation(window.mapkit, d, container);
-      });
-      mk.addAnnotations(anns);
-      container._hcMkMerchantAnnotations = container._hcMkMerchantAnnotations.concat(anns);
-      syncMapKitMerchantClustering(container, mk.region);
-    } catch (e) {
-      console.warn('[HC offers map] addAnnotations failed', e);
-    }
-    return;
-  }
-
-  var lf = container._hcLeafletMap;
-  if (lf && window.L) {
-    try {
-      if (!container._hcLeafletMerchantMarkers) container._hcLeafletMerchantMarkers = [];
-      var cluster = container._hcLeafletClusterGroup;
-      if (!cluster && typeof window.L.markerClusterGroup === 'function') {
-        cluster = window.L.markerClusterGroup({
-          showCoverageOnHover: false,
-          maxClusterRadius: 56,
-          spiderfyOnMaxZoom: true,
-          zoomToBoundsOnClick: true,
-          disableClusteringAtZoom: MAP_LEAFLET_DISABLE_CLUSTERING_AT_ZOOM,
-        });
-        lf.addLayer(cluster);
-        container._hcLeafletClusterGroup = cluster;
-      }
-      data.forEach(function (d) {
-        var marker = window.L.marker([d.lat, d.lng], {
-          icon: leafletMerchantPinIcon(window.L, d, false),
-        });
-        marker.on('click', function (ev) {
-          if (ev && ev.originalEvent) {
-            window.L.DomEvent.stopPropagation(ev.originalEvent);
-            window.L.DomEvent.preventDefault(ev.originalEvent);
-          }
-          showSelectedMapMerchant(container, d.merchant);
-        });
-        if (cluster) {
-          cluster.addLayer(marker);
-        } else {
-          marker.addTo(lf);
-        }
-        container._hcLeafletMerchantMarkers.push({ marker: marker, mk: d });
-      });
-    } catch (e2) {
-      console.warn('[HC offers map] leaflet marker add failed', e2);
-    }
-  }
+  if (!registerOffersMapPins(container, data)) return;
+  queueOffersMapMarkerSync(container);
 }
 
 function handleLiveMapRegionChange(container, center, spanLatDeg) {
@@ -1657,85 +1603,79 @@ function handleLiveMapRegionChange(container, center, spanLatDeg) {
   }, OFFERS_MAP_PAN_DEBOUNCE_MS);
 }
 
-var offersLeafletLoadPromise = null;
+function removeOffersMapMarkers(container) {
+  if (container._hcMlFlyRaf) {
+    window.cancelAnimationFrame(container._hcMlFlyRaf);
+    container._hcMlFlyRaf = 0;
+  }
+  container._hcMlFlights = [];
+  (container._hcMlLeaveTimers || []).forEach(function (id) {
+    window.clearTimeout(id);
+  });
+  container._hcMlLeaveTimers = [];
+  var leaving = container._hcMlLeavingMarkers || {};
+  Object.keys(leaving).forEach(function (id) {
+    try {
+      leaving[id].remove();
+    } catch (e0) {}
+  });
+  container._hcMlLeavingMarkers = {};
+  var markers = container._hcMlMarkers || {};
+  Object.keys(markers).forEach(function (id) {
+    try {
+      markers[id].remove();
+    } catch (e) {}
+  });
+  container._hcMlMarkers = {};
+  container._hcMlClusterEntries = [];
+  var userMarker = container._hcMlUserMarker;
+  if (userMarker) {
+    try {
+      userMarker.remove();
+    } catch (e2) {}
+  }
+  container._hcMlUserMarker = null;
+}
 
 function destroyOffersMapInstance(container) {
   if (container._hcRegionDebounce) {
     window.clearTimeout(container._hcRegionDebounce);
     container._hcRegionDebounce = null;
   }
-  restoreMapKitConsoleErrorHook(container);
-  var h = container._hcMkFallbackHandler;
-  if (h && window.mapkit && window.mapkit.removeEventListener) {
+  removeOffersMapMarkers(container);
+  var map = container._hcMlMap;
+  if (map && typeof map.remove === 'function') {
     try {
-      window.mapkit.removeEventListener('error', h);
-      window.mapkit.removeEventListener('configuration-error', h);
+      map.remove();
     } catch (e) {}
   }
-  container._hcMkFallbackHandler = null;
-  var mk = container._hcMkMap;
-  if (mk && typeof mk.destroy === 'function') {
-    try {
-      mk.destroy();
-    } catch (e) {}
-  }
-  container._hcMkMap = null;
-  var lf = container._hcLeafletMap;
-  if (lf && typeof lf.remove === 'function') {
-    try {
-      lf.remove();
-    } catch (e2) {}
-  }
-  container._hcLeafletMap = null;
-  container._hcLeafletClusterGroup = null;
-  container._hcLeafletMerchantMarkers = [];
-  container._hcMkMerchantAnnotations = [];
+  container._hcMlMap = null;
+  container._hcMlLib = null;
+  container._hcMlSyncQueued = false;
   hideSelectedMapMerchant(container);
 }
 
 function focusOffersMap(container, lat, lng) {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-
-  var lf = container._hcLeafletMap;
-  if (lf && typeof lf.setView === 'function') {
-    lf.setView([lat, lng], MAP_USER_ZOOM_LEAFLET, { animate: true });
-    return;
-  }
-
-  var mk = container._hcMkMap;
-  if (mk && window.mapkit) {
-    try {
-      var Coord = window.mapkit.Coordinate;
-      var Region = window.mapkit.CoordinateRegion;
-      var Span = window.mapkit.CoordinateSpan;
-      var center = new Coord(lat, lng);
-      var span = new Span(MAP_USER_SPAN_DEG, MAP_USER_SPAN_DEG);
-      var region = new Region(center, span);
-      if (typeof mk.setRegionAnimated === 'function') {
-        mk.setRegionAnimated(region, true);
-      } else {
-        mk.region = region;
-      }
-    } catch (e) {
-      console.warn('[HC offers map] focusOffersMap failed', e);
-    }
+  var map = container._hcMlMap;
+  if (!map) return;
+  try {
+    map.easeTo({ center: [lng, lat], zoom: MAP_USER_ZOOM });
+  } catch (e) {
+    console.warn('[HC offers map] focusOffersMap failed', e);
   }
 }
 
-function leafletMapPinIcon(L, fillHex) {
-  var html =
+function buildMapPinElement(fillHex) {
+  var el = document.createElement('div');
+  el.className = 'hc-map-pin-icon';
+  el.innerHTML =
     '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36" aria-hidden="true">' +
     '<path fill="' +
     fillHex +
     '" stroke="#ffffff" stroke-width="1.5" d="M14 0C6.268 0 0 6.268 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.268 21.732 0 14 0z"/>' +
     '</svg>';
-  return L.divIcon({
-    className: 'hc-map-pin-icon',
-    html: html,
-    iconSize: [28, 36],
-    iconAnchor: [14, 36],
-    popupAnchor: [0, -34],
-  });
+  return el;
 }
 
 function resolveMerchantLogoUrl(m) {
@@ -1798,8 +1738,6 @@ function isFeaturedMapMerchant(container, merchant) {
 
 function buildMerchantPinHtml(mk, selected) {
   var size = selected ? 44 : 40;
-  var tipW = selected ? 18 : 16;
-  var tipH = selected ? 11 : 10;
   var border = selected ? 3 : 2.5;
   var logoUrl = (mk && mk.logoUrl) || resolveMerchantLogoUrl(mk && mk.merchant);
   var name = (mk && mk.name) || (mk && mk.merchant && (mk.merchant.name || mk.merchant.merchantName)) || '?';
@@ -1816,26 +1754,24 @@ function buildMerchantPinHtml(mk, selected) {
     size +
     'px;--hc-pin-border:' +
     border +
-    'px;--hc-pin-tip-w:' +
-    tipW / 2 +
-    'px;--hc-pin-tip-h:' +
-    tipH +
     'px">' +
     '<div class="hc-merchant-pin-head">' +
     inner +
     '</div>' +
-    '<div class="hc-merchant-pin-tip" aria-hidden="true"></div>' +
     '</div>'
   );
 }
 
-function leafletMerchantPinIcon(L, mk, selected) {
-  return L.divIcon({
-    className: 'hc-merchant-pin-icon',
-    html: buildMerchantPinHtml(mk, !!selected),
-    iconSize: selected ? [44, 55] : [40, 50],
-    iconAnchor: selected ? [22, 55] : [20, 50],
+function buildMerchantPinElement(container, mk, selected) {
+  var el = document.createElement('div');
+  el.className = 'hc-merchant-pin-icon';
+  el.innerHTML = '<div class="hc-map-marker-face">' + buildMerchantPinHtml(mk, !!selected) + '</div>';
+  el.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    showSelectedMapMerchant(container, mk.merchant);
   });
+  return el;
 }
 
 function buildMapCardHomecrowdBadgeHtml() {
@@ -2004,34 +1940,20 @@ function dismissSelectedMapMerchant(container) {
 
 function syncSelectedMerchantPinStyles(container, merchant) {
   var selectedKey = merchant ? offersMapStoreKey(merchant) : '';
-  var leafletMarkers = container._hcLeafletMerchantMarkers || [];
-  leafletMarkers.forEach(function (entry) {
-    if (!entry || !entry.marker || !entry.mk) return;
-    var key = entry.mk.key || (entry.mk.merchant ? offersMapStoreKey(entry.mk.merchant) : '');
-    var selected = !!(selectedKey && key && String(selectedKey) === String(key));
-    try {
-      entry.marker.setIcon(leafletMerchantPinIcon(window.L, entry.mk, selected));
-    } catch (_e) {}
-  });
-  var anns = container._hcMkMerchantAnnotations || [];
-  anns.forEach(function (ann) {
-    if (!ann) return;
-    var key = ann._hcKey || '';
-    var selected = !!(selectedKey && key && String(selectedKey) === String(key));
-    var mk = ann._hcMarkerData;
+  container._hcMapSelectedKey = selectedKey;
+  var markers = container._hcMlMarkers || {};
+  var data = container._hcMapPinData || {};
+  Object.keys(markers).forEach(function (id) {
+    if (id.indexOf('p:') !== 0) return;
+    var key = id.slice(2);
+    var mk = data[key];
     if (!mk) return;
+    var selected = !!(selectedKey && String(selectedKey) === String(key));
     try {
-      var html = buildMerchantPinHtml(mk, selected);
-      var tmp = document.createElement('div');
-      tmp.innerHTML = html;
-      var next = tmp.firstElementChild;
-      var el = ann.element;
-      if (el && next) {
-        el.className = next.className;
-        el.setAttribute('style', next.getAttribute('style') || '');
-        el.innerHTML = next.innerHTML;
-      }
-    } catch (_e2) {}
+      var root = markers[id].getElement();
+      var face = root && root.querySelector ? root.querySelector('.hc-map-marker-face') : null;
+      (face || root).innerHTML = buildMerchantPinHtml(mk, selected);
+    } catch (_e) {}
   });
 }
 
@@ -2042,111 +1964,73 @@ function buildMerchantMarkerDataItem(m, userLat, userLng) {
     lat: p.lat,
     lng: p.lng,
     name: m.name || m.merchantName || '',
-    subtitle: storeMapMerchantMapKitSubtitle(m, userLat, userLng),
+    subtitle: storeMapMerchantSubtitle(m, userLat, userLng),
     logoUrl: resolveMerchantLogoUrl(m),
     key: offersMapStoreKey(m),
     merchant: m,
   };
 }
 
-function createMapKitMerchantAnnotation(mapkit, mk, container) {
-  var Coord = mapkit.Coordinate;
-  var Ann = mapkit.Annotation;
-  var factory = function () {
-    var wrap = document.createElement('div');
-    wrap.innerHTML = buildMerchantPinHtml(mk, false);
-    var el = wrap.firstElementChild || wrap;
-    el.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      if (container) showSelectedMapMerchant(container, mk.merchant);
-    });
-    return el;
-  };
-  var pinW = 40;
-  var pinH = 50;
-  var ann = new Ann(new Coord(mk.lat, mk.lng), factory, {
-    size: { width: pinW, height: pinH },
-    anchorOffset: new DOMPoint(0, -pinH),
-    calloutEnabled: false,
-    animates: false,
-    clusteringIdentifier: MAP_MERCHANT_CLUSTER_ID,
-    collisionMode: mapkit.Annotation.CollisionMode
-      ? mapkit.Annotation.CollisionMode.Circle
-      : 'circle',
-  });
-  ann._hcMerchant = mk.merchant;
-  ann._hcMarkerData = mk;
-  ann._hcKey = mk.key;
-  return ann;
-}
-
-function buildMapKitClusterAnnotation(mapkit, clusterAnnotation, getMap) {
-  var members = clusterAnnotation.memberAnnotations || [];
-  var count = members.length || 0;
+function buildMapClusterElement(container, entry) {
+  var count = Number(entry.count) || 0;
   var size = count >= 25 ? 52 : count >= 10 ? 46 : 40;
-  var factory = function () {
-    var el = document.createElement('div');
-    el.className = 'hc-map-cluster';
-    el.style.setProperty('--hc-cluster-size', size + 'px');
-    el.textContent = String(count);
-    el.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      zoomMapKitToClusterMembers(typeof getMap === 'function' ? getMap() : null, mapkit, members);
-    });
-    return el;
-  };
-  var ann = new mapkit.Annotation(clusterAnnotation.coordinate, factory, {
-    size: { width: size, height: size },
-    anchorOffset: new DOMPoint(0, -size / 2),
-    calloutEnabled: false,
-    animates: false,
-    clusteringIdentifier: MAP_MERCHANT_CLUSTER_ID,
+  var el = document.createElement('div');
+  el.className = 'hc-map-cluster';
+  el.style.setProperty('--hc-cluster-size', size + 'px');
+  el.innerHTML = '<div class="hc-map-marker-face">' + String(count) + '</div>';
+  el._hcClusterMembers = entry.members || [];
+  el.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    zoomOffersMapToCluster(container, el._hcClusterMembers);
   });
-  ann._hcClusterMembers = members;
-  return ann;
+  return el;
 }
 
-function zoomMapKitToClusterMembers(map, mapkit, members) {
-  if (!map || !members || !members.length) return;
+function fitOffersMapToPoints(container, points, animate) {
+  var map = container._hcMlMap;
+  if (!map || !points || !points.length) return false;
+  var lats = [];
+  var lngs = [];
+  points.forEach(function (p) {
+    if (!p) return;
+    if (Number.isFinite(p.lat)) lats.push(p.lat);
+    if (Number.isFinite(p.lng)) lngs.push(p.lng);
+  });
+  if (!lats.length || !lngs.length) return false;
+  var minLat = Math.min.apply(null, lats);
+  var maxLat = Math.max.apply(null, lats);
+  var minLng = Math.min.apply(null, lngs);
+  var maxLng = Math.max.apply(null, lngs);
   try {
-    if (typeof map.showItems === 'function') {
-      var showOpts = { animate: true };
-      if (mapkit.Padding) {
-        showOpts.padding = new mapkit.Padding(48, 48, 48, 48);
-      }
-      map.showItems(members, showOpts);
-      return;
-    }
-  } catch (e) {}
-  try {
-    var lats = [];
-    var lngs = [];
-    members.forEach(function (ann) {
-      var c = ann && ann.coordinate;
-      if (!c) return;
-      if (Number.isFinite(c.latitude)) lats.push(c.latitude);
-      if (Number.isFinite(c.longitude)) lngs.push(c.longitude);
-    });
-    if (!lats.length) return;
-    var minLat = Math.min.apply(null, lats);
-    var maxLat = Math.max.apply(null, lats);
-    var minLng = Math.min.apply(null, lngs);
-    var maxLng = Math.max.apply(null, lngs);
-    var center = new mapkit.Coordinate((minLat + maxLat) / 2, (minLng + maxLng) / 2);
-    var span = new mapkit.CoordinateSpan(
-      Math.max((maxLat - minLat) * 1.6, 0.01),
-      Math.max((maxLng - minLng) * 1.6, 0.01),
+    map.fitBounds(
+      [
+        [minLng, minLat],
+        [maxLng, maxLat],
+      ],
+      { padding: 64, maxZoom: MAP_MAX_ZOOM, animate: animate !== false, duration: 400 },
     );
-    var region = new mapkit.CoordinateRegion(center, span);
-    if (typeof map.setRegionAnimated === 'function') {
-      map.setRegionAnimated(region, true);
-    } else {
-      map.region = region;
-    }
-  } catch (e2) {
-    console.warn('[HC offers map] cluster zoom failed', e2);
+    return true;
+  } catch (e) {
+    console.warn('[HC offers map] fitBounds failed', e);
+    return false;
+  }
+}
+
+function zoomOffersMapToCluster(container, members) {
+  var points = (members || []).map(function (mk) {
+    return { lat: mk.lat, lng: mk.lng };
+  });
+  if (fitOffersMapToPoints(container, points, true)) return;
+  var map = container._hcMlMap;
+  if (!map || !points.length) return;
+  try {
+    map.easeTo({
+      center: [points[0].lng, points[0].lat],
+      zoom: Math.min(map.getZoom() + 2, MAP_MAX_ZOOM),
+    });
+  } catch (e) {
+    console.warn('[HC offers map] cluster zoom failed', e);
   }
 }
 
@@ -2159,7 +2043,7 @@ function wireMapSelectionHandlers(container, mapMount) {
         e.target &&
         e.target.closest &&
         e.target.closest(
-          '.hc-merchant-pin, .hc-map-cluster, .hc-map-merchant-card, .hc-offers-map-merchant-card, .marker-cluster',
+          '.hc-merchant-pin, .hc-map-cluster, .hc-map-merchant-card, .hc-offers-map-merchant-card',
         )
       ) {
         return;
@@ -2169,229 +2053,300 @@ function wireMapSelectionHandlers(container, mapMount) {
   }
 }
 
-function offersMapLinkOnce(href, id) {
-  if (document.querySelector('link[data-hc-offers-map="' + id + '"]')) return;
-  var link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = href;
-  link.setAttribute('data-hc-offers-map', id);
-  document.head.appendChild(link);
-}
-
-function offersLoadScriptSequential(urls, index, done, err) {
-  if (index >= urls.length) {
-    done();
-    return;
-  }
-  var s = document.createElement('script');
-  s.src = urls[index];
-  s.onload = function () {
-    offersLoadScriptSequential(urls, index + 1, done, err);
-  };
-  s.onerror = function () {
-    err(new Error('Failed to load script: ' + urls[index]));
-  };
-  document.body.appendChild(s);
-}
-
-function ensureLeafletLoaded() {
-  if (window.L && typeof window.L.markerClusterGroup === 'function') {
-    return Promise.resolve(window.L);
-  }
-  if (offersLeafletLoadPromise) return offersLeafletLoadPromise;
-
-  offersLeafletLoadPromise = new Promise(function (resolve, reject) {
-    offersMapLinkOnce('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', 'leaflet');
-    offersMapLinkOnce(
-      'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css',
-      'markercluster',
-    );
-    offersMapLinkOnce(
-      'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css',
-      'markercluster-default',
-    );
-
-    var urls = [];
-    if (!window.L) {
-      urls.push('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js');
-    }
-    if (!window.L || typeof window.L.markerClusterGroup !== 'function') {
-      urls.push('https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js');
-    }
-
-    function finish() {
-      if (!window.L) {
-        reject(new Error('Leaflet is not available'));
-        return;
-      }
-      if (typeof window.L.markerClusterGroup !== 'function') {
-        console.warn('[HC offers map] MarkerCluster missing after load');
-      } else {
-        console.log('[HC offers map] Leaflet + MarkerCluster ready');
-      }
-      resolve(window.L);
-    }
-
-    if (urls.length === 0) {
-      finish();
-      return;
-    }
-
-    offersLoadScriptSequential(urls, 0, finish, function (err) {
-      if (window.L) {
-        console.warn('[HC offers map] script load issue, continuing with Leaflet', err);
-        finish();
-        return;
-      }
-      reject(err);
-    });
-  }).catch(function (e) {
-    offersLeafletLoadPromise = null;
-    throw e;
-  });
-
-  return offersLeafletLoadPromise;
-}
-
-function clearLeafletMapMount(mapMount) {
+function clearOffersMapMount(mapMount) {
   if (!mapMount) return;
-  try {
-    if (mapMount._leaflet_id) mapMount._leaflet_id = null;
-  } catch (e) {}
   mapMount.innerHTML = '';
 }
 
-function attachOffersLeafletBaseLayer(L, map) {
-  var layer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap',
-    crossOrigin: true,
+function offersMapMercatorXY(lng, lat) {
+  var x = (Number(lng) + 180) / 360;
+  var clamped = Math.max(-85.051128, Math.min(85.051128, Number(lat)));
+  var s = Math.sin((clamped * Math.PI) / 180);
+  var y = 0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI);
+  return { x: x, y: y };
+}
+
+function clusterOffersMapPins(container, map) {
+  var pinData = container._hcMapPinData || {};
+  var items = [];
+  Object.keys(pinData).forEach(function (key) {
+    var mk = pinData[key];
+    if (!mk || !Number.isFinite(mk.lng) || !Number.isFinite(mk.lat)) return;
+    items.push(mk);
   });
-  layer.on('tileerror', function (event) {
-    console.warn(
-      '[HC offers map] OSM tile failed',
-      event && event.coords ? event.coords : '',
+  var zoom = map.getZoom();
+  if (!(zoom <= MAP_CLUSTER_MAX_ZOOM) || items.length <= 1) {
+    return items.map(function (mk) {
+      return { id: 'p:' + mk.key, cluster: false, mk: mk, lng: mk.lng, lat: mk.lat };
+    });
+  }
+  var z = Math.max(0, Math.floor(zoom));
+  var cell = MAP_CLUSTER_RADIUS / (512 * Math.pow(2, z));
+  var buckets = {};
+  items.forEach(function (mk) {
+    var xy = offersMapMercatorXY(mk.lng, mk.lat);
+    var id = z + ':' + Math.floor(xy.x / cell) + ':' + Math.floor(xy.y / cell);
+    if (!buckets[id]) buckets[id] = [];
+    buckets[id].push(mk);
+  });
+  var out = [];
+  Object.keys(buckets).forEach(function (id) {
+    var group = buckets[id];
+    if (group.length === 1) {
+      out.push({
+        id: 'p:' + group[0].key,
+        cluster: false,
+        mk: group[0],
+        lng: group[0].lng,
+        lat: group[0].lat,
+      });
+      return;
+    }
+    var lat = 0;
+    var lng = 0;
+    group.forEach(function (mk) {
+      lat += mk.lat;
+      lng += mk.lng;
+    });
+    out.push({
+      id: 'c:' + id,
+      cluster: true,
+      count: group.length,
+      members: group,
+      lng: lng / group.length,
+      lat: lat / group.length,
+    });
+  });
+  return out;
+}
+
+function indexOffersMapEntryKeys(entries) {
+  var byKey = {};
+  (entries || []).forEach(function (entry) {
+    if (entry.cluster) {
+      (entry.members || []).forEach(function (mk) {
+        if (mk && mk.key) byKey[mk.key] = entry;
+      });
+    } else if (entry.mk && entry.mk.key) {
+      byKey[entry.mk.key] = entry;
+    }
+  });
+  return byKey;
+}
+
+function offersMapMarkerFace(element) {
+  if (!element) return null;
+  return (element.querySelector && element.querySelector('.hc-map-marker-face')) || element;
+}
+
+function playOffersMapMarkerEnter(element) {
+  var face = offersMapMarkerFace(element);
+  if (!face) return;
+  face.classList.add('hc-map-marker--enter');
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      face.classList.remove('hc-map-marker--enter');
+    });
+  });
+}
+
+function queueOffersMapFlight(container, marker, fromLng, fromLat, toLng, toLat, done) {
+  if (!marker) return;
+  if (
+    !Number.isFinite(fromLng) ||
+    !Number.isFinite(fromLat) ||
+    !Number.isFinite(toLng) ||
+    !Number.isFinite(toLat)
+  ) {
+    if (typeof done === 'function') done();
+    return;
+  }
+  marker.setLngLat([fromLng, fromLat]);
+  if (Math.abs(fromLng - toLng) < 1e-7 && Math.abs(fromLat - toLat) < 1e-7) {
+    if (typeof done === 'function') done();
+    return;
+  }
+  container._hcMlFlights = (container._hcMlFlights || []).filter(function (f) {
+    return f.marker !== marker;
+  });
+  container._hcMlFlights.push({
+    marker: marker,
+    fromLng: fromLng,
+    fromLat: fromLat,
+    toLng: toLng,
+    toLat: toLat,
+    t0: performance.now(),
+    duration: MAP_CLUSTER_ANIM_MS,
+    done: done,
+  });
+  if (container._hcMlFlyRaf) return;
+  function tick(now) {
+    var rest = [];
+    (container._hcMlFlights || []).forEach(function (f) {
+      var t = Math.min(1, (now - f.t0) / f.duration);
+      var e = 1 - (1 - t) * (1 - t) * (1 - t);
+      try {
+        f.marker.setLngLat([f.fromLng + (f.toLng - f.fromLng) * e, f.fromLat + (f.toLat - f.fromLat) * e]);
+      } catch (err) {}
+      if (t < 1) rest.push(f);
+      else if (typeof f.done === 'function') f.done();
+    });
+    container._hcMlFlights = rest;
+    if (rest.length) container._hcMlFlyRaf = requestAnimationFrame(tick);
+    else container._hcMlFlyRaf = 0;
+  }
+  container._hcMlFlyRaf = requestAnimationFrame(tick);
+}
+
+function startLngLatForNewEntry(entry, prevByKey) {
+  if (entry.cluster) {
+    var slng = 0;
+    var slat = 0;
+    var n = 0;
+    (entry.members || []).forEach(function (mk) {
+      var prev = mk && prevByKey[mk.key];
+      if (!prev) return;
+      slng += prev.lng;
+      slat += prev.lat;
+      n++;
+    });
+    if (n) return { lng: slng / n, lat: slat / n };
+    return { lng: entry.lng, lat: entry.lat };
+  }
+  var prevPin = entry.mk && prevByKey[entry.mk.key];
+  if (prevPin) return { lng: prevPin.lng, lat: prevPin.lat };
+  return { lng: entry.lng, lat: entry.lat };
+}
+
+function createOffersMapMarker(container, entry) {
+  var maplibregl = container._hcMlLib;
+  if (!maplibregl) return null;
+  if (!Number.isFinite(entry.lng) || !Number.isFinite(entry.lat)) return null;
+  var element;
+  var anchor;
+  if (entry.cluster) {
+    element = buildMapClusterElement(container, entry);
+    anchor = 'center';
+  } else {
+    var mk = entry.mk;
+    if (!mk) return null;
+    var selectedKey = container._hcMapSelectedKey || '';
+    element = buildMerchantPinElement(
+      container,
+      mk,
+      !!(selectedKey && String(selectedKey) === String(mk.key)),
     );
-  });
-  layer.addTo(map);
-  return 'osm';
-}
-
-function tokenLooksLikeMapKitJwt(t) {
-  if (!t || typeof t !== 'string') return false;
-  var parts = t.split('.');
-  return parts.length === 3 && parts[0].length > 0 && parts[1].length > 0 && parts[2].length > 0;
-}
-
-function mapKitConfigurationErrorStatusMeansFallback(st) {
-  if (st == null) return false;
-  var s = String(st);
-  return (
-    s === 'Unauthorized' ||
-    s === 'Bad Request' ||
-    s === 'Too Many Requests' ||
-    s === 'Malformed Response' ||
-    s === 'Timeout' ||
-    s === 'Network Error'
-  );
-}
-
-function mapKitErrorEventBlob(ev) {
-  var parts = [];
-  if (ev && ev.status != null) parts.push(String(ev.status));
-  if (ev && ev.message) parts.push(String(ev.message));
-  if (typeof ev === 'string') parts.push(ev);
-  if (ev && ev.reason != null) parts.push(String(ev.reason));
-  if (ev && ev.detail != null) {
-    try {
-      parts.push(typeof ev.detail === 'string' ? ev.detail : JSON.stringify(ev.detail));
-    } catch (e) {
-      parts.push(String(ev.detail));
-    }
+    anchor = 'bottom';
   }
-  if (ev && ev.error != null) {
-    try {
-      parts.push(ev.error && ev.error.message ? String(ev.error.message) : String(ev.error));
-    } catch (e2) {
-      parts.push('error');
-    }
+  return new maplibregl.Marker({ element: element, anchor: anchor }).setLngLat([
+    entry.lng,
+    entry.lat,
+  ]);
+}
+
+function leaveOffersMapMarker(container, id, marker, toLng, toLat) {
+  if (!marker) return;
+  var face = offersMapMarkerFace(marker.getElement());
+  if (face) face.classList.add('hc-map-marker--leave');
+  container._hcMlLeavingMarkers = container._hcMlLeavingMarkers || {};
+  container._hcMlLeavingMarkers[id] = marker;
+  if (Number.isFinite(toLng) && Number.isFinite(toLat)) {
+    var from = marker.getLngLat();
+    queueOffersMapFlight(container, marker, from.lng, from.lat, toLng, toLat);
   }
-  return parts.join(' ').toLowerCase();
+  var timer = window.setTimeout(function () {
+    container._hcMlLeaveTimers = (container._hcMlLeaveTimers || []).filter(function (t) {
+      return t !== timer;
+    });
+    if ((container._hcMlLeavingMarkers || {})[id] !== marker) return;
+    delete container._hcMlLeavingMarkers[id];
+    try {
+      marker.remove();
+    } catch (e) {}
+  }, MAP_CLUSTER_ANIM_MS);
+  container._hcMlLeaveTimers = container._hcMlLeaveTimers || [];
+  container._hcMlLeaveTimers.push(timer);
 }
 
-function mapKitConsoleErrorImpliesTokenFailure(text) {
-  var low = String(text).toLowerCase();
-  if (low.indexOf('mapkit') < 0) return false;
-  return (
-    low.indexOf('initialization failed') >= 0 ||
-    low.indexOf('authorization token is invalid') >= 0 ||
-    (low.indexOf('authorization') >= 0 && low.indexOf('invalid') >= 0 && low.indexOf('token') >= 0)
-  );
-}
-
-function mapKitErrorShouldFallbackToOsm(ev) {
-  if (ev && mapKitConfigurationErrorStatusMeansFallback(ev.status)) return true;
-  var blob = mapKitErrorEventBlob(ev);
-  return (
-    blob.indexOf('too many') >= 0 ||
-    blob.indexOf('429') >= 0 ||
-    blob.indexOf('quota') >= 0 ||
-    blob.indexOf('rate limit') >= 0 ||
-    blob.indexOf('unauthorized') >= 0 ||
-    blob.indexOf('authorization') >= 0 ||
-    (blob.indexOf('invalid') >= 0 && blob.indexOf('token') >= 0) ||
-    blob.indexOf('invalid token') >= 0 ||
-    blob.indexOf('initialization failed') >= 0 ||
-    blob.indexOf('jwt') >= 0 ||
-    blob.indexOf('signature') >= 0 ||
-    blob.indexOf('expired') >= 0
-  );
-}
-
-function joinConsoleErrorArgs(args) {
-  var parts = [];
-  for (var i = 0; i < args.length; i++) {
-    var a = args[i];
-    if (a && typeof a === 'object' && typeof a.message === 'string') {
-      parts.push(a.message);
+function syncOffersMapMarkers(container) {
+  var map = container._hcMlMap;
+  if (!map) return;
+  var entries = clusterOffersMapPins(container, map);
+  var current = container._hcMlMarkers || {};
+  var prevEntries = container._hcMlClusterEntries || [];
+  var prevByKey = indexOffersMapEntryKeys(prevEntries);
+  var nextByKey = indexOffersMapEntryKeys(entries);
+  var animate = prevEntries.length > 0;
+  var next = {};
+  entries.forEach(function (entry) {
+    var marker = current[entry.id];
+    if (!marker) {
+      marker = createOffersMapMarker(container, entry);
+      if (!marker) return;
+      var start = animate ? startLngLatForNewEntry(entry, prevByKey) : { lng: entry.lng, lat: entry.lat };
+      marker.setLngLat([start.lng, start.lat]);
+      marker.addTo(map);
+      playOffersMapMarkerEnter(marker.getElement());
+      if (animate) {
+        queueOffersMapFlight(container, marker, start.lng, start.lat, entry.lng, entry.lat);
+      }
     } else {
-      parts.push(String(a));
+      var here = marker.getLngLat();
+      if (animate) {
+        queueOffersMapFlight(container, marker, here.lng, here.lat, entry.lng, entry.lat);
+      } else {
+        marker.setLngLat([entry.lng, entry.lat]);
+      }
+      if (entry.cluster) {
+        var el = marker.getElement();
+        if (el) {
+          var face = offersMapMarkerFace(el);
+          if (face) face.textContent = String(entry.count);
+          el._hcClusterMembers = entry.members || [];
+          var size = entry.count >= 25 ? 52 : entry.count >= 10 ? 46 : 40;
+          el.style.setProperty('--hc-cluster-size', size + 'px');
+        }
+      }
     }
-  }
-  return parts.join(' ');
+    next[entry.id] = marker;
+  });
+  Object.keys(current).forEach(function (id) {
+    if (next[id]) return;
+    var marker = current[id];
+    var destLng = NaN;
+    var destLat = NaN;
+    var prev = null;
+    for (var i = 0; i < prevEntries.length; i++) {
+      if (prevEntries[i].id === id) {
+        prev = prevEntries[i];
+        break;
+      }
+    }
+    if (prev && prev.cluster) {
+      destLng = prev.lng;
+      destLat = prev.lat;
+    } else if (prev && prev.mk && nextByKey[prev.mk.key]) {
+      destLng = nextByKey[prev.mk.key].lng;
+      destLat = nextByKey[prev.mk.key].lat;
+    }
+    if (animate) leaveOffersMapMarker(container, id, marker, destLng, destLat);
+    else {
+      try {
+        marker.remove();
+      } catch (e2) {}
+    }
+  });
+  container._hcMlMarkers = next;
+  container._hcMlClusterEntries = entries;
 }
 
-function installMapKitConsoleErrorFallback(container, onMatch) {
-  if (container._hcMkConsoleErrorRestore) {
-    try {
-      container._hcMkConsoleErrorRestore();
-    } catch (e) {}
-    container._hcMkConsoleErrorRestore = null;
-  }
-  var prev = console.error;
-  function wrapped() {
-    var joined = joinConsoleErrorArgs(arguments);
-    if (mapKitConsoleErrorImpliesTokenFailure(joined)) {
-      onMatch({ message: joined });
-    }
-    return prev.apply(console, arguments);
-  }
-  console.error = wrapped;
-  container._hcMkConsoleErrorRestore = function () {
-    if (console.error === wrapped) {
-      console.error = prev;
-    }
-    container._hcMkConsoleErrorRestore = null;
-  };
-}
-
-function restoreMapKitConsoleErrorHook(container) {
-  if (container._hcMkConsoleErrorRestore) {
-    try {
-      container._hcMkConsoleErrorRestore();
-    } catch (e) {}
-    container._hcMkConsoleErrorRestore = null;
-  }
+function queueOffersMapMarkerSync(container) {
+  if (container._hcMlSyncQueued) return;
+  container._hcMlSyncQueued = true;
+  requestAnimationFrame(function () {
+    container._hcMlSyncQueued = false;
+    syncOffersMapMarkers(container);
+  });
 }
 
 function notifyMapRenderDone(container) {
@@ -2506,128 +2461,113 @@ function applyPendingMapMerchantSelection(container) {
   }
 }
 
-function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker) {
+function boundsFromRegionBox(box) {
+  return [
+    [box.centerLng - box.spanLon / 2, box.centerLat - box.spanLat / 2],
+    [box.centerLng + box.spanLon / 2, box.centerLat + box.spanLat / 2],
+  ];
+}
+
+function frameOffersMap(container, map, userLat, userLng, merchantMarkerData, showUserMarker) {
+  if (merchantMarkerData.length > 0) {
+    var box = computeMapRegionLikeStoreMap(
+      showUserMarker ? userLat : NaN,
+      showUserMarker ? userLng : NaN,
+      merchantMarkerData,
+    );
+    try {
+      map.fitBounds(boundsFromRegionBox(box), {
+        padding: 24,
+        maxZoom: 16,
+        animate: false,
+      });
+      return;
+    } catch (e) {
+      console.warn('[HC offers map] initial fitBounds failed', e);
+    }
+  }
+  map.jumpTo({ center: [userLng, userLat], zoom: MAP_USER_ZOOM });
+}
+
+function reportOffersMapViewport(container, map, notify) {
+  var center = map.getCenter();
+  var bounds = map.getBounds();
+  var latSpan = Math.abs(bounds.getNorth() - bounds.getSouth());
+  var lngSpan = Math.abs(bounds.getEast() - bounds.getWest());
+  logOffersMapViewportDistance('OpenFreeMap', center.lat, latSpan, lngSpan);
+  if (notify) {
+    handleLiveMapRegionChange(container, { lat: center.lat, lng: center.lng }, latSpan);
+  }
+  return { center: center, latSpan: latSpan };
+}
+
+function syncOffersMapUserMarker(container, userLat, userLng, showUserMarker) {
+  var map = container._hcMlMap;
+  var maplibregl = container._hcMlLib;
+  if (!map || !maplibregl) return;
+  if (!showUserMarker) {
+    if (container._hcMlUserMarker) {
+      try {
+        container._hcMlUserMarker.remove();
+      } catch (e) {}
+      container._hcMlUserMarker = null;
+    }
+    return;
+  }
+  if (container._hcMlUserMarker) {
+    container._hcMlUserMarker.setLngLat([userLng, userLat]);
+    return;
+  }
+  container._hcMlUserMarker = new maplibregl.Marker({
+    element: buildMapPinElement(MAP_PIN_USER_COLOR),
+    anchor: 'bottom',
+  })
+    .setLngLat([userLng, userLat])
+    .addTo(map);
+}
+
+function updateOffersMapInPlace(container, userLat, userLng, merchantMarkerData, showUserMarker) {
+  var map = container._hcMlMap;
+  if (!map) return false;
+  hideSelectedMapMerchant(container);
+  resetOffersMapPins(container);
+  registerOffersMapPins(container, merchantMarkerData);
+  syncOffersMapUserMarker(container, userLat, userLng, showUserMarker);
+  queueOffersMapMarkerSync(container);
+  try {
+    var viewport = reportOffersMapViewport(container, map, false);
+    container._hcLastRegionFetchCenter = { lat: viewport.center.lat, lng: viewport.center.lng };
+  } catch (e) {
+    console.warn('[HC offers map] in-place refresh layout failed', e);
+  }
+  notifyMapRenderDone(container);
+  return true;
+}
+
+function renderOffersMap(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker) {
   if (showUserMarker === undefined) showUserMarker = true;
-  var renderId = (container._hcLeafletRenderId = (container._hcLeafletRenderId || 0) + 1);
-  ensureLeafletLoaded()
-    .then(function (L) {
-      if (renderId !== container._hcLeafletRenderId) return;
+  var renderId = (container._hcMapRenderId = (container._hcMapRenderId || 0) + 1);
+  if (updateOffersMapInPlace(container, userLat, userLng, merchantMarkerData, showUserMarker)) {
+    return;
+  }
+  ensureMapLibreLoaded()
+    .then(function (maplibregl) {
+      if (renderId !== container._hcMapRenderId) return;
       destroyOffersMapInstance(container);
-      clearLeafletMapMount(mapMount);
+      clearOffersMapMount(mapMount);
       mapMount.classList.remove('hc-offers-map-loading');
       mapMount.removeAttribute('aria-busy');
-      mapMount.classList.add('hc-offers-map-osm-fallback');
-      var map = L.map(mapMount, { maxZoom: 19 }).setView(
-        [userLat, userLng],
-        MAP_USER_ZOOM_LEAFLET,
-      );
-      container._hcLeafletMap = map;
-      container._hcLeafletMerchantMarkers = [];
-      container._hcMkMerchantAnnotations = [];
-      attachOffersLeafletBaseLayer(L, map);
+      resetOffersMapPins(container);
+      registerOffersMapPins(container, merchantMarkerData);
 
-      var userIcon = leafletMapPinIcon(L, MAP_PIN_USER_COLOR);
-      var userMarker = null;
-      if (showUserMarker) {
-        userMarker = L.marker([userLat, userLng], {
-          icon: userIcon,
-          zIndexOffset: 1000,
-        }).addTo(map);
-      }
-
-      var clusterGroup =
-        typeof L.markerClusterGroup === 'function'
-          ? L.markerClusterGroup({
-              showCoverageOnHover: false,
-              maxClusterRadius: 56,
-              spiderfyOnMaxZoom: true,
-              zoomToBoundsOnClick: true,
-              disableClusteringAtZoom: MAP_LEAFLET_DISABLE_CLUSTERING_AT_ZOOM,
-            })
-          : null;
-      container._hcLeafletClusterGroup = clusterGroup;
-
-      merchantMarkerData.forEach(function (mk) {
-        var marker = L.marker([mk.lat, mk.lng], {
-          icon: leafletMerchantPinIcon(L, mk, false),
-        });
-        marker.on('click', function (ev) {
-          if (ev && ev.originalEvent) {
-            L.DomEvent.stopPropagation(ev.originalEvent);
-            L.DomEvent.preventDefault(ev.originalEvent);
-          }
-          showSelectedMapMerchant(container, mk.merchant);
-        });
-        if (clusterGroup) {
-          clusterGroup.addLayer(marker);
-        } else {
-          marker.addTo(map);
-        }
-        container._hcLeafletMerchantMarkers.push({ marker: marker, mk: mk });
+      whenOffersMapMountLaidOut(mapMount, function () {
+        if (renderId !== container._hcMapRenderId) return;
+        createOffersMapInstance(container, mapMount, maplibregl, renderId, userLat, userLng, merchantMarkerData, showUserMarker);
       });
-      if (clusterGroup) {
-        map.addLayer(clusterGroup);
-      }
-
-      wireMapSelectionHandlers(container, mapMount);
-      map.on('click', function () {
-        dismissSelectedMapMerchant(container);
-      });
-
-      if (merchantMarkerData.length > 0) {
-        var box = computeMapKitRegionLikeStoreMap(
-          showUserMarker ? userLat : NaN,
-          showUserMarker ? userLng : NaN,
-          merchantMarkerData,
-        );
-        map.fitBounds(
-          [
-            [box.centerLat - box.spanLat / 2, box.centerLng - box.spanLon / 2],
-            [box.centerLat + box.spanLat / 2, box.centerLng + box.spanLon / 2],
-          ],
-          { animate: false },
-        );
-      } else {
-        map.setView([userLat, userLng], MAP_USER_ZOOM_LEAFLET, { animate: false });
-      }
-      window.setTimeout(function () {
-        if (renderId !== container._hcLeafletRenderId) return;
-        if (container._hcLeafletMap !== map) return;
-        try {
-          map.invalidateSize();
-          var fittedCenter = map.getCenter();
-          var fittedBounds = map.getBounds();
-          container._hcLastRegionFetchCenter = { lat: fittedCenter.lat, lng: fittedCenter.lng };
-          logOffersMapViewportDistance(
-            'Leaflet',
-            fittedCenter.lat,
-            Math.abs(fittedBounds.getNorth() - fittedBounds.getSouth()),
-            Math.abs(fittedBounds.getEast() - fittedBounds.getWest()),
-          );
-          map.on('moveend', function () {
-            var c = map.getCenter();
-            var b = map.getBounds();
-            logOffersMapViewportDistance(
-              'Leaflet',
-              c.lat,
-              Math.abs(b.getNorth() - b.getSouth()),
-              Math.abs(b.getEast() - b.getWest()),
-            );
-            handleLiveMapRegionChange(
-              container,
-              { lat: c.lat, lng: c.lng },
-              Math.abs(b.getNorth() - b.getSouth()),
-            );
-          });
-        } catch (e) {
-          console.warn('[HC offers map] leaflet post-layout failed', e);
-        }
-        notifyMapRenderDone(container);
-      }, 100);
     })
     .catch(function (err) {
-      if (renderId !== container._hcLeafletRenderId) return;
-      console.error('[HC offers map] Leaflet failed', err);
+      if (renderId !== container._hcMapRenderId) return;
+      console.error('[HC offers map] OpenFreeMap failed', err);
       destroyOffersMapInstance(container);
       mapMount.classList.remove('hc-offers-map-loading');
       mapMount.removeAttribute('aria-busy');
@@ -2637,6 +2577,108 @@ function renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMar
         '</div>';
       notifyMapRenderDone(container);
     });
+}
+
+function whenMapStyleReady(map, cb) {
+  if (typeof map.isStyleLoaded === 'function' && map.isStyleLoaded()) {
+    cb();
+    return;
+  }
+  var done = false;
+  function once() {
+    if (done) return;
+    done = true;
+    cb();
+  }
+  map.once('style.load', once);
+  map.once('load', once);
+}
+
+function createOffersMapInstance(
+  container,
+  mapMount,
+  maplibregl,
+  renderId,
+  userLat,
+  userLng,
+  merchantMarkerData,
+  showUserMarker,
+) {
+  var map;
+  try {
+    map = new maplibregl.Map({
+      container: mapMount,
+      style: OPENFREEMAP_STYLE_URL,
+      center: [userLng, userLat],
+      zoom: MAP_USER_ZOOM,
+      maxZoom: MAP_MAX_ZOOM,
+      attributionControl: false,
+    });
+  } catch (e) {
+    console.error('[HC offers map] new Map failed', e);
+    mapMount.innerHTML =
+      '<div class="hc-offers-map-unavailable">' +
+      escapeHtml('Map could not be loaded. Please try again later.') +
+      '</div>';
+    notifyMapRenderDone(container);
+    return;
+  }
+  container._hcMlMap = map;
+  container._hcMlLib = maplibregl;
+  container._hcMlMarkers = {};
+  try {
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+  } catch (eCtrl) {
+    console.warn('[HC offers map] zoom control failed', eCtrl);
+  }
+  map.on('error', function (ev) {
+    console.warn('[HC offers map] maplibre error', ev && ev.error ? ev.error.message : ev);
+  });
+  map.once('idle', function () {
+    console.log('[HC offers map] streets ready', map.isSourceLoaded('openmaptiles'));
+  });
+
+  if (showUserMarker) {
+    container._hcMlUserMarker = new maplibregl.Marker({
+      element: buildMapPinElement(MAP_PIN_USER_COLOR),
+      anchor: 'bottom',
+    })
+      .setLngLat([userLng, userLat])
+      .addTo(map);
+  }
+  syncOffersMapMarkers(container);
+
+  whenMapStyleReady(map, function () {
+    if (renderId !== container._hcMapRenderId) return;
+
+    frameOffersMap(container, map, userLat, userLng, merchantMarkerData, showUserMarker);
+
+    map.on('zoomend', function () {
+      queueOffersMapMarkerSync(container);
+    });
+    map.on('moveend', function () {
+      if (container._hcMlMap !== map) return;
+      reportOffersMapViewport(container, map, true);
+    });
+    syncOffersMapMarkers(container);
+
+    wireMapSelectionHandlers(container, mapMount);
+    map.on('click', function () {
+      dismissSelectedMapMerchant(container);
+    });
+
+    try {
+      map.resize();
+      var viewport = reportOffersMapViewport(container, map, false);
+      container._hcLastRegionFetchCenter = {
+        lat: viewport.center.lat,
+        lng: viewport.center.lng,
+      };
+    } catch (e) {
+      console.warn('[HC offers map] post-load layout failed', e);
+    }
+    notifyMapRenderDone(container);
+  });
 }
 
 function whenOffersMapMountLaidOut(mapMount, cb) {
@@ -2655,293 +2697,6 @@ function whenOffersMapMountLaidOut(mapMount, cb) {
   requestAnimationFrame(function () {
     requestAnimationFrame(tick);
   });
-}
-
-function scheduleMapKitTileReflow(map) {
-  function nudge() {
-    window.dispatchEvent(new Event('resize'));
-    try {
-      if (map && map.region) {
-        var r = map.region;
-        map.region = r;
-      }
-    } catch (e) {}
-  }
-  nudge();
-  window.setTimeout(nudge, 50);
-  window.setTimeout(nudge, 200);
-  window.setTimeout(nudge, 500);
-}
-
-function offersMapAnnotationCalloutDelegate() {
-  return {
-    calloutContentForAnnotation: function (annotation) {
-      var wrap = document.createElement('div');
-      wrap.className = 'hc-mk-callout-inner';
-      wrap.style.padding = '10px 12px';
-      wrap.style.minWidth = '200px';
-      wrap.style.maxWidth = '280px';
-      wrap.style.boxSizing = 'border-box';
-      wrap.style.fontFamily =
-        'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-      var t = annotation.title != null ? String(annotation.title) : '';
-      var st = annotation.subtitle != null ? String(annotation.subtitle) : '';
-      var h = document.createElement('div');
-      h.textContent = t;
-      h.style.fontWeight = '700';
-      h.style.fontSize = '15px';
-      h.style.color = '#1d1d1f';
-      h.style.marginBottom = st ? '6px' : '0';
-      wrap.appendChild(h);
-      if (st) {
-        var s = document.createElement('div');
-        s.textContent = st;
-        s.style.fontSize = '12px';
-        s.style.color = '#3c3c43';
-        s.style.lineHeight = '1.4';
-        s.style.wordBreak = 'break-word';
-        wrap.appendChild(s);
-      }
-      return wrap;
-    },
-  };
-}
-
-function renderMapWithMapKit(container, mapMount, mapkit, userLat, userLng, merchantMarkerData, showUserMarker) {
-  if (showUserMarker === undefined) showUserMarker = true;
-  if (mapKitAuthFailureWasReported()) {
-    console.warn('[HC offers map] MapKit auth failure before render, using OpenStreetMap fallback');
-    renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
-    return;
-  }
-  console.log('[HC offers map] renderMapWithMapKit center', userLat, userLng, 'pins', merchantMarkerData.length);
-  destroyOffersMapInstance(container);
-  mapMount.innerHTML = '';
-  mapMount.classList.remove('hc-offers-map-loading');
-  mapMount.removeAttribute('aria-busy');
-
-  var Coord = mapkit.Coordinate;
-  var Region = mapkit.CoordinateRegion;
-  var Span = mapkit.CoordinateSpan;
-  var Mai = mapkit.MarkerAnnotation;
-
-  var calloutDel = offersMapAnnotationCalloutDelegate();
-
-  var userCoord = new Coord(userLat, userLng);
-  var annotations = [];
-  var merchantAnnotations = [];
-  if (showUserMarker) {
-    annotations.push(
-      new Mai(userCoord, {
-        title: 'Your Location',
-        color: MAP_PIN_USER_COLOR,
-        calloutEnabled: false,
-        titleVisibility: 'hidden',
-        callout: calloutDel,
-      }),
-    );
-  }
-
-  merchantMarkerData.forEach(function (mk) {
-    try {
-      var ann = createMapKitMerchantAnnotation(mapkit, mk, container);
-      annotations.push(ann);
-      merchantAnnotations.push(ann);
-    } catch (annErr) {
-      var label = (mk.name || '').trim() || 'Partner store';
-      var fallback = new Mai(new Coord(mk.lat, mk.lng), {
-        title: label,
-        subtitle: (mk.subtitle || '').trim(),
-        color: MAP_PIN_MERCHANT_COLOR,
-        calloutEnabled: false,
-        titleVisibility: 'hidden',
-        subtitleVisibility: 'hidden',
-        clusteringIdentifier: MAP_MERCHANT_CLUSTER_ID,
-      });
-      fallback._hcMerchant = mk.merchant;
-      fallback._hcMarkerData = mk;
-      fallback._hcKey = mk.key;
-      annotations.push(fallback);
-      merchantAnnotations.push(fallback);
-    }
-  });
-  container._hcMkMerchantAnnotations = merchantAnnotations;
-
-  var regionBox = computeMapKitRegionLikeStoreMap(
-    showUserMarker ? userLat : NaN,
-    showUserMarker ? userLng : NaN,
-    merchantMarkerData,
-  );
-  var mapCenterCoord = new Coord(regionBox.centerLat, regionBox.centerLng);
-  var startSpan = new Span(regionBox.spanLat, regionBox.spanLon);
-  var clusterAtStart =
-    startSpan.latitudeDelta > MAPKIT_CLUSTER_MIN_LATITUDE_DELTA
-      ? MAP_MERCHANT_CLUSTER_ID
-      : null;
-  merchantAnnotations.forEach(function (annotation) {
-    annotation.clusteringIdentifier = clusterAtStart;
-  });
-  var M = mapkit.Map;
-
-  function createMapAndAnnotations() {
-    if (mapKitAuthFailureWasReported()) {
-      console.warn('[HC offers map] MapKit auth failure detected, using OpenStreetMap fallback');
-      renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
-      return;
-    }
-    var mapOpts = {
-      region: new Region(mapCenterCoord, startSpan),
-      mapType: 'standard',
-      colorScheme: 'light',
-      showsZoomControl: true,
-      showsMapTypeControl: false,
-      showsPointsOfInterest: true,
-      annotationForCluster: function (clusterAnnotation) {
-        return buildMapKitClusterAnnotation(mapkit, clusterAnnotation, function () {
-          return container._hcMkMap || map;
-        });
-      },
-    };
-    if (M && M.LoadPriorities && M.LoadPriorities.PointsOfInterest != null) {
-      mapOpts.loadPriority = M.LoadPriorities.PointsOfInterest;
-    }
-    var map;
-
-    function cleanupMapKitFallbackListeners() {
-      restoreMapKitConsoleErrorHook(container);
-      container._hcMkFallbackHandler = null;
-      try {
-        if (window.mapkit && window.mapkit.removeEventListener) {
-          window.mapkit.removeEventListener('error', onMapKitFallbackTrigger);
-          window.mapkit.removeEventListener('configuration-error', onMapKitFallbackTrigger);
-        }
-      } catch (e) {}
-      try {
-        if (map && map.removeEventListener) {
-          map.removeEventListener('error', onMapKitFallbackTrigger);
-        }
-      } catch (e2) {}
-    }
-
-    function onMapKitFallbackTrigger(ev) {
-      if (container._hcOsmFallbackDone) return;
-      if (!mapKitErrorShouldFallbackToOsm(ev)) return;
-      container._hcOsmFallbackDone = true;
-      console.warn('[HC offers map] MapKit error, switching to OpenStreetMap', ev && ev.status, ev && ev.message);
-      cleanupMapKitFallbackListeners();
-      try {
-        if (map && typeof map.destroy === 'function') {
-          map.destroy();
-        }
-      } catch (e3) {}
-      container._hcMkMap = null;
-      renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
-    }
-
-    container._hcMkFallbackHandler = onMapKitFallbackTrigger;
-    if (window.mapkit && window.mapkit.addEventListener) {
-      window.mapkit.addEventListener('error', onMapKitFallbackTrigger);
-      window.mapkit.addEventListener('configuration-error', onMapKitFallbackTrigger);
-    }
-    installMapKitConsoleErrorFallback(container, onMapKitFallbackTrigger);
-
-    console.log(
-      '[HC offers map] new Map',
-      'colorScheme=' + mapOpts.colorScheme,
-      'loadPriority=' + (mapOpts.loadPriority != null ? mapOpts.loadPriority : 'default'),
-    );
-    try {
-      map = new mapkit.Map(mapMount, mapOpts);
-    } catch (e) {
-      console.error('[HC offers map] new Map failed', e);
-      cleanupMapKitFallbackListeners();
-      renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
-      return;
-    }
-    container._hcMkMap = map;
-    container._hcMkMerchantAnnotations = merchantAnnotations;
-    try {
-      map.addEventListener('error', onMapKitFallbackTrigger);
-    } catch (e4) {}
-    map.addAnnotations(annotations);
-    try {
-      var framed = new Region(mapCenterCoord, startSpan);
-      if (typeof map.setRegionAnimated === 'function') {
-        map.setRegionAnimated(framed, false);
-      } else {
-        map.region = framed;
-      }
-    } catch (regionErr) {}
-    console.log('[HC offers map] annotations:', annotations.length);
-    try {
-      map.addEventListener('select', function (event) {
-        var ann = event && event.annotation;
-        if (!ann) return;
-        if (ann._hcMerchant) {
-          showSelectedMapMerchant(container, ann._hcMerchant);
-          return;
-        }
-        var members = ann.memberAnnotations || ann._hcClusterMembers;
-        if (members && members.length) {
-          zoomMapKitToClusterMembers(map, mapkit, members);
-          try {
-            if (typeof map.deselectAnnotation === 'function') {
-              map.deselectAnnotation(ann);
-            } else {
-              ann.selected = false;
-            }
-          } catch (eDeselect) {}
-        }
-      });
-      map.addEventListener('deselect', function () {
-        dismissSelectedMapMerchant(container);
-      });
-    } catch (selErr) {
-      console.warn('[HC offers map] select listeners failed', selErr);
-    }
-    wireMapSelectionHandlers(container, mapMount);
-    scheduleMapKitTileReflow(map);
-    window.setTimeout(function () {
-      try {
-        var c = map.center;
-        if (c) {
-          container._hcLastRegionFetchCenter = { lat: c.latitude, lng: c.longitude };
-        }
-        var initialSpan = map.region && map.region.span;
-        if (c && initialSpan) {
-          logOffersMapViewportDistance(
-            'MapKit',
-            c.latitude,
-            initialSpan.latitudeDelta,
-            initialSpan.longitudeDelta,
-          );
-        }
-        map.addEventListener('region-change-end', function () {
-          try {
-            var cc = map.center;
-            var span = map.region && map.region.span;
-            if (span) {
-              syncMapKitMerchantClustering(container, map.region);
-              logOffersMapViewportDistance(
-                'MapKit',
-                cc.latitude,
-                span.latitudeDelta,
-                span.longitudeDelta,
-              );
-            }
-            handleLiveMapRegionChange(
-              container,
-              { lat: cc.latitude, lng: cc.longitude },
-              span ? span.latitudeDelta : 0.05,
-            );
-          } catch (e5) {}
-        });
-      } catch (e6) {}
-      notifyMapRenderDone(container);
-    }, 150);
-  }
-
-  whenOffersMapMountLaidOut(mapMount, createMapAndAnnotations);
 }
 
 function initOffersMap(container, cardlinked) {
@@ -2989,7 +2744,6 @@ function initOffersMap(container, cardlinked) {
     console.warn('[HC offers map] unavailable:', message || '');
     destroyOffersMapInstance(container);
     mapMount.classList.remove('hc-offers-map-loading');
-    mapMount.classList.remove('hc-offers-map-osm-fallback');
     mapMount.removeAttribute('aria-busy');
     mapMount.innerHTML =
       '<div class="hc-offers-map-unavailable">' + escapeHtml(message || 'Map could not be loaded.') + '</div>';
@@ -3019,7 +2773,6 @@ function initOffersMap(container, cardlinked) {
     if (mapShell) mapShell.style.display = 'none';
     else mapMount.style.display = 'none';
     mapMount.classList.remove('hc-offers-map-loading');
-    mapMount.classList.remove('hc-offers-map-osm-fallback');
     mapMount.removeAttribute('aria-busy');
     mapMount.innerHTML = '';
   }
@@ -3247,7 +3000,7 @@ function initOffersMap(container, cardlinked) {
       if (item) merchantMarkerData.push(item);
     });
 
-    var refreshingMap = !!(container._hcLeafletMap || container._hcMkMap);
+    var refreshingMap = !!container._hcMlMap;
     if (!refreshingMap) {
       mapMount.classList.add('hc-offers-map-loading');
       mapMount.setAttribute('aria-busy', 'true');
@@ -3258,50 +3011,7 @@ function initOffersMap(container, cardlinked) {
     }
 
     console.log('[HC offers map] renderMap start', userLat, userLng, 'merchant pins', merchantMarkerData.length);
-    container._hcOsmFallbackDone = false;
-    if (!shouldUseMapKitJs()) {
-      console.log('[HC offers map] non-iOS/non-Safari → OpenStreetMap (Leaflet)');
-      renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
-      return;
-    }
-    resolveMapKitTokenAsync().then(function (mkToken) {
-      if (!mkToken) {
-        console.warn('[HC offers map] no MapKit token, using OpenStreetMap fallback');
-        renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
-        return;
-      }
-      if (!tokenLooksLikeMapKitJwt(mkToken)) {
-        console.warn('[HC offers map] token is not a JWT, using OpenStreetMap fallback');
-        renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
-        return;
-      }
-      ensureMapKitLoaded(mkToken)
-        .then(function (mapkit) {
-          if (mapKitAuthFailureWasReported()) {
-            console.warn('[HC offers map] MapKit reported invalid token, using OpenStreetMap fallback');
-            renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
-            return;
-          }
-          try {
-            renderMapWithMapKit(
-              container,
-              mapMount,
-              mapkit,
-              userLat,
-              userLng,
-              merchantMarkerData,
-              showUserMarker,
-            );
-          } catch (e) {
-            console.error('[HC offers map] renderMapWithMapKit threw', e);
-            renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
-          }
-        })
-        .catch(function (err) {
-          console.error('[HC offers map] ensureMapKitLoaded failed', err);
-          renderMapWithLeaflet(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
-        });
-    });
+    renderOffersMap(container, mapMount, userLat, userLng, merchantMarkerData, showUserMarker);
   }
 
   function showMapWithDefaultCenter() {
@@ -3351,7 +3061,7 @@ function initOffersMap(container, cardlinked) {
     if (previewMap) {
       showMapUI();
       setMapShellLoading(true);
-      if (container._hcLeafletMap || container._hcMkMap) {
+      if (container._hcMlMap) {
         focusOffersMap(container, lat, lng);
       } else {
         renderMap(lat, lng, true);

@@ -1,7 +1,7 @@
 import { getEmbedSchoolId } from './brand.js';
 
 var EMBED_BASE = '/api/embed/v1';
-var MAP_OFFERS_PAGE_SIZE_DEFAULT = 150;
+var MAP_OFFERS_PAGE_SIZE_DEFAULT = 300;
 
 function resolveApiBaseUrl() {
   var env =
@@ -438,10 +438,6 @@ export async function updateUserProfile(payload) {
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
-}
-
-export async function getEmbedMapKitJsToken() {
-  return request(EMBED_BASE + '/mapkit-js-token/');
 }
 
 export async function logout() {

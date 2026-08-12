@@ -4463,14 +4463,14 @@ html.hc-embed--no-school-brand .hc-login-card {
   box-sizing: border-box;
 }
 
-.hc-offers-map-mount .leaflet-container {
+.hc-offers-map-mount .maplibregl-map {
   height: 100%;
   width: 100%;
   font-family: var(--hc-font);
 }
 
-.hc-offers-map-mount .leaflet-container .maplibregl-map,
-.hc-offers-map-mount .leaflet-container .maplibregl-canvas-container {
+.hc-offers-map-mount .maplibregl-canvas-container,
+.hc-offers-map-mount .maplibregl-canvas {
   width: 100%;
   height: 100%;
 }
@@ -4488,11 +4488,17 @@ html.hc-embed--no-school-brand .hc-login-card {
 .hc-offers-map-mount .hc-merchant-pin-icon {
   background: transparent !important;
   border: none !important;
+  cursor: pointer;
 }
 
 .hc-map-cluster {
   width: var(--hc-cluster-size, 40px);
   height: var(--hc-cluster-size, 40px);
+}
+
+.hc-map-cluster .hc-map-marker-face {
+  width: 100%;
+  height: 100%;
   border-radius: 999px;
   background: #00c8ff;
   border: 2.5px solid #ffffff;
@@ -4509,47 +4515,62 @@ html.hc-embed--no-school-brand .hc-login-card {
   cursor: pointer;
 }
 
-.hc-offers-map-mount .marker-cluster {
-  background: rgba(0, 200, 255, 0.22);
+.hc-map-marker-face {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.28s ease, transform 0.28s ease;
 }
 
-.hc-offers-map-mount .marker-cluster div {
-  background: #00c8ff;
-  color: #ffffff;
-  font-family: 'Baikal-Bold', var(--hc-font);
-  font-weight: 700;
+.hc-map-marker-face.hc-map-marker--enter,
+.hc-map-marker-face.hc-map-marker--leave {
+  opacity: 0;
+  transform: scale(0.45);
+}
+
+.hc-map-marker-face.hc-map-marker--leave {
+  pointer-events: none;
 }
 
 .hc-merchant-pin {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: auto;
   --hc-pin-size: 40px;
   --hc-pin-border: 2.5px;
-  --hc-pin-tip-w: 8px;
-  --hc-pin-tip-h: 10px;
+  --hc-pin-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 44' preserveAspectRatio='none'%3E%3Cpath fill='%23000' d='M20 0C31.046 0 40 8.954 40 20C40 26.5 31 34 20 44C9 34 0 26.5 0 20C0 8.954 8.954 0 20 0Z'/%3E%3C/svg%3E");
+  width: var(--hc-pin-size);
+  height: calc(var(--hc-pin-size) * 1.1);
+  padding: var(--hc-pin-border);
+  box-sizing: border-box;
+  background: #ffffff;
+  pointer-events: auto;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+  -webkit-mask-image: var(--hc-pin-mask);
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-image: var(--hc-pin-mask);
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
 }
 
 .hc-merchant-pin-head {
-  width: var(--hc-pin-size);
-  height: var(--hc-pin-size);
-  border-radius: 999px;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   background: #e5e5e5;
-  border: var(--hc-pin-border) solid #ffffff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
-  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
+  -webkit-mask-image: var(--hc-pin-mask);
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-image: var(--hc-pin-mask);
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
 }
 
-/* Sizing and fit come from img[data-hc-square]: the pin carries the same
-   white-padded square as the tiles, and the round head clips it to a circle.
-   Only display stays here — a stray object-fit would be dead weight that the
-   attribute rule silently outranks. */
 .hc-merchant-pin-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
   display: block;
 }
 
@@ -4559,20 +4580,6 @@ html.hc-embed--no-school-brand .hc-login-card {
   font-weight: 700;
   color: #666;
   line-height: 1;
-}
-
-.hc-merchant-pin-tip {
-  width: 0;
-  height: 0;
-  margin-top: calc(-1 * var(--hc-pin-border));
-  border-style: solid;
-  border-left-width: var(--hc-pin-tip-w);
-  border-right-width: var(--hc-pin-tip-w);
-  border-top-width: var(--hc-pin-tip-h);
-  border-left-color: transparent;
-  border-right-color: transparent;
-  border-top-color: #ffffff;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.12));
 }
 
 .hc-offers-map-merchant-card {
@@ -4905,7 +4912,7 @@ html.hc-embed--no-school-brand .hc-login-card {
   background: #F0F0F0;
 }
 
-.hc-store-map .leaflet-container {
+.hc-store-map .maplibregl-map {
   height: 100%;
   width: 100%;
   border-radius: 12px;

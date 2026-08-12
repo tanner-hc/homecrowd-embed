@@ -35,4 +35,16 @@ if (import.meta.env.DEV) {
       } catch (e) {}
     };
   });
+
+  window.addEventListener('error', function (e) {
+    forward('error', [
+      '[uncaught]',
+      (e && e.message) || '',
+      e && e.filename ? e.filename + ':' + e.lineno : '',
+      e && e.error ? e.error : '',
+    ]);
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    forward('error', ['[unhandled rejection]', (e && e.reason) || '']);
+  });
 }

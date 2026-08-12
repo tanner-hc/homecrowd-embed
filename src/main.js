@@ -63,7 +63,7 @@ import { renderResetPassword } from './views/reset-password.js';
 import { renderSchoolSelection } from './views/school-selection.js';
 import LoadingSpinner from './base-components/LoadingSpinner.js';
 import { installImageFallback } from './base-components/imageFallback.js';
-import { preloadMapKitForEmbed } from './mapkit-embed.js';
+import { preloadMapForEmbed } from './openfreemap.js';
 import houseFilledSvg from './assets/icons/house-filled.svg?raw';
 import giftFilledSvg from './assets/icons/gift-filled.svg?raw';
 import bagSvg from './assets/icons/bag.svg?raw';
@@ -262,7 +262,7 @@ function completeLoginState(nextUser, tokenUsed) {
     lastAutologinTokenApplied = tokenUsed;
   }
   postToNative('homecrowd:login', { user: nextUser });
-  preloadMapKitForEmbed();
+  preloadMapForEmbed();
   scheduleDailyVisitCheck();
   scheduleExtensionStatusSync();
   refreshProfileUserForTabs();
@@ -346,7 +346,7 @@ async function applyAutologinToken(token, view, nextSchoolId) {
     user = await api.fetchCurrentUser();
     lastAutologinTokenApplied = token;
     postToNative('homecrowd:login', { user: user });
-    preloadMapKitForEmbed();
+    preloadMapForEmbed();
     scheduleDailyVisitCheck();
     scheduleExtensionStatusSync();
     navigate('/' + (view || initialView));
@@ -741,7 +741,7 @@ async function init() {
       user = await api.fetchCurrentUser();
       await ensureBrandConfigForUser(user);
       postToNative('homecrowd:login', { user: user });
-      preloadMapKitForEmbed();
+      preloadMapForEmbed();
       scheduleDailyVisitCheck();
       scheduleExtensionStatusSync();
     } catch (e) {
