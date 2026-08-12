@@ -2,7 +2,6 @@ import * as api from '../api.js';
 import * as analytics from '../analytics.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import { buildAppHeaderHtml, attachAppHeader } from '../base-components/AppHeader.js';
-import { buildPurchasesFootnoteHtml } from '../purchasesFootnote.js';
 import { escapeHtml } from '../base-components/html.js';
 import { getNavEpoch } from '../router.js';
 import {
@@ -553,7 +552,6 @@ async function loadRewards(container, routeEpoch) {
       html += buildRewardListHtml(rewardRows);
       html += '</div>';
     }
-    html += buildPurchasesFootnoteHtml();
     html += '</div>';
     html += '</div>';
 
