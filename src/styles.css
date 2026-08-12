@@ -14437,7 +14437,10 @@ button.hc-shop-detail-cats--expandable {
 .hc-tx-avatar {
   width: 40px;
   height: 40px;
-  border-radius: 20px;
+  /* A rounded square, not a disc: a circle inscribed in this box would clip the
+     left and right edges of a wide logo even after it has been padded square.
+     8px keeps the ~0.2 radius-to-size ratio the other logo tiles use. */
+  border-radius: 8px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -14471,10 +14474,8 @@ button.hc-shop-detail-cats--expandable {
   background: #f2f2f2;
 }
 
+/* Sizing and fit come from img[data-hc-square]. */
 .hc-tx-avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
   display: block;
 }
 

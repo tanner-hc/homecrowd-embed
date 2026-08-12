@@ -45,6 +45,24 @@ function buildFallbackAvatarHtml(schoolLogoUrl) {
   );
 }
 
+/**
+ * Where a purchase came from: 'olive' (in-person, card-linked), 'wildfire'
+ * (online), or '' for anything else.
+ *
+ * The backend sends `source` outright; the id fields are the fallback so the
+ * embed still behaves against a backend that predates that field. The merchant
+ * name is deliberately not consulted — it prefers the Wildfire name and falls
+ * back to the Olive one, so it cannot tell the two apart.
+ */
+function transactionSource(transaction) {
+  if (!transaction) return '';
+  var declared = String(transaction.source || '').trim().toLowerCase();
+  if (declared === 'olive' || declared === 'wildfire') return declared;
+  if (transaction.wildfire_merchant_id) return 'wildfire';
+  if (String(transaction.olive_merchant_id || '').trim()) return 'olive';
+  return '';
+}
+
 function transactionMerchantDisplayName(transaction) {
   if (!transaction) return '';
   var m = transaction.merchant;
@@ -130,8 +148,12 @@ export function buildTransactionItemHtml(transaction, helpers) {
     (transaction.merchant && (transaction.merchant.logo_url || transaction.merchant.small_logo_url)) ||
     null;
 
-  var avatarHtml = logoUrl
-    ? '<div class="hc-tx-avatar hc-tx-avatar--merchant"><img data-hc-ph="store" src="' +
+  // Every merchant mark is squared off with white — Olive in-person, Wildfire
+  // online, and Safari-extension purchases, which are Wildfire rows too (same
+  // ingest, only the application id differs). Nothing here is cropped.
+  var source = transactionSource(transaction);
+  var avatarHtml = logoUrl && (source === 'olive' || source === 'wildfire')
+    ? '<div class="hc-tx-avatar hc-tx-avatar--merchant"><img data-hc-ph="store" data-hc-square src="' +
       escapeAttr(logoUrl) +
       '" alt="" class="hc-tx-avatar-img" /></div>'
     : buildFallbackAvatarHtml(schoolLogoUrl);
