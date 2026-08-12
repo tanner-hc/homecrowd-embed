@@ -3,6 +3,7 @@ import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import { buildAppHeaderHtml, attachAppHeader } from '../base-components/AppHeader.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
+import planeSvg from '../assets/icons/travel-plane.svg?raw';
 
 var travelResizeObserver = null;
 
@@ -61,8 +62,13 @@ export function renderTravel(container) {
     // Sits outside #hc-travel-body so it survives the iframe swap below.
     '<div class="hc-travel-earn">' +
     '<div class="hc-travel-earn-row">' +
-    '<span class="hc-travel-earn-label">Earn as you travel</span>' +
+    '<span class="hc-travel-earn-icon" aria-hidden="true">' +
+    planeSvg +
+    '</span>' +
+    '<span class="hc-travel-earn-text">' +
+    '<span class="hc-travel-earn-label">Earn points as you travel</span>' +
     '<span class="hc-travel-earn-pts">1 point per $1 spent</span>' +
+    '</span>' +
     '</div>' +
     '</div>' +
     '<div class="hc-travel-body" id="hc-travel-body">' +

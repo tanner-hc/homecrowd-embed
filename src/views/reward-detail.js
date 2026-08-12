@@ -10,6 +10,7 @@ import {
   bindLinkCardUnlockBar,
 } from '../base-components/LinkCardUnlockBar.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
+import ticketSvg from '../assets/icons/ticket-fill.svg?raw';
 import { showSuccess, showError } from '../base-components/toastApi.js';
 import { writeRedemptionConfirmAndNavigate } from './redemption-confirmation.js';
 import { parsePeriodEndTimestamp } from '../rewardPeriodCountdown.js';
@@ -488,35 +489,22 @@ function buildDetailHtml(product, summary, currentUser, cardLinkStatus, ticketsR
   html += '<div class="hc-prize-detail-content">';
   html += '<div class="hc-prize-detail-body">';
 
-  html += '<span class="hc-prize-detail-badge">' + escapeHtml(badgeLabel) + '</span>';
+  // Figma 1425:10461 — a raffle's chip carries the ticket; other reward types
+  // stay text-only.
+  html +=
+    '<span class="hc-prize-detail-badge">' +
+    (redemptionType === 'raffle'
+      ? '<span class="hc-prize-detail-badge-icon" aria-hidden="true">' + ticketSvg + '</span>'
+      : '') +
+    '<span class="hc-prize-detail-badge-text">' +
+    escapeHtml(badgeLabel) +
+    '</span>' +
+    '</span>';
   html += '<h1 class="hc-prize-detail-title">' + escapeHtml(product.title) + '</h1>';
 
-  // Prizes carry no cost, so there is no slot for this upstream — it sits directly
-  // under the title where the prize screen would start its description.
-  if (!isEarlyRelease && !weeklyReward) {
-    html += '<div class="hc-product-points-row">';
-    if (redemptionType === 'card') {
-      if (detailCashOk) {
-        html +=
-          '<span class="hc-product-cash">' + escapeHtml('$' + (stripeCents / 100).toFixed(2)) + '</span>';
-      } else if (!weeklyReward) {
-        html += '<span class="hc-product-points-muted">Card price not set</span>';
-      }
-    } else {
-      html +=
-        '<span class="hc-product-points">' +
-        formatDisplayNumber(product.points_cost || 0) +
-        ' points</span>';
-      if (detailCashOk) {
-        html += '<span class="hc-product-or"> or </span>';
-        html +=
-          '<span class="hc-product-cash">' +
-          escapeHtml('$' + (stripeCents / 100).toFixed(2)) +
-          '</span>';
-      }
-    }
-    html += '</div>';
-  }
+  // The cost is shown in the carousel's overlay pill, so the design carries no
+  // points line under the title (Figma 1425:10461). The block that rendered it,
+  // including the card-price variants, was removed here.
 
   if (redemptionType === 'auction' && auctionInfo && userWonAuction) {
     html += '<div class="hc-product-winner-auction">';
@@ -906,9 +894,9 @@ function buildBottomBarHtml(o) {
       text: o.isLocked ? 'Locked' : '',
       html: o.isLocked
         ? null
-        : 'Redeem 1 raffle entry (' +
+        : 'Enter raffle (<strong>' +
           formatDisplayNumber(product.points_cost || 0) +
-          ' points)',
+          ' pts)</strong>',
     });
     html += '</div>';
     return html;

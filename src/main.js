@@ -5,7 +5,7 @@ import * as api from './api.js';
 import * as analytics from './analytics.js';
 import { postToNative, onNativeMessage } from './bridge.js';
 import { syncExtensionEnabledFromNative, extensionFlagTrue } from './extension-status.js';
-import { navigate, getRoute, onRouteChange, startRouter, nextNavEpoch } from './router.js';
+import { navigate, getRoute, onRouteChange, startRouter, nextNavEpoch, getNavEpoch } from './router.js';
 import {
   applyBrandConfig,
   clearBrandConfig,
@@ -976,9 +976,208 @@ function cleanupOverlays() {
   if (overlay) overlay.remove();
 }
 
+/**
+ * Load a reward and render its detail screen into `contentEl`.
+ *
+ * Shared by the detail route and the confirm route — the confirm step is a
+ * sheet over this screen, so the detail has to be on the page underneath it
+ * rather than replaced. Extracted rather than duplicated so the two cannot
+ * drift apart.
+ */
+/**
+ * A fixed host for route-level sheets, mounted outside #hc-content.
+ *
+ * Deliberately not a child of the content element: the screen underneath loads
+ * asynchronously and replaces its own innerHTML when it resolves, which would
+ * tear a sheet mounted inside it right back out.
+ */
+function mountSheetHost() {
+  var appEl = document.querySelector('.hc-embed') || document.body;
+  var existing = appEl.querySelector('.hc-sheet-host');
+  if (existing) existing.remove();
+  var host = document.createElement('div');
+  host.className = 'hc-sheet-host';
+  appEl.appendChild(host);
+  return host;
+}
+
+/**
+ * The reward detail currently painted into the shell, or null.
+ *
+ * Opening /confirm renders that same detail underneath its sheet. Without this,
+ * the route change would tear the shell down and refetch, so tapping Redeem
+ * flashed a spinner before the sheet slid up — and going back flashed it again.
+ * When the detail on screen is already the one the route wants, we leave it be
+ * and only add or drop the sheet.
+ */
+var mountedDetail = null;
+
+/**
+ * What a mounted detail must match to be reusable: the reward, plus the params
+ * that change what gets rendered. `from` is deliberately excluded — it only sets
+ * the back target, so dropping it (as goBack does) must not force a refetch.
+ */
+function detailMountKey(route, rewardId) {
+  var qIdx = route.indexOf('?');
+  var params = new URLSearchParams(qIdx >= 0 ? route.slice(qIdx + 1) : '');
+  var period = params.get('weekly') === '1' ? 'w' : params.get('overall') === '1' ? 'o' : '';
+  return rewardId + '|' + period;
+}
+
+/**
+ * Whether the detail on screen is the one `key` describes and is still the live
+ * shell. Node identity is the test: anything that rebuilt the layout produced a
+ * fresh, empty #hc-content, so a stale record can never pass.
+ */
+function isDetailMounted(key) {
+  if (!mountedDetail || mountedDetail.key !== key) return false;
+  return mountedDetail.el === document.getElementById('hc-content');
+}
+
+function mountRewardDetail(route, rewardId, contentEl) {
+  var mountEpoch = getNavEpoch();
+  contentEl.innerHTML = LoadingSpinner({ text: 'Loading reward...' });
+  Promise.all([
+    api.getRewardsSummary(),
+    api.fetchCurrentUser(),
+    api.getCards().catch(function () {
+      return null;
+    }),
+    api.getRaffleTicketsList().catch(function () {
+      return null;
+    }),
+  ])
+    .then(function (parts) {
+      var summary = parts[0];
+      var currentUser = parts[1];
+      var paymentCards = parts[2];
+      var ticketsResponse = parts[3];
+      var qIdx = route.indexOf('?');
+      var params = new URLSearchParams(qIdx >= 0 ? route.slice(qIdx + 1) : '');
+      var navSource = params.get('from') === 'home' ? 'home' : 'rewards';
+      var wantWeekly = params.get('weekly') === '1';
+      var wantOverall = params.get('overall') === '1';
+
+      function emptyCtx(product, weeklyReward) {
+        return {
+          summary: summary,
+          product: product,
+          currentUser: currentUser,
+          paymentCards: paymentCards,
+          ticketsResponse: ticketsResponse,
+          weeklyReward: weeklyReward || null,
+          navSource: navSource,
+        };
+      }
+
+      function loadCatalogFallback() {
+        return api.getRewardsCatalog().then(function (catalogRaw) {
+          var list = Array.isArray(catalogRaw) ? catalogRaw : (catalogRaw && catalogRaw.results) || [];
+          var found = list.find(function (r) {
+            return String(r.id) === rewardId;
+          });
+          return emptyCtx(found, null);
+        });
+      }
+
+      function loadStandardProduct() {
+        return api
+          .getRewardDetail(rewardId)
+          .catch(function () {
+            return null;
+          })
+          .then(function (product) {
+            if (product && product.id) {
+              return emptyCtx(product, null);
+            }
+            return loadCatalogFallback();
+          });
+      }
+
+      function loadLeaderboardProduct(periodKind) {
+        return api
+          .getLeaderboard()
+          .catch(function () {
+            return null;
+          })
+          .then(function (lb) {
+            if (!lb) return null;
+            var loaders =
+              periodKind === 'weekly'
+                ? [buildWeeklyRewardContext(lb)]
+                : periodKind === 'overall'
+                  ? [buildOverallRewardContext(lb)]
+                  : [buildWeeklyRewardContext(lb), buildOverallRewardContext(lb)];
+            return Promise.all(loaders).then(function (contexts) {
+              var match =
+                contexts.find(function (ctxItem) {
+                  return ctxItem && String(ctxItem.rewardId) === String(rewardId);
+                }) || null;
+              if (!match) return null;
+              var prod = leaderboardContextToEmbedProduct(match);
+              if (!prod || !prod.id) return null;
+              return emptyCtx(prod, match);
+            });
+          });
+      }
+
+      if (wantWeekly || wantOverall) {
+        return loadLeaderboardProduct(wantWeekly ? 'weekly' : 'overall').then(function (ctx) {
+          if (ctx && ctx.product && ctx.product.id) {
+            return ctx;
+          }
+          return loadStandardProduct();
+        });
+      }
+
+      return loadStandardProduct().then(function (ctx) {
+        if (ctx && ctx.product && ctx.product.id) {
+          return ctx;
+        }
+        return loadLeaderboardProduct(null).then(function (leaderboardCtx) {
+          return leaderboardCtx || ctx;
+        });
+      });
+    })
+    .then(function (ctx) {
+      if (!ctx || !ctx.product || !ctx.product.id) {
+        contentEl.innerHTML = '<div class="hc-alert-error">Reward not found</div>';
+        return;
+      }
+      analytics.trackEmbedRewardDetailView(ctx.product, ctx.currentUser);
+      // Only claim the shell if the user has not navigated on while we loaded.
+      if (getNavEpoch() === mountEpoch) {
+        mountedDetail = { key: detailMountKey(route, rewardId), el: contentEl };
+      }
+      renderRewardDetail(contentEl, {
+        product: ctx.product,
+        summary: ctx.summary,
+        currentUser: ctx.currentUser,
+        cardLinkStatus: resolveCardLinkStatus(ctx.currentUser, ctx.paymentCards) || 'unknown',
+        ticketsResponse: ctx.ticketsResponse,
+        weeklyReward: ctx.weeklyReward || null,
+        navSource: ctx.navSource || 'rewards',
+      });
+    })
+    .catch(function (err) {
+      contentEl.innerHTML =
+        '<div class="hc-alert-error">Failed to load: ' + (err.message || 'Unknown error') + '</div>';
+    });
+}
+
 function render(route) {
   var routeEpoch = nextNavEpoch();
   var pathOnly = routePathOnly(route);
+  // Any sheet belongs to the route that opened it, so navigating anywhere closes
+  // it. The confirm branch below mounts a fresh host for itself.
+  var staleSheet = document.querySelector('.hc-sheet-host');
+  if (staleSheet) staleSheet.remove();
+  // Any route outside this reward's detail/confirm pair replaces the shell, so
+  // the mounted detail stops being reusable the moment we leave the pair.
+  var detailFamily = pathOnly.match(/^\/rewards\/([^/]+)(?:\/confirm)?$/);
+  if (!detailFamily || !isDetailMounted(detailMountKey(route, detailFamily[1]))) {
+    mountedDetail = null;
+  }
   if (!user && !isPublicAuthPath(pathOnly)) {
     navigate(partnerToken ? '/preview' : '/get-started');
     return;
@@ -1172,138 +1371,24 @@ function render(route) {
   var confirmMatch = pathOnly.match(/^\/rewards\/([^/]+)\/confirm$/);
   if (confirmMatch) {
     var confirmRewardId = confirmMatch[1];
-    var confirmContentEl = renderLayout(route);
-    renderRedemptionConfirmation(confirmContentEl, confirmRewardId);
+    // The confirm step is a sheet that partially covers the reward, so the detail
+    // renders underneath as usual and the sheet mounts over it. Coming from the
+    // detail page — the only way in — that detail is already on screen, so it is
+    // left untouched and the sheet just slides up over it.
+    if (!isDetailMounted(detailMountKey(route, confirmRewardId))) {
+      mountRewardDetail(route, confirmRewardId, renderLayout(route));
+    }
+    renderRedemptionConfirmation(mountSheetHost(), confirmRewardId);
     return;
   }
 
   var detailMatch = pathOnly.match(/^\/rewards\/([^/]+)$/);
   if (detailMatch) {
-    var rewardId = detailMatch[1];
-    var contentEl = renderLayout(route);
-    contentEl.innerHTML = LoadingSpinner({ text: 'Loading reward...' });
-    Promise.all([
-      api.getRewardsSummary(),
-      api.fetchCurrentUser(),
-      api.getCards().catch(function () {
-        return null;
-      }),
-      api.getRaffleTicketsList().catch(function () {
-        return null;
-      }),
-    ])
-      .then(function (parts) {
-        var summary = parts[0];
-        var currentUser = parts[1];
-        var paymentCards = parts[2];
-        var ticketsResponse = parts[3];
-        var qIdx = route.indexOf('?');
-        var params = new URLSearchParams(qIdx >= 0 ? route.slice(qIdx + 1) : '');
-        var navSource = params.get('from') === 'home' ? 'home' : 'rewards';
-        var wantWeekly = params.get('weekly') === '1';
-        var wantOverall = params.get('overall') === '1';
-
-        function emptyCtx(product, weeklyReward) {
-          return {
-            summary: summary,
-            product: product,
-            currentUser: currentUser,
-            paymentCards: paymentCards,
-            ticketsResponse: ticketsResponse,
-            weeklyReward: weeklyReward || null,
-            navSource: navSource,
-          };
-        }
-
-        function loadCatalogFallback() {
-          return api.getRewardsCatalog().then(function (catalogRaw) {
-            var list = Array.isArray(catalogRaw) ? catalogRaw : (catalogRaw && catalogRaw.results) || [];
-            var found = list.find(function (r) {
-              return String(r.id) === rewardId;
-            });
-            return emptyCtx(found, null);
-          });
-        }
-
-        function loadStandardProduct() {
-          return api
-            .getRewardDetail(rewardId)
-            .catch(function () {
-              return null;
-            })
-            .then(function (product) {
-              if (product && product.id) {
-                return emptyCtx(product, null);
-              }
-              return loadCatalogFallback();
-            });
-        }
-
-        function loadLeaderboardProduct(periodKind) {
-          return api
-            .getLeaderboard()
-            .catch(function () {
-              return null;
-            })
-            .then(function (lb) {
-              if (!lb) return null;
-              var loaders =
-                periodKind === 'weekly'
-                  ? [buildWeeklyRewardContext(lb)]
-                  : periodKind === 'overall'
-                    ? [buildOverallRewardContext(lb)]
-                    : [buildWeeklyRewardContext(lb), buildOverallRewardContext(lb)];
-              return Promise.all(loaders).then(function (contexts) {
-                var match =
-                  contexts.find(function (ctxItem) {
-                    return ctxItem && String(ctxItem.rewardId) === String(rewardId);
-                  }) || null;
-                if (!match) return null;
-                var prod = leaderboardContextToEmbedProduct(match);
-                if (!prod || !prod.id) return null;
-                return emptyCtx(prod, match);
-              });
-            });
-        }
-
-        if (wantWeekly || wantOverall) {
-          return loadLeaderboardProduct(wantWeekly ? 'weekly' : 'overall').then(function (ctx) {
-            if (ctx && ctx.product && ctx.product.id) {
-              return ctx;
-            }
-            return loadStandardProduct();
-          });
-        }
-
-        return loadStandardProduct().then(function (ctx) {
-          if (ctx && ctx.product && ctx.product.id) {
-            return ctx;
-          }
-          return loadLeaderboardProduct(null).then(function (leaderboardCtx) {
-            return leaderboardCtx || ctx;
-          });
-        });
-      })
-      .then(function (ctx) {
-        if (!ctx || !ctx.product || !ctx.product.id) {
-          contentEl.innerHTML = '<div class="hc-alert-error">Reward not found</div>';
-          return;
-        }
-        analytics.trackEmbedRewardDetailView(ctx.product, ctx.currentUser);
-        renderRewardDetail(contentEl, {
-          product: ctx.product,
-          summary: ctx.summary,
-          currentUser: ctx.currentUser,
-          cardLinkStatus: resolveCardLinkStatus(ctx.currentUser, ctx.paymentCards) || 'unknown',
-          ticketsResponse: ctx.ticketsResponse,
-          weeklyReward: ctx.weeklyReward || null,
-          navSource: ctx.navSource || 'rewards',
-        });
-      })
-      .catch(function (err) {
-        contentEl.innerHTML =
-          '<div class="hc-alert-error">Failed to load: ' + (err.message || 'Unknown error') + '</div>';
-      });
+    // Dismissing the confirm sheet lands here with the detail still painted;
+    // the sheet was already removed above, so there is nothing left to do.
+    if (!isDetailMounted(detailMountKey(route, detailMatch[1]))) {
+      mountRewardDetail(route, detailMatch[1], renderLayout(route));
+    }
     return;
   }
 
@@ -1460,10 +1545,12 @@ function renderLayout(route) {
   var isAddCardPage = pathOnly === '/cards/link';
   var isSafariOnPage = pathOnly === '/browser-extension';
   // Rewards now renders its own AppHeader, so the shell's lockup would sit
-  // above it as a second header. The reward detail does the same — but only on
-  // the detail route itself; /confirm and /thanks still rely on the lockup.
+  // above it as a second header. The reward detail does the same, and /confirm
+  // renders that same detail underneath its sheet — so both routes take the
+  // detail's layout. Only /thanks still relies on the lockup.
   var isRewardsPage = pathOnly === '/rewards';
-  var isRewardDetailRoot = /^\/rewards\/[^/]+$/.test(pathOnly);
+  var isRewardDetailRoot =
+    /^\/rewards\/[^/]+$/.test(pathOnly) || /^\/rewards\/[^/]+\/confirm$/.test(pathOnly);
   var isActivityLogPage = pathOnly === '/activity-log';
   var isCardDrawPage = pathOnly === '/card-draw';
   var hideBrandLockup =

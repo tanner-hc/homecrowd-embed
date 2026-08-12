@@ -23,7 +23,10 @@ import {
   bindPrizeCards,
   bindPrizeCardCountdowns,
 } from '../components/Rewards/PrizeCard.js';
-import { buildRewardSectionsHtml } from '../components/Rewards/RewardListRow.js';
+import {
+  buildRewardListHtml,
+  buildRewardSectionsHtml,
+} from '../components/Rewards/RewardListRow.js';
 import {
   buildPointsMilestonesCardHtml,
   bindPointsMilestonesCard,
@@ -189,6 +192,59 @@ function groupRewardsByDate(rewards, nowMs) {
     sections = sections.concat([{ title: 'Available', rows: noDate }]);
   }
   return sections;
+}
+
+/**
+ * Catalogue order, in three tiers:
+ *
+ *   1. Live and timed — soonest to close first, because those are the ones with
+ *      a deadline worth acting on.
+ *   2. Not open yet — soonest to open first.
+ *   3. No schedule at all — plain rewards that are always available, so they sit
+ *      at the bottom where they are not competing with anything time-bound.
+ *
+ * Rewards that have already closed are dropped, the rule groupRewardsByDate
+ * applied back when this list was grouped under date headings.
+ *
+ * @param {Array<object>} rewards
+ * @param {number} nowMs
+ */
+function orderRewardsForCatalogue(rewards, nowMs) {
+  function openMs(r) {
+    var d = parseRewardDate(getRewardStartDate(r));
+    return d ? d.getTime() : null;
+  }
+  function closeMs(r) {
+    var d = parseDateEndOfDay(getRewardEndDate(r));
+    return d ? d.getTime() : null;
+  }
+  function tierOf(r) {
+    var opens = openMs(r);
+    if (opens != null && opens > nowMs) return 1;
+    return closeMs(r) != null ? 0 : 2;
+  }
+
+  var rows = rewards.filter(function (r) {
+    var closesAt = closeMs(r);
+    return !(closesAt != null && closesAt < nowMs);
+  });
+
+  // Decorate with the original index so the dateless tier keeps the order it
+  // arrived in — Array.prototype.sort is only stable per spec since ES2019, and
+  // there is nothing meaningful to sort those by anyway.
+  return rows
+    .map(function (r, index) {
+      return { reward: r, index: index, tier: tierOf(r) };
+    })
+    .sort(function (a, b) {
+      if (a.tier !== b.tier) return a.tier - b.tier;
+      if (a.tier === 0) return closeMs(a.reward) - closeMs(b.reward);
+      if (a.tier === 1) return openMs(a.reward) - openMs(b.reward);
+      return a.index - b.index;
+    })
+    .map(function (entry) {
+      return entry.reward;
+    });
 }
 
 /**
@@ -396,6 +452,12 @@ async function loadRewards(container, routeEpoch) {
     var featuredRewards = formattedRewards.filter(function (r) {
       return isFeaturedRewardLive(r, nowMs);
     });
+    // Ids actually rendered at the top, so the catalogue can exclude exactly
+    // those and no more.
+    var featuredIds = {};
+    featuredRewards.forEach(function (r) {
+      featuredIds[String(r.id)] = true;
+    });
     if (featuredRewards.length) {
       html += '<div class="hc-prize-cards hc-rewards-featured">';
       featuredRewards.forEach(function (r) {
@@ -410,19 +472,21 @@ async function loadRewards(container, routeEpoch) {
     }
 
     if (weeklyRewardItem || overallRewardItem) {
-      // Two prizes sit side by side; a lone one still spans the full width.
+      // Two prizes sit side by side; a lone one still spans the full width, and
+      // at full width it is the taller layout the design uses for the featured
+      // card rather than the paired one.
+      var prizesPaired = !!(weeklyRewardItem && overallRewardItem);
       html +=
-        '<div class="hc-prize-cards' +
-        (weeklyRewardItem && overallRewardItem ? ' hc-prize-cards--pair' : '') +
-        '">';
+        '<div class="hc-prize-cards' + (prizesPaired ? ' hc-prize-cards--pair' : '') + '">';
       if (weeklyRewardItem) {
         html += buildPrizeCardHtml({
           kind: 'weekly',
           title: weeklyReward.title,
           imageUrl: weeklyReward.imageUrl,
           statusText: buildPrizeCountdownLabel(weeklyReward),
-      targetMs: weeklyReward.targetMs,
+          targetMs: weeklyReward.targetMs,
           rewardId: weeklyReward.rewardId,
+          compact: prizesPaired,
         });
       }
       if (overallRewardItem) {
@@ -431,8 +495,9 @@ async function loadRewards(container, routeEpoch) {
           title: overallReward.title,
           imageUrl: overallReward.imageUrl,
           statusText: buildPrizeCountdownLabel(overallReward),
-      targetMs: overallReward.targetMs,
+          targetMs: overallReward.targetMs,
           rewardId: overallReward.rewardId,
+          compact: prizesPaired,
         });
       }
       html += '</div>';
@@ -453,28 +518,39 @@ async function loadRewards(container, routeEpoch) {
     // The rest of the catalogue, under the ladder. The prize cards above are
     // leaderboard rewards and the ladder is the first-reward set, so neither
     // overlaps this list.
+    // Excludes what the featured slot is showing, not everything flagged
+    // featured: a flagged reward that has not opened yet fails the window check
+    // above, and keying this off `is_featured` would drop it from the page
+    // altogether rather than listing it here with its "Opens ..." pill.
     var otherRewards = formattedRewards.filter(function (r) {
-      return r && r.id != null && r.is_active !== false && !r.is_featured;
+      return r && r.id != null && r.is_active !== false && !featuredIds[String(r.id)];
     });
     if (otherRewards.length) {
-      var rewardSections = groupRewardsByDate(otherRewards, nowMs).map(function (section) {
+      var rewardRows = orderRewardsForCatalogue(otherRewards, nowMs).map(function (r) {
+        // A reward whose window has not opened shows when it will instead
+        // of an action it cannot take yet.
+        var startsAt = parseRewardDate(getRewardStartDate(r));
+        var notOpenYet = !!startsAt && startsAt.getTime() > nowMs;
         return {
-          title: section.title,
-          rows: section.rows.map(function (r) {
-            return {
-              id: r.id,
-              title: r.title,
-              pointsCost: r.points_cost,
-              imageUrl: getRewardImageUrl(r, getImageUrl),
-              redemptionType: r.redemption_type,
-              redeemable: isRewardRedeemable(r, availablePoints, nowMs),
-            };
-          }),
+          id: r.id,
+          title: r.title,
+          pointsCost: r.points_cost,
+          imageUrl: getRewardImageUrl(r, getImageUrl),
+          redemptionType: r.redemption_type,
+          redeemable: isRewardRedeemable(r, availablePoints, nowMs),
+          opensLabel: notOpenYet
+            ? 'Opens ' +
+              startsAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            : '',
         };
       });
       html += '<div class="hc-rewards-other">';
-      html += '<div class="hc-rewards-other-title">More rewards</div>';
-      html += buildRewardSectionsHtml(rewardSections);
+      html += '<div class="hc-rewards-other-title">Prizes</div>';
+      // Grouping under "Friday, Sep 25" style headings is off for now — the
+      // catalogue is one flat grid. Restore by swapping the two lines below and
+      // rebuilding sections with groupRewardsByDate().
+      // html += buildRewardSectionsHtml(rewardSections);
+      html += buildRewardListHtml(rewardRows);
       html += '</div>';
     }
     html += buildPurchasesFootnoteHtml();

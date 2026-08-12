@@ -1,13 +1,15 @@
 import { escapeAttr, escapeHtml } from '../../base-components/html.js';
 import { formatDisplayNumber } from '../../formatNumber.js';
+import ticketSvg from '../../assets/icons/ticket-fill.svg?raw';
 
 /**
- * One catalogue reward in the rewards-screen list: square artwork on the left,
- * title and cost stacked beside it, and a Redeem chip pinned to the right.
+ * One catalogue reward as a tile. Figma 1423:9735 — Gray 1 card with a dashed
+ * Gray 2 outline at an 18px radius, a 112px cover, a Medium 16 title, and a
+ * pill that is either the blue entry action or a muted "Opens ..." state.
  *
- * The row itself carries data-reward-id, which the rewards view's delegated
- * click handler already listens for — so the whole row navigates to the reward
- * detail without any binding of its own.
+ * The tile carries data-reward-id, which the rewards view's delegated click
+ * handler already listens for — so it navigates to the detail page without any
+ * binding of its own.
  *
  * @param {{
  *   id?: string,
@@ -15,48 +17,54 @@ import { formatDisplayNumber } from '../../formatNumber.js';
  *   pointsCost?: number,
  *   imageUrl?: string,
  *   redemptionType?: string,
- *   redeemable?: boolean, when the user can afford it the chip reads as an action
+ *   redeemable?: boolean, when the user can act the pill reads as an action
+ *   opensLabel?: string, e.g. "Opens Sep 15" — shown instead when not yet open
  * }} props
  */
 export function buildRewardListRowHtml(props) {
   props = props || {};
 
-  // Mirrors the mobile RewardCard's type badge, which sits under the price.
   var type = String(props.redemptionType || '').toLowerCase();
-  var badge = '';
-  if (type === 'raffle' || type === 'auction') {
-    badge =
-      '<span class="hc-reward-type-badge hc-reward-type-badge--' +
-      type +
-      '">' +
-      (type === 'raffle' ? 'RAFFLE' : 'AUCTION') +
-      '</span>';
-  }
+  var isRaffle = type === 'raffle';
 
   var thumb = props.imageUrl
-    ? '<img data-hc-ph="gift" class="hc-reward-row-img" src="' +
+    ? '<img data-hc-ph="gift" class="hc-reward-tile-img" src="' +
       escapeAttr(String(props.imageUrl)) +
       '" alt="" />'
-    : '<span class="hc-reward-row-img hc-reward-row-img--ph hc-img-ph hc-img-ph--gift"></span>';
+    : '<span class="hc-reward-tile-img hc-reward-tile-img--ph hc-img-ph hc-img-ph--gift"></span>';
+
+  // A reward that has not opened yet says so; otherwise a raffle invites an
+  // entry at its cost and everything else offers a redeem.
+  var actionLabel;
+  var actionIcon = '';
+  if (props.opensLabel) {
+    actionLabel = String(props.opensLabel);
+  } else if (isRaffle) {
+    actionLabel = 'Enter for ' + formatDisplayNumber(props.pointsCost) + ' pts';
+    actionIcon = '<span class="hc-reward-tile-action-icon" aria-hidden="true">' + ticketSvg + '</span>';
+  } else {
+    actionLabel = 'Redeem for ' + formatDisplayNumber(props.pointsCost) + ' pts';
+  }
+
+  var ready = !props.opensLabel && !!props.redeemable;
 
   return (
-    '<button type="button" class="hc-reward-row" data-reward-id="' +
+    '<button type="button" class="hc-reward-tile" data-reward-id="' +
     escapeAttr(String(props.id || '')) +
     '">' +
     thumb +
-    '<span class="hc-reward-row-body">' +
-    '<span class="hc-reward-row-text">' +
-    '<span class="hc-reward-row-title">' +
+    '<span class="hc-reward-tile-body">' +
+    '<span class="hc-reward-tile-title">' +
     escapeHtml(String(props.title || '')) +
     '</span>' +
-    '<span class="hc-reward-row-points">' +
-    escapeHtml(formatDisplayNumber(props.pointsCost) + ' points') +
+    '<span class="hc-reward-tile-action' +
+    (ready ? ' hc-reward-tile-action--ready' : '') +
+    '">' +
+    actionIcon +
+    '<span class="hc-reward-tile-action-text">' +
+    escapeHtml(actionLabel) +
     '</span>' +
-    badge +
     '</span>' +
-    '<span class="hc-reward-row-action' +
-    (props.redeemable ? ' hc-reward-row-action--ready' : '') +
-    '">Redeem</span>' +
     '</span>' +
     '</button>'
   );
@@ -68,7 +76,7 @@ export function buildRewardListRowHtml(props) {
 export function buildRewardListHtml(rows) {
   if (!Array.isArray(rows) || !rows.length) return '';
   return (
-    '<div class="hc-reward-rows">' + rows.map(buildRewardListRowHtml).join('') + '</div>'
+    '<div class="hc-reward-tiles">' + rows.map(buildRewardListRowHtml).join('') + '</div>'
   );
 }
 

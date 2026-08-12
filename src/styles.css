@@ -1541,7 +1541,9 @@ html.hc-embed--no-school-brand .hc-login-card {
    the same padding .hc-app-header already carries. Without this the header sits
    inset while everything under it runs edge to edge. */
 .hc-rewards-page-pad {
-  padding: 0 var(--hc-spacing-base);
+  /* Figma 1423:9735 sets 24px between the header row and the first card. The
+     sticky header's own 8px bottom padding covers a third of it. */
+  padding: 16px var(--hc-spacing-base) 0;
 }
 
 .hc-rewards-page-inner {
@@ -3229,17 +3231,7 @@ html.hc-embed--no-school-brand .hc-login-card {
   box-sizing: border-box;
 }
 
-.hc-content.hc-content--reward-detail .hc-redemption-confirm-bottom {
-  left: 50%;
-  right: auto;
-  width: 100vw;
-  max-width: none;
-  margin-left: -50vw;
-  margin-right: 0;
-  box-sizing: border-box;
-}
-
-.hc-sticky-top.hc-sticky-top--reward-detail {
+.hc-content.hc-content--reward-detail .hc-sticky-top.hc-sticky-top--reward-detail {
   background: #fff;
 }
 
@@ -7268,29 +7260,6 @@ button.hc-shop-detail-cats--expandable {
   opacity: 1;
 }
 
-/* RedemptionConfirmationScreen (mobile parity) */
-.hc-redemption-confirm {
-  background: #fff;
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.hc-redemption-confirm-scroll {
-  flex: 1 1 auto;
-  padding: 0 20px;
-  padding-bottom: 120px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.hc-rc-image-block {
-  display: flex;
-  justify-content: center;
-  margin-top: 12px;
-  margin-bottom: 8px;
-}
-
 .hc-rc-image-wrap {
   width: 120px;
   height: 120px;
@@ -7322,222 +7291,256 @@ button.hc-shop-detail-cats--expandable {
   color: #999;
 }
 
-.hc-rc-info {
-  margin-top: 16px;
-  margin-bottom: 20px;
+/* Redemption confirm as a bottom sheet. Figma 1426:10785 — it partially covers
+   the reward detail, which stays rendered and dimmed underneath. */
+.hc-sheet-host {
+  position: absolute;
+  inset: 0;
+  z-index: 400;
+  pointer-events: none;
+}
+
+.hc-sheet-host > * {
+  pointer-events: auto;
+}
+
+.hc-rc-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  animation: hc-rc-fade 180ms ease;
+}
+
+.hc-rc-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  /* Figma 1426:10785 leaves the reward's header and the top of its artwork
+     showing above the sheet — roughly a sixth of the screen. */
+  max-height: 84%;
+  background: #fff;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  animation: hc-rc-rise 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes hc-rc-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes hc-rc-rise {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-rc-backdrop,
+  .hc-rc-sheet {
+    animation: none;
+  }
+}
+
+/* The grab handle: a 51x5 bar in a 13px band (Figma 973:4208). */
+.hc-rc-grabber {
+  flex-shrink: 0;
+  width: 51px;
+  height: 5px;
+  margin: 13px auto;
+  border-radius: 100px;
+  background: #dadada;
+}
+
+.hc-rc-sheet-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* The sheet's sections are 34px apart in the design, including the gap under
+     the grabber band and the one above the buttons. */
+  padding: 34px 16px;
+}
+
+.hc-rc-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
 .hc-rc-title {
-  font-size: 18px;
+  margin: 0;
+  font-size: 36px;
+  line-height: 0.9;
+  font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
   font-weight: 700;
   color: #000;
-  margin-bottom: 16px;
   text-align: center;
-  line-height: 22px;
-}
-
-.hc-rc-row {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-}
-
-.hc-rc-row--border {
-  border-bottom: 1px solid #e0e0e0;
-  margin-bottom: 8px;
-}
-
-.hc-rc-row-label {
-  font-size: 16px;
-  font-weight: 400;
-  color: #000;
-}
-
-.hc-rc-row-value {
-  font-size: 16px;
-  font-weight: 500;
-  color: #000;
-}
-
-.hc-rc-row-value--accent {
-  font-size: 18px;
-  font-weight: 800;
-  color: #000;
-  font-family: var(--hc-detail-cta-font);
-  letter-spacing: 0.03em;
 }
 
 .hc-rc-qty {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  text-align: center;
-  padding: 16px 0;
-  border-bottom: 1px solid #e0e0e0;
-  margin-bottom: 8px;
+  gap: 22px;
+  margin-top: 12px;
 }
 
 .hc-rc-qty-label {
   font-size: 14px;
+  font-family: 'Baikal-Regular', var(--hc-font);
   font-weight: 400;
-  color: #666;
-  margin-bottom: 12px;
+  color: #888;
 }
 
 .hc-rc-qty-row {
   display: flex;
-  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 24px;
+  justify-content: space-between;
+  width: 100%;
 }
 
+/* 45px circles; the decrement stays neutral and only the increment is blue. */
 .hc-rc-qty-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 18px;
+  width: 45px;
+  height: 45px;
   border: none;
-  background: #00c8ff;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 24px;
-  color: #000;
-  cursor: pointer;
+  border-radius: 24px;
+  background: #ebebeb;
   display: flex;
   align-items: center;
   justify-content: center;
-  -webkit-tap-highlight-color: transparent;
+  padding: 0;
+  cursor: pointer;
 }
 
-.hc-rc-qty-btn:hover:not(:disabled) {
-  background: #00b4e6;
+/* 16x16 leaf inside the 45px circle, matching the exported glyphs. */
+.hc-rc-qty-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.hc-rc-qty-btn--add {
+  background: var(--hc-app-primary, #00c8ff);
 }
 
 .hc-rc-qty-btn:disabled {
-  background: #cbd5e1;
-  color: #64748b;
-  cursor: not-allowed;
+  opacity: 0.3;
+  cursor: default;
 }
 
 .hc-rc-qty-num {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 42px;
+  line-height: normal;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
   color: #000;
-  min-width: 32px;
-  text-align: center;
 }
 
-.hc-rc-qty-avail {
-  font-size: 12px;
+.hc-rc-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 34px;
+}
+
+.hc-rc-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 0;
+  border-top: 1px solid #ebebeb;
+}
+
+.hc-rc-row-label {
+  font-size: 14px;
+  font-family: 'Baikal-Regular', var(--hc-font);
   font-weight: 400;
-  color: #999;
-  margin-top: 8px;
+  color: #888;
+}
+
+.hc-rc-row-value {
+  font-size: 16px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
 }
 
 .hc-rc-confirm-box {
-  margin: 20px 0;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  margin-top: 22px;
+  padding: 18px;
+  border-radius: 16px;
+  background: #f8f8f8;
+}
+
+.hc-rc-confirm-icon {
+  display: flex;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.hc-rc-confirm-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 
 .hc-rc-confirm-text {
-  font-size: 14px;
-  font-weight: 400;
-  color: #666;
-  text-align: center;
-  line-height: 20px;
   margin: 0;
+  font-size: 14px;
+  line-height: normal;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-weight: 400;
+  color: #888;
 }
 
-.hc-redemption-confirm-bottom {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: var(--hc-reward-footer-pad-y) var(--hc-reward-footer-pad-x)
-    calc(var(--hc-reward-footer-pad-y) + env(safe-area-inset-bottom, 0px));
-  background: #fff;
-  z-index: 60;
-  max-width: 600px;
-  margin: 0 auto;
-  box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.06);
-}
-
-.hc-rc-bottom-inner {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  gap: var(--hc-reward-footer-actions-gap);
-}
-
-.hc-rc-bottom-inner > * {
-  flex: 1;
-  min-width: 0;
-}
-
-.hc-rc-cancel {
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 52px;
-  height: auto;
-  padding: 14px var(--hc-spacing-base);
-  border: none;
-  border-radius: var(--hc-radius-pill);
-  background: #f0f0f0;
-  color: #666;
-  font-family: var(--hc-font);
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.2;
-  text-align: center;
-  cursor: pointer;
-  box-shadow: 0 5px 8px rgba(0, 0, 0, 0.05);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.hc-rc-confirm-wrap {
+/* Stacked full-width buttons, Confirm above Cancel. */
+.hc-rc-actions {
   position: relative;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 16px calc(32px + env(safe-area-inset-bottom, 0px));
+  background: #fff;
+}
+
+.hc-rc-confirm,
+.hc-rc-cancel {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 100px;
+  font-size: 16px;
+  line-height: normal;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+  cursor: pointer;
 }
 
 .hc-rc-confirm {
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 52px;
-  height: auto;
-  padding: 14px var(--hc-spacing-base);
-  border: none;
-  border-radius: var(--hc-radius-pill);
-  background: #00c8ff;
-  color: #000;
-  font-family: var(--hc-detail-cta-font);
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  line-height: 1.2;
-  text-align: center;
-  cursor: pointer;
-  box-shadow: var(--hc-shadow-cta);
-  -webkit-tap-highlight-color: transparent;
+  background: var(--hc-app-primary, #00c8ff);
 }
 
-.hc-rc-confirm:hover:not(:disabled) {
-  background: #00b4e6;
-  color: #000;
+.hc-rc-cancel {
+  background: #ebebeb;
 }
 
 .hc-rc-confirm--disabled,
 .hc-rc-confirm:disabled {
-  background: #cbd5e1;
-  color: #64748b;
-  cursor: not-allowed;
-  opacity: 1;
-  box-shadow: none;
+  background: #c6c6c6;
+  opacity: 0.3;
+  cursor: default;
 }
 
 .hc-rc-loading {
@@ -12024,45 +12027,66 @@ button.hc-shop-detail-cats--expandable {
   overflow: hidden;
 }
 
-/* Earn-rate row above the booking frame. Built on the same card idiom as the
-   home setup steps (.hc-unlock-setup-card): Gray 1 #F8F8F8 at a 12px radius
-   with 20px padding, a 24px tinted icon badge, a 16px Baikal-Medium label, and
-   the green #677A29 points accent. flex-shrink keeps the iframe from squeezing
-   it out of the column. */
+/* Earn-rate card above the booking frame. Figma 1427:13364 — Light blue #F0F9FF
+   at 20px padding, a 24px plane icon, a Medium 16 title over a Regular 14 in
+   Grey 4. flex-shrink keeps the iframe from squeezing it out of the column. */
 .hc-travel-earn {
   flex-shrink: 0;
 }
 
-/* Spans the full width, like the booking iframe below it, so the two read as
-   one surface. Full-bleed means no corner radius — rounded corners against the
-   viewport edge leave slivers of the page showing through. */
+/* Runs the full width rather than the design's inset 370px card: this page is
+   full-bleed, and the frame below it already reaches both edges. Full-bleed
+   means no corner radius — rounded corners against the viewport edge leave
+   slivers of the page showing through. */
 .hc-travel-earn-row {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  background: #f8f8f8;
-  padding: 16px var(--hc-spacing-lg);
+  background: #f0f9ff;
+  padding: 20px var(--hc-spacing-lg);
   box-sizing: border-box;
 }
 
-.hc-travel-earn-label {
-  flex: 1;
+/* The design rotates a 19.79x20.67 plane 30deg inside a 24px box. Both the box
+   and the glyph are sized explicitly so the rotation pivots where it should. */
+.hc-travel-earn-icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hc-travel-earn-icon svg {
+  width: 19.79px;
+  height: 20.67px;
+  display: block;
+  transform: rotate(30deg);
+}
+
+.hc-travel-earn-text {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
   min-width: 0;
+}
+
+.hc-travel-earn-label {
   font-size: 16px;
-  line-height: 16px;
+  line-height: normal;
   font-family: 'Baikal-Medium', var(--hc-font);
   font-weight: 500;
   color: #000;
 }
 
 .hc-travel-earn-pts {
-  flex-shrink: 0;
   font-size: 14px;
-  line-height: 1.1;
-  font-family: 'Baikal-Medium', var(--hc-font);
-  font-weight: 500;
-  color: #677a29;
+  line-height: normal;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-weight: 400;
+  color: #888;
 }
 
 .hc-travel-body {
@@ -12084,12 +12108,28 @@ button.hc-shop-detail-cats--expandable {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Full-bleed, same as the stores map: the booking frame is the page, so it
+   escapes the 600px reading column and loses .hc-content's 8px padding-top.
+   (.hc-content--flush-top would clear that padding, but that rule is scoped to
+   #hc-content, the inner div, so it never matches this <main>.) */
 .hc-content.hc-content--travel {
   display: flex;
   flex-direction: column;
   overflow: hidden;
   overscroll-behavior: none;
-  padding-bottom: 0;
+  max-width: none;
+  padding: 0;
+}
+
+/* The tab bar is a flex sibling of .hc-content, so in normal flow it would cut
+   the frame short. Lifting it out of flow lets the iframe run the full height
+   and show through the shell's 32px top corners. */
+.hc-content--travel ~ .hc-tab-bar-shell {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-width: none;
 }
 
 .hc-content.hc-content--travel.hc-content--with-tab-bar {
@@ -16976,43 +17016,88 @@ body:has(.hc-fr-success) {
   margin-bottom: 12px;
 }
 
-/* Weekly and season prizes sit side by side. At a 402px viewport with 20px
-   gutters this makes each card ~175px wide against the shared 196px height. */
+/* Weekly and season prizes sit side by side (Figma 1423:9770). */
 .hc-prize-cards--pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
-/* 80% of the 245px design height. Scoped to the pair on purpose: .hc-prize-card is
-   shared with the Current Reward card above and the home screen's, which keep the
-   full height. Everything inside anchors to an edge — label and status to the top,
-   title to the bottom — so height is the only value that changes. */
-.hc-prize-cards--pair .hc-prize-card {
-  height: 196px;
+/* The paired card (Figma 1423:9771). Unlike the full-width card, which anchors
+   its parts to the card's corners, this one is a 10px-padded column: label at
+   the top, countdown and title stacked at the bottom.
+
+   Double class because .hc-prize-card's own display/height/padding are declared
+   later in this file, so a single class would lose the tie on source order. */
+.hc-prize-card.hc-prize-card--compact {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  height: 161px;
+  padding: 10px;
 }
 
-/* The title's fixed 238px measure and the right-aligned status chip both assume
-   a full-width card, so they need reining in at half the width. */
-.hc-prize-cards--pair .hc-prize-card-title {
-  width: auto;
-  right: 9.5px;
-  font-size: 30px;
+/* A single light wash rather than the full card's two-stop scrim — there is no
+   top-right chip here that needs darkening behind it. */
+.hc-prize-card--compact .hc-prize-card-scrim {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.2) 100%);
 }
 
-/* Still dropped to a second row — at half width the chip and the label can't
-   share the top line — but flush right, mirroring the label's 9.5px inset. */
-.hc-prize-cards--pair .hc-prize-card-status {
+/* Relative, not static: the artwork and scrim above are absolutely positioned,
+   and positioned elements paint over in-flow content whatever the DOM order —
+   so in-flow text here would sit behind the image. */
+.hc-prize-card--compact .hc-prize-card-label {
+  position: relative;
+  /* Clear the full-width card's absolute insets: under `relative` they would
+     still offset the badge from the padded corner it should sit in. */
+  top: auto;
   left: auto;
-  right: 9.5px;
-  top: 38px;
+  font-size: 14px;
+}
+
+.hc-prize-card--compact .hc-prize-card-dot {
+  width: 10px;
+  height: 10px;
+}
+
+.hc-prize-card-foot {
+  /* Positioned for the same reason as the label above; its children flow
+     inside it and ride along. */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+}
+
+.hc-prize-card--compact .hc-prize-card-status {
+  position: static;
+}
+
+.hc-prize-card--compact .hc-prize-card-status-text {
+  font-size: 10px;
+}
+
+.hc-prize-card--compact .hc-prize-card-title {
+  position: static;
+  width: 100%;
+  font-size: 20px;
+  /* Two lines at most on the short card; -webkit-box clamping ellipsises the
+     overflow. Two lines of 20px/0.9 is 36px, which the 161px card clears. */
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 /* Catalogue reward rows. Figma 973:6212 — 117px artwork at a 12px radius, 13px
    from the text column, which pads 18px vertically so the block centres against
    the square. Gray 2 #EBEBEB chip with Grey 4 #888888 label. */
+/* Figma 1423:9735 — "Unlock with points" and the catalogue below it sit in a
+   24px column (node 1423:9867). The 16px under the heading matches the same
+   frame's header-to-content gap. */
 .hc-rewards-other {
-  margin-top: 42px;
+  margin-top: 24px;
 }
 
 .hc-rewards-other-title {
@@ -17042,100 +17127,109 @@ body:has(.hc-fr-success) {
   margin-bottom: 12px;
 }
 
-.hc-reward-rows {
+/* Catalogue rewards as tiles. Figma 1423:9735 — two per row at a 12px gap,
+   replacing the old full-width list rows. */
+.hc-reward-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+/* Gray 1 card with a dashed Gray 2 outline at an 18px radius. The dashed edge
+   is what separates a catalogue entry from the solid prize cards above it. */
+.hc-reward-tile {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-}
-
-.hc-reward-row {
-  display: flex;
-  gap: 13px;
-  align-items: flex-start;
-  width: 100%;
+  align-items: stretch;
+  min-width: 0;
   padding: 0;
-  border: none;
-  background: none;
-  text-align: left;
-  font: inherit;
-  color: inherit;
+  border: 1px dashed #ebebeb;
+  border-radius: 18px;
+  background: #f8f8f8;
+  overflow: hidden;
   cursor: pointer;
+  text-align: left;
+  font-family: var(--hc-font);
 }
 
-.hc-reward-row-img {
-  flex-shrink: 0;
-  width: 117px;
-  height: 117px;
-  border-radius: 12px;
+.hc-reward-tile-img {
+  width: 100%;
+  height: 112px;
   object-fit: cover;
   display: block;
-}
-
-.hc-reward-row-img--ph {
-  background: #ebebeb;
-}
-
-.hc-reward-row-body {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  gap: 14px;
-  align-items: flex-start;
-  padding: 18px 0;
-}
-
-.hc-reward-row-text {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  flex-direction: column;
-  gap: 6px;
-  color: #000;
-}
-
-.hc-reward-row-title {
-  font-size: 16px;
-  line-height: normal;
-  font-family: 'Baikal-Condensed', var(--hc-font);
-  font-weight: 700;
-  /* The design ellipsises a long title rather than letting the row grow. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.hc-reward-row-points {
-  font-size: 15px;
-  line-height: normal;
-  font-family: 'Baikal-Regular', var(--hc-font);
-  font-weight: 400;
-}
-
-/* Mobile spaces the badge 8px below the price; the column's own gap supplies 6. */
-.hc-reward-row-text .hc-reward-type-badge {
-  align-self: flex-start;
-  margin-top: 2px;
-}
-
-.hc-reward-row-action {
   flex-shrink: 0;
-  padding: 5px 8px;
-  border-radius: 6px;
-  background: #ebebeb;
-  color: #888;
-  font-size: 12px;
+}
+
+.hc-reward-tile-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px 16px 16px;
+  min-width: 0;
+}
+
+.hc-reward-tile-title {
+  width: 100%;
+  min-width: 0;
+  font-size: 16px;
   line-height: normal;
   font-family: 'Baikal-Medium', var(--hc-font);
   font-weight: 500;
-  white-space: nowrap;
+  color: #000;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Affordable rewards get the live-action treatment the ladder's Redeem uses. */
-.hc-reward-row-action--ready {
-  background: var(--hc-app-primary, #00c8ff);
+/* "Button (new)": 100px radius, 14/9 padding, Medium 12. Gray 3 at 30% is the
+   design's unavailable state, so the muted form is the default. */
+.hc-reward-tile-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 9px 14px;
+  border-radius: 100px;
+  background: #c6c6c6;
+  opacity: 0.3;
+  font-size: 12px;
+  line-height: normal;
+  /* Plain Medium, matching every other pill in the app. The Figma token reads
+     "Baikal VAR: Medium", a variable instance that sits between this project's
+     static 500 and 700 faces — there is no semibold file and no variable axis to
+     hit it exactly, and faking it with a stroke looked worse than being slightly
+     light. Shipping a real semibold face is the fix if it matters. */
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
   color: #000;
+}
+
+.hc-reward-tile-action--ready {
+  background: var(--hc-app-primary, #00c8ff);
+  opacity: 1;
+}
+
+/* The ticket sits tighter to the left edge than the label does to the right. */
+.hc-reward-tile-action-icon {
+  display: flex;
+  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
+  margin-left: -4px;
+}
+
+.hc-reward-tile-action-icon svg {
+  width: 17px;
+  height: 17px;
+  display: block;
+}
+
+.hc-reward-tile-action-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .hc-prize-card {
@@ -17212,7 +17306,9 @@ body:has(.hc-fr-success) {
   padding: 5px 8px;
   border-radius: 6px;
   background: rgba(216, 216, 216, 0.3);
-  border: 1px solid rgba(248, 248, 248, 0.14);
+  /* Inset rather than a border: Figma draws this stroke inside the box, so the
+     pill measures 21px tall (5 + 11 + 5). A real border would add 2px. */
+  box-shadow: inset 0 0 0 1px rgba(248, 248, 248, 0.14);
   backdrop-filter: blur(50px);
   -webkit-backdrop-filter: blur(50px);
 }
@@ -17450,6 +17546,8 @@ body:has(.hc-fr-success) {
 .hc-prize-detail-badge {
   display: inline-flex;
   align-items: center;
+  /* 5px between the ticket and the label, per Figma 1425:10461. */
+  gap: 5px;
   height: 20px;
   padding: 3px 6px;
   border-radius: 5px;
@@ -17459,6 +17557,21 @@ body:has(.hc-fr-success) {
   font-family: 'Baikal-Medium', var(--hc-font);
   font-weight: 500;
   line-height: 1.1;
+}
+
+/* The glyph is taller than the 20px chip, which is what the design shows — it
+   overhangs the padding rather than being scaled down to fit. */
+.hc-prize-detail-badge-icon {
+  display: flex;
+  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
+}
+
+.hc-prize-detail-badge-icon svg {
+  width: 17px;
+  height: 17px;
+  display: block;
 }
 
 .hc-prize-detail-title {

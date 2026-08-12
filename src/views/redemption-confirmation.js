@@ -1,8 +1,11 @@
 import * as api from '../api.js';
-import NavHeader from '../base-components/NavHeader.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { showError } from '../base-components/toastApi.js';
 import { formatDisplayNumber } from '../formatNumber.js';
+import ticketSvg from '../assets/icons/ticket-fill.svg?raw';
+import infoSvg from '../assets/icons/info-outline.svg?raw';
+import minusSvg from '../assets/icons/stepper-minus.svg?raw';
+import plusSvg from '../assets/icons/stepper-plus.svg?raw';
 import { navigateToRedemptionThanks, writePendingStripeThanks } from './redemption-thanks.js';
 
 var STORAGE_KEY = 'hc_redemption_confirm_v1';
@@ -191,10 +194,10 @@ export function renderRedemptionConfirmation(container, rewardId) {
   }
 
   var balanceLabel = payWithStripe
-    ? 'Your points (unchanged):'
+    ? 'Your points (unchanged)'
     : rt === 'raffle' && useRaffleTicket
-      ? 'Your Tickets:'
-      : 'Your Points:';
+      ? 'Your tickets'
+      : 'Your points';
   var balanceVal = payWithStripe
     ? formatDisplayNumber(pointsSummaryPts) + ' pts'
     : rt === 'raffle' && useRaffleTicket
@@ -203,7 +206,7 @@ export function renderRedemptionConfirmation(container, rewardId) {
 
   var remainingRowHtml = '';
   if (!payWithStripe) {
-    var remLabel = 'Remaining After:';
+    var remLabel = 'Remaining after';
     var remVal = '';
     if (rt === 'raffle' && useRaffleTicket) {
       remVal =
@@ -234,15 +237,16 @@ export function renderRedemptionConfirmation(container, rewardId) {
   if (showEntryQuantitySelector) {
     qtyHtml =
       '<div class="hc-rc-qty">' +
-      '<div class="hc-rc-qty-label">Entries to redeem</div>' +
+      '<div class="hc-rc-qty-label">How many entries?</div>' +
       '<div class="hc-rc-qty-row">' +
-      '<button type="button" class="hc-rc-qty-btn" id="hc-rc-qty-minus" aria-label="Decrease">−</button>' +
+      '<button type="button" class="hc-rc-qty-btn" id="hc-rc-qty-minus" aria-label="Decrease">' +
+      minusSvg +
+      '</button>' +
       '<span class="hc-rc-qty-num" id="hc-rc-qty-val">1</span>' +
-      '<button type="button" class="hc-rc-qty-btn" id="hc-rc-qty-plus" aria-label="Increase">+</button>' +
+      '<button type="button" class="hc-rc-qty-btn hc-rc-qty-btn--add" id="hc-rc-qty-plus" aria-label="Increase">' +
+      plusSvg +
+      '</button>' +
       '</div>' +
-      '<div class="hc-rc-qty-avail">' +
-      maxEntryQuantity +
-      ' available</div>' +
       '</div>';
   }
 
@@ -253,11 +257,11 @@ export function renderRedemptionConfirmation(container, rewardId) {
   } else if (rt === 'raffle') {
     confirmText = raffleDrawingDatePassed
       ? 'This raffle has ended and is no longer accepting entries.'
-      : showEntryQuantitySelector
-        ? 'Are you sure you want to redeem entries for this raffle? Your points will be spent and entries cannot be undone.'
-        : 'Are you sure you want to enter this raffle? You will be entered into the drawing and your entry cannot be undone.';
+      : useRaffleTicket
+        ? 'Your tickets will be spent when you enter. Raffle entries cannot be undone.'
+        : 'Your points will be spent when you enter. Raffle entries cannot be undone.';
   } else {
-    confirmText = 'Are you sure you want to redeem this item? This action cannot be undone.';
+    confirmText = 'Your points will be spent when you redeem. Redemptions cannot be undone.';
   }
 
   var totalPointsCost =
@@ -272,28 +276,37 @@ export function renderRedemptionConfirmation(container, rewardId) {
       ? 'Continue to payment'
       : 'Confirm';
 
+  // Figma 1426:10785 — a bottom sheet over the dimmed reward, not a page.
   var html =
-    '<div class="hc-product-detail hc-redemption-confirm">' +
-    '<div class="hc-product-detail-nav-sticky">' +
-    NavHeader({ title: navTitle, backButtonId: 'hc-rc-back' }) +
-    '</div>' +
-    '<div class="hc-redemption-confirm-scroll">' +
-    '<div class="hc-rc-image-block">' +
-    imgBlock +
-    '</div>' +
-    '<div class="hc-rc-info">' +
-    '<div class="hc-rc-title">' +
+    '<div class="hc-rc-backdrop" data-hc-rc-dismiss="1"></div>' +
+    '<div class="hc-rc-sheet" role="dialog" aria-modal="true" aria-label="' +
+    escapeAttr(navTitle) +
+    '">' +
+    '<div class="hc-rc-grabber" aria-hidden="true"></div>' +
+    '<div class="hc-rc-sheet-scroll">' +
+    '<div class="hc-rc-head">' +
+    (rt === 'raffle'
+      ? '<span class="hc-prize-detail-badge">' +
+        '<span class="hc-prize-detail-badge-icon" aria-hidden="true">' +
+        ticketSvg +
+        '</span>' +
+        '<span class="hc-prize-detail-badge-text">Raffle</span>' +
+        '</span>'
+      : '') +
+    '<h1 class="hc-rc-title">' +
     escapeHtml(product.title || '') +
+    '</h1>' +
     '</div>' +
     qtyHtml +
-    '<div class="hc-rc-row hc-rc-row--border">' +
+    '<div class="hc-rc-info">' +
+    '<div class="hc-rc-row">' +
     '<span class="hc-rc-row-label">' +
     costLabel +
     '</span>' +
-    '<span class="hc-rc-row-value hc-rc-row-value--accent" id="hc-rc-cost-wrap">' +
+    '<span class="hc-rc-row-value" id="hc-rc-cost-wrap">' +
     costValueHtml +
     '</span></div>' +
-    '<div class="hc-rc-row hc-rc-row--border">' +
+    '<div class="hc-rc-row">' +
     '<span class="hc-rc-row-label">' +
     balanceLabel +
     '</span>' +
@@ -303,14 +316,14 @@ export function renderRedemptionConfirmation(container, rewardId) {
     remainingRowHtml +
     '</div>' +
     '<div class="hc-rc-confirm-box">' +
+    '<span class="hc-rc-confirm-icon" aria-hidden="true">' +
+    infoSvg +
+    '</span>' +
     '<p class="hc-rc-confirm-text">' +
     escapeHtml(confirmText) +
     '</p></div>' +
     '</div>' +
-    '<div class="hc-redemption-confirm-bottom">' +
-    '<div class="hc-rc-bottom-inner">' +
-    '<button type="button" class="hc-rc-cancel" id="hc-rc-cancel">Cancel</button>' +
-    '<div class="hc-rc-confirm-wrap">' +
+    '<div class="hc-rc-actions">' +
     '<button type="button" class="hc-rc-confirm' +
     (confirmDisabled ? ' hc-rc-confirm--disabled' : '') +
     '" id="hc-rc-submit"' +
@@ -318,9 +331,12 @@ export function renderRedemptionConfirmation(container, rewardId) {
     '>' +
     escapeHtml(confirmBtnLabel) +
     '</button>' +
+    '<button type="button" class="hc-rc-cancel" id="hc-rc-cancel">Cancel</button>' +
     '<div class="hc-rc-loading" id="hc-rc-loading" style="display:none" aria-hidden="true">' +
     '<span class="hc-rc-spinner"></span>' +
-    '</div></div></div></div></div>';
+    '</div>' +
+    '</div>' +
+    '</div>';
 
   container.innerHTML = html;
 
@@ -379,14 +395,11 @@ export function renderRedemptionConfirmation(container, rewardId) {
       if (raffleDrawingDatePassed) {
         confirmTextEl.textContent =
           'This raffle has ended and is no longer accepting entries.';
-      } else if (selectedQuantity > 1) {
-        confirmTextEl.textContent =
-          'Are you sure you want to redeem ' +
-          selectedQuantity +
-          ' entries for this raffle? Your points will be spent and entries cannot be undone.';
       } else {
-        confirmTextEl.textContent =
-          'Are you sure you want to enter this raffle? You will be entered into the drawing and your entry cannot be undone.';
+        // Same note at any quantity — the design states the rule, not the count.
+        confirmTextEl.textContent = useRaffleTicket
+          ? 'Your tickets will be spent when you enter. Raffle entries cannot be undone.'
+          : 'Your points will be spent when you enter. Raffle entries cannot be undone.';
       }
     }
   }
@@ -425,6 +438,10 @@ export function renderRedemptionConfirmation(container, rewardId) {
   }
 
   document.getElementById('hc-rc-cancel').addEventListener('click', goBack);
+
+  // Tapping the dimmed reward behind the sheet dismisses it, the same as Cancel.
+  var backdropEl = container.querySelector('[data-hc-rc-dismiss]');
+  if (backdropEl) backdropEl.addEventListener('click', goBack);
 
   var submitBtn = document.getElementById('hc-rc-submit');
   var loadingEl = document.getElementById('hc-rc-loading');

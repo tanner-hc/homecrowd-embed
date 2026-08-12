@@ -15,11 +15,16 @@ import calendarSvg from '../../assets/icon-calendar.svg?raw';
  *   statusText?: string,
  *   rewardId?: string,
  *   targetMs?: number, when the period ends, so the status text can tick
+ *   compact?: boolean, the half-width variant (Figma 1423:9771)
  * }} props
  */
 export function buildPrizeCardHtml(props) {
   props = props || {};
   var overall = props.kind === 'overall';
+  // The paired weekly/season cards are a different design, not just a shorter
+  // one: the countdown sits in the bottom stack above the title rather than
+  // opposite the label, and it drops its glyph. Hence a separate layout below.
+  var compact = !!props.compact;
   // Featured rewards reuse this card with their own label; prizes derive theirs.
   var label = props.label || (overall ? 'Season Prize' : 'Weekly Prize');
   // Weekly counts down, the season ends on a date — hence the different glyphs.
@@ -33,9 +38,9 @@ export function buildPrizeCardHtml(props) {
 
   var statusHtml = props.statusText
     ? '<div class="hc-prize-card-status">' +
-      '<span class="hc-prize-card-status-icon">' +
-      icon +
-      '</span>' +
+      (compact
+        ? ''
+        : '<span class="hc-prize-card-status-icon">' + icon + '</span>') +
       '<span class="hc-prize-card-status-text"' +
       targetAttr +
       '>' +
@@ -44,8 +49,21 @@ export function buildPrizeCardHtml(props) {
       '</div>'
     : '';
 
+  var labelHtml =
+    '<span class="hc-prize-card-label">' +
+    '<span class="hc-prize-card-dot" aria-hidden="true"></span>' +
+    escapeHtml(label) +
+    '</span>';
+  var titleHtml =
+    '<span class="hc-prize-card-title">' + escapeHtml(String(props.title || '')) + '</span>';
+  var bodyHtml = compact
+    ? labelHtml + '<span class="hc-prize-card-foot">' + statusHtml + titleHtml + '</span>'
+    : labelHtml + statusHtml + titleHtml;
+
   return (
-    '<button type="button" class="hc-prize-card" data-prize-card="1" data-prize-kind="' +
+    '<button type="button" class="hc-prize-card' +
+    (compact ? ' hc-prize-card--compact' : '') +
+    '" data-prize-card="1" data-prize-kind="' +
     escapeAttr(overall ? 'overall' : 'weekly') +
     '" data-prize-reward-id="' +
     escapeAttr(String(props.rewardId || '')) +
@@ -56,14 +74,7 @@ export function buildPrizeCardHtml(props) {
         '" alt="" />'
       : '<span class="hc-prize-card-img hc-prize-card-img--ph hc-img-ph hc-img-ph--gift"></span>') +
     '<span class="hc-prize-card-scrim" aria-hidden="true"></span>' +
-    '<span class="hc-prize-card-label">' +
-    '<span class="hc-prize-card-dot" aria-hidden="true"></span>' +
-    escapeHtml(label) +
-    '</span>' +
-    statusHtml +
-    '<span class="hc-prize-card-title">' +
-    escapeHtml(String(props.title || '')) +
-    '</span>' +
+    bodyHtml +
     '</button>'
   );
 }
