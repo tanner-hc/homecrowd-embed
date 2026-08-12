@@ -12106,6 +12106,37 @@ button.hc-shop-detail-cats--expandable {
   background: #fff;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
+  transition: opacity 220ms ease;
+}
+
+/* Transparent until the frame reports it has painted, so its blank document
+   never shows through as a white screen. */
+.hc-travel-iframe--loading {
+  opacity: 0;
+}
+
+/* Covers the frame for both the session request and the frame's own load. */
+.hc-travel-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  transition: opacity 220ms ease;
+}
+
+.hc-travel-loading--done {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-travel-iframe,
+  .hc-travel-loading {
+    transition: none;
+  }
 }
 
 /* Full-bleed, same as the stores map: the booking frame is the page, so it

@@ -48,6 +48,38 @@ function bindTravelIframeSize(bodyEl, iframeEl) {
   });
 }
 
+/**
+ * Holds the spinner over the frame until it has actually painted.
+ *
+ * `load` fires on the element for cross-origin frames too, so this works
+ * without touching the partner's document. The timeout is a backstop for a
+ * frame that stalls — better to show whatever has rendered than to sit under a
+ * spinner indefinitely.
+ */
+var TRAVEL_FRAME_TIMEOUT_MS = 12000;
+
+function revealTravelFrameWhenReady(bodyEl, iframeEl) {
+  if (!bodyEl || !iframeEl) return;
+  var overlay = bodyEl.querySelector('[data-travel-loading]');
+  var done = false;
+  var timer = null;
+
+  function reveal() {
+    if (done) return;
+    done = true;
+    if (timer != null) window.clearTimeout(timer);
+    iframeEl.classList.remove('hc-travel-iframe--loading');
+    if (!overlay) return;
+    overlay.classList.add('hc-travel-loading--done');
+    window.setTimeout(function () {
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    }, 250);
+  }
+
+  iframeEl.addEventListener('load', reveal);
+  timer = window.setTimeout(reveal, TRAVEL_FRAME_TIMEOUT_MS);
+}
+
 export async function openTravel() {
   navigate('/travel');
 }
@@ -72,7 +104,12 @@ export function renderTravel(container) {
     '</div>' +
     '</div>' +
     '<div class="hc-travel-body" id="hc-travel-body">' +
+    // The spinner is an overlay from the start and the iframe slots in behind
+    // it, so the same node covers both the session request and the iframe's own
+    // load. Re-rendering it between the two would restart its animation.
+    '<div class="hc-travel-loading" data-travel-loading>' +
     LoadingSpinner({ text: 'Loading Travel...' }) +
+    '</div>' +
     '</div>' +
     '</div>';
 
@@ -92,13 +129,18 @@ async function loadTravelFrame(container) {
       throw new Error('No travel session from server');
     }
 
-    bodyEl.innerHTML =
-      '<iframe class="hc-travel-iframe" src="' +
-      escapeAttr(travelUrl) +
-      '" title="Travel" scrolling="yes" ' +
-      'allow="clipboard-write; payment; geolocation; fullscreen"></iframe>';
+    // Behind the overlay, and transparent until it has painted — otherwise the
+    // partner's blank document shows as a white screen for the whole load.
+    bodyEl.insertAdjacentHTML(
+      'afterbegin',
+      '<iframe class="hc-travel-iframe hc-travel-iframe--loading" src="' +
+        escapeAttr(travelUrl) +
+        '" title="Travel" scrolling="yes" ' +
+        'allow="clipboard-write; payment; geolocation; fullscreen"></iframe>',
+    );
 
     var iframeEl = bodyEl.querySelector('.hc-travel-iframe');
+    revealTravelFrameWhenReady(bodyEl, iframeEl);
     requestAnimationFrame(function () {
       bindTravelIframeSize(bodyEl, iframeEl);
     });
