@@ -4525,42 +4525,31 @@ html.hc-embed--no-school-brand .hc-login-card {
   flex-direction: column;
   align-items: center;
   pointer-events: auto;
-  /* Teardrop: a circle that converges to a point at the bottom centre. */
-  --hc-pin-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 25 28.5'%3E%3Cpath d='M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 16 12.5 16S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z' fill='%23000'/%3E%3C/svg%3E");
   --hc-pin-size: 40px;
   --hc-pin-border: 2.5px;
   --hc-pin-tip-w: 8px;
   --hc-pin-tip-h: 10px;
 }
 
-/* Figma 1421:9188 — a single teardrop filled edge to edge by the merchant's own
-   artwork: Ulta is a solid orange drop, Best Buy blue, Walgreens red. No white
-   plate and no ring, so the brand colour is what reads at pin size.
-
-   Masked rather than built from a circle plus a triangle, because the point has
-   to be filled by the same image — a separate tip element would have to guess
-   the artwork's colour. */
 .hc-merchant-pin-head {
   width: var(--hc-pin-size);
-  height: calc(var(--hc-pin-size) * 1.14);
+  height: var(--hc-pin-size);
+  border-radius: 999px;
   overflow: hidden;
-  background: #fff;
+  background: #e5e5e5;
+  border: var(--hc-pin-border) solid #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
   box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
-  -webkit-mask-image: var(--hc-pin-mask);
-  mask-image: var(--hc-pin-mask);
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
 }
 
+/* Sizing and fit come from img[data-hc-square]: the pin carries the same
+   white-padded square as the tiles, and the round head clips it to a circle.
+   Only display stays here — a stray object-fit would be dead weight that the
+   attribute rule silently outranks. */
 .hc-merchant-pin-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
   display: block;
 }
 
@@ -4572,9 +4561,18 @@ html.hc-embed--no-school-brand .hc-login-card {
   line-height: 1;
 }
 
-/* The teardrop mask draws the point, so the separate tip is redundant. */
 .hc-merchant-pin-tip {
-  display: none;
+  width: 0;
+  height: 0;
+  margin-top: calc(-1 * var(--hc-pin-border));
+  border-style: solid;
+  border-left-width: var(--hc-pin-tip-w);
+  border-right-width: var(--hc-pin-tip-w);
+  border-top-width: var(--hc-pin-tip-h);
+  border-left-color: transparent;
+  border-right-color: transparent;
+  border-top-color: #ffffff;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.12));
 }
 
 .hc-offers-map-merchant-card {
@@ -18570,37 +18568,26 @@ body:has(.hc-fr-success) {
 --------------------------------------------------------------------------- */
 .hc-img-ph,
 /* ── Square logo tiles ──
-   Both the Eat local row tile (.hc-merchant-img-wrap, 60x60) and the offer detail
-   hero (.hc-shop-detail-logo-wrap, 112x112) are square white plates that centre
-   their logo. Scaling the logo until its LONGER side fills the plate leaves the
-   shorter side letterboxed by the white, so the composite always reads as a
-   square — whether the source art was wider, taller, or smaller than the plate.
+   Merchant logos arrive at every proportion — square brand tiles, wide wordmarks
+   with a tagline. These tiles pad each one out to a square with white so they all
+   present the same way: the Eat local row (.hc-merchant-img-wrap, 60x60), the
+   offer detail hero (.hc-shop-detail-logo-wrap, 112x112) and the map pin card
+   (.hc-map-merchant-card-logo, 72x72).
 
-   Sized to the artwork rather than stretched to 100%/100% with object-fit:
-   border-radius clips at the element's box, so a stretched img would round the
-   plate's corners while the artwork's own corners stayed square inside it, which
-   shows on any logo with a coloured background. Hugging the artwork makes element
-   and mark the same box, so the radius lands on real pixels.
-
-   Which side is longer is a property of the decoded bitmap, so imageSquare.js adds
-   --wide / --tall on load. Until then the max-* pair holds the old behaviour: fits
-   inside the plate, never overflows, never upscales. */
+   The element is the square, not the artwork, so border-radius rounds the square
+   — which is the thing that should be rounded. A coloured non-square logo can no
+   longer show its own square corners inside a rounded plate. */
 img[data-hc-square] {
   display: block;
-  width: auto;
-  height: auto;
-  max-width: 100%;
-  max-height: 100%;
-}
-
-/* Only the dominant axis is set; the other stays auto, and the max-* pair above
-   remains as a backstop so neither can overflow the plate. */
-img[data-hc-square].hc-img-square--wide {
   width: 100%;
-}
-
-img[data-hc-square].hc-img-square--tall {
   height: 100%;
+  /* This is the width-vs-height rule: contain fits the artwork by whichever side
+     is longer, so a wide logo leaves space above and below and a tall one leaves
+     it left and right. The background fills that space, on the image itself, so
+     the element is a white square whatever shape the artwork is. It scales up as
+     well as down, so a logo smaller than the plate fills it too. */
+  object-fit: contain;
+  background: #fff;
 }
 
 /* A failed image keeps its element but carries a 1x1 pixel as its src, which the

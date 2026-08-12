@@ -1805,7 +1805,7 @@ function buildMerchantPinHtml(mk, selected) {
   var name = (mk && mk.name) || (mk && mk.merchant && (mk.merchant.name || mk.merchant.merchantName)) || '?';
   var initial = String(name).trim().charAt(0).toUpperCase() || '?';
   var inner = logoUrl
-    ? '<img data-hc-ph="store" src="' +
+    ? '<img data-hc-ph="store" data-hc-square src="' +
       escapeAttr(logoUrl) +
       '" alt="" class="hc-merchant-pin-img" />'
     : '<span class="hc-merchant-pin-fallback">' + escapeHtml(initial) + '</span>';
@@ -2064,9 +2064,7 @@ function createMapKitMerchantAnnotation(mapkit, mk, container) {
     return el;
   };
   var pinW = 40;
-  // The teardrop is 25x28.5 in the design — 1.14 tall for its width — and the
-  // point is the bottom of the shape, so the box is the shape.
-  var pinH = 46;
+  var pinH = 50;
   var ann = new Ann(new Coord(mk.lat, mk.lng), factory, {
     size: { width: pinW, height: pinH },
     anchorOffset: new DOMPoint(0, -pinH),

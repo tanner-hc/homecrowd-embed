@@ -63,7 +63,6 @@ import { renderResetPassword } from './views/reset-password.js';
 import { renderSchoolSelection } from './views/school-selection.js';
 import LoadingSpinner from './base-components/LoadingSpinner.js';
 import { installImageFallback } from './base-components/imageFallback.js';
-import { installSquareImages } from './base-components/imageSquare.js';
 import { preloadMapKitForEmbed } from './mapkit-embed.js';
 import houseFilledSvg from './assets/icons/house-filled.svg?raw';
 import giftFilledSvg from './assets/icons/gift-filled.svg?raw';
@@ -72,10 +71,8 @@ import bagSvg from './assets/icons/bag.svg?raw';
 import planeSvg from './assets/icons/plane-filled.svg?raw';
 import playFilledSvg from './assets/icons/play-filled.svg?raw';
 
-// Registered before the first render so no view can paint a broken image, and
-// so the square-logo listener exists before the first <img> is created.
+// Registered before the first render so no view can paint a broken image.
 installImageFallback();
-installSquareImages();
 
 var appEl = document.getElementById('app');
 var user = null;
