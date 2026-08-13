@@ -10,6 +10,28 @@ var maplibreWorkerFiles = {
   '/maplibre-gl-shared.mjs': path.join(maplibreDist, 'maplibre-gl-shared.mjs'),
 };
 
+function oauthCallbackPlugin() {
+  var file = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public/oauth-callback.html');
+  return {
+    name: 'hc-oauth-callback',
+    configureServer(server) {
+      server.middlewares.use(function (req, res, next) {
+        var url = (req.url || '').split('?')[0];
+        if (url !== '/oauth-callback' && url !== '/oauth-callback/') return next();
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        fs.createReadStream(file).pipe(res);
+      });
+    },
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'oauth-callback',
+        source: fs.readFileSync(file),
+      });
+    },
+  };
+}
+
 function mapLibreWorkerPlugin() {
   return {
     name: 'maplibre-worker-static',
@@ -44,6 +66,7 @@ export default defineConfig({
   },
   plugins: [
     basicSsl(),
+    oauthCallbackPlugin(),
     mapLibreWorkerPlugin(),
     {
       name: 'hc-browser-log-to-terminal',

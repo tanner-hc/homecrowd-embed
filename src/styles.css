@@ -1062,6 +1062,88 @@ html.hc-embed--no-school-brand .hc-login-card {
   text-decoration: underline;
 }
 
+.hc-login-social-wrap {
+  width: 100%;
+  margin: 4px 0 8px;
+}
+
+.hc-login-social-divider {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin: 0 0 12px;
+}
+
+.hc-login-social-divider-line {
+  flex: 1 1 auto;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.hc-login-social-divider-text {
+  margin: 0 12px;
+  color: rgba(255, 255, 255, 0.85);
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.hc-login-social {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 54px;
+  margin-bottom: 10px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border-radius: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 14px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-login-social:last-child {
+  margin-bottom: 0;
+}
+
+.hc-login-social:active,
+.hc-login-social:disabled {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.hc-login-social:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.hc-login-social-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  margin-right: 8px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.hc-login-shell--school .hc-login-social-divider-line {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.hc-login-shell--school .hc-login-social-divider-text,
+.hc-login-shell--school .hc-login-social {
+  color: #ffffff;
+}
+
+.hc-login-shell--school .hc-login-social {
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
 .hc-signup-back-btn {
   align-items: center;
   border: 1px solid color-mix(in srgb, var(--hc-powered-by-text-label, rgba(255, 255, 255, 0.62)) 68%, transparent);
@@ -13218,6 +13300,11 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-create-account-social:active {
   opacity: 0.85;
+}
+
+.hc-create-account-social:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 
 .hc-create-account-social-icon {

@@ -9,6 +9,9 @@ function resolveApiBaseUrl() {
   if (env) {
     return String(env).replace(/\/$/, '');
   }
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV) {
+    return '';
+  }
   var h = window.location.hostname || '';
   if (h === 'embed.gethomecrowd.com') {
     return 'https://api.gethomecrowd.com';
@@ -136,26 +139,29 @@ async function refreshAccessToken() {
 
 async function request(path, options) {
   options = options || {};
+  var includeStatus = !!options.includeStatus;
+  var fetchOptions = Object.assign({}, options);
+  delete fetchOptions.includeStatus;
   var token = getAccessToken();
-  var headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+  var headers = Object.assign({ 'Content-Type': 'application/json' }, fetchOptions.headers || {});
   if (token) headers['Authorization'] = 'Bearer ' + token;
   var activeImpersonationUserId = getImpersonationUserId();
   if (activeImpersonationUserId) {
     headers['X-Homecrowd-Impersonate-User-Id'] = activeImpersonationUserId;
   }
-  assertImpersonationReadOnly(options, activeImpersonationUserId);
+  assertImpersonationReadOnly(fetchOptions, activeImpersonationUserId);
   if (typeof window !== 'undefined' && window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
     headers['X-Homecrowd-Client'] = 'mobile';
   }
 
   var requestPath = withImpersonationParam(path, activeImpersonationUserId);
-  var res = await fetch(baseUrl + requestPath, Object.assign({}, options, { headers: headers }));
+  var res = await fetch(baseUrl + requestPath, Object.assign({}, fetchOptions, { headers: headers }));
 
   if (res.status === 401 && token) {
     var refreshed = await refreshAccessToken();
     if (refreshed) {
       headers['Authorization'] = 'Bearer ' + getAccessToken();
-      res = await fetch(baseUrl + requestPath, Object.assign({}, options, { headers: headers }));
+      res = await fetch(baseUrl + requestPath, Object.assign({}, fetchOptions, { headers: headers }));
     } else {
       clearTokens();
       window.location.hash = '#/login';
@@ -193,7 +199,11 @@ async function request(path, options) {
     throw reqErr;
   }
 
-  return res.json();
+  var data = await res.json();
+  if (includeStatus) {
+    return { data: data, status: res.status };
+  }
+  return data;
 }
 
 async function requestMultipart(path, options) {
@@ -292,6 +302,50 @@ export async function checkEmailExists(email) {
     }),
   });
   return !!(data && data.email_exists === true);
+}
+
+function applySocialLoginResult(result) {
+  var data = result && result.data ? result.data : result || {};
+  var tokens = data.tokens || {};
+  if (tokens.access) {
+    setTokens(tokens.access, tokens.refresh);
+  } else if (data.access) {
+    setTokens(data.access, data.refresh);
+  }
+  return {
+    user: data.user || null,
+    tokens: tokens,
+    isNewUser: !!(result && result.status === 201),
+  };
+}
+
+export async function googleLogin(idToken) {
+  var result = await request('/api/auth/google/', {
+    method: 'POST',
+    includeStatus: true,
+    body: JSON.stringify({
+      id_token: idToken,
+      client_context: embedClientContext(),
+    }),
+  });
+  return applySocialLoginResult(result);
+}
+
+export async function appleLogin(identityToken, nameFromApple) {
+  var payload = {
+    identity_token: identityToken,
+    client_context: embedClientContext(),
+  };
+  if (nameFromApple && typeof nameFromApple === 'object') {
+    payload.first_name = nameFromApple.first_name || '';
+    payload.last_name = nameFromApple.last_name || '';
+  }
+  var result = await request('/api/auth/apple/', {
+    method: 'POST',
+    includeStatus: true,
+    body: JSON.stringify(payload),
+  });
+  return applySocialLoginResult(result);
 }
 
 export async function assignSchool(schoolId) {

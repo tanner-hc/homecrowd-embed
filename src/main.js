@@ -16,7 +16,7 @@ import {
 } from './brand.js';
 import { renderLogin } from './views/login.js';
 import { renderGetStarted } from './views/get-started.js';
-import { renderFindYourSchool } from './views/find-your-school.js';
+import { renderFindYourSchool, getPendingSignupSchool } from './views/find-your-school.js';
 import { renderYoureIn } from './views/youre-in.js';
 import { renderCreateAccount } from './views/create-account.js';
 import { renderEnterFullName } from './views/enter-full-name.js';
@@ -271,6 +271,41 @@ function completeLoginState(nextUser, tokenUsed) {
   ensureBrandConfigForUser(nextUser).then(function (applied) {
     if (applied) render(getRoute());
   });
+}
+
+async function finishEmbedSocialLogin(result) {
+  var nextUser = result && result.user ? result.user : null;
+  var isNewUser = !!(result && result.isNewUser);
+  if (!nextUser) {
+    nextUser = await api.fetchCurrentUser();
+  }
+  var schoolId = '';
+  var pendingSchool = getPendingSignupSchool();
+  if (pendingSchool && pendingSchool.id) {
+    schoolId = String(pendingSchool.id).trim();
+  }
+  if (!schoolId) {
+    try {
+      schoolId = String(sessionStorage.getItem('hc_embed_pending_signup_school_id') || '').trim();
+    } catch (_e) { }
+  }
+  if (!schoolId) {
+    schoolId = getEmbedSchoolId() || '';
+  }
+  if (isNewUser && schoolId) {
+    try {
+      await api.assignSchool(schoolId);
+      nextUser = await api.fetchCurrentUser();
+    } catch (_e) { }
+  } else if (!nextUser) {
+    nextUser = await api.fetchCurrentUser();
+  }
+  completeLoginState(nextUser);
+  if (isNewUser) {
+    navigate('/account-created');
+    return;
+  }
+  navigate(hasActiveSchool(nextUser) ? '/' + initialView : '/school-selection');
 }
 
 function startSchoolEmailConfirmationPolling(confirmationId) {
@@ -1215,7 +1250,7 @@ function render(route) {
 
   if (pathOnly === '/create-account') {
     appEl.innerHTML = '';
-    renderCreateAccount(appEl);
+    renderCreateAccount(appEl, finishEmbedSocialLogin);
     return;
   }
 
@@ -1264,6 +1299,14 @@ function render(route) {
       : '';
     appEl.innerHTML = '';
     renderLogin(appEl, async function (u, loginMeta) {
+      var socialSource = loginMeta && loginMeta.source ? String(loginMeta.source) : '';
+      if (socialSource === 'google_sign_in' || socialSource === 'apple_sign_in') {
+        await finishEmbedSocialLogin({
+          user: u,
+          isNewUser: !!(loginMeta && loginMeta.isNewUser),
+        });
+        return;
+      }
       var assignSchoolId =
         loginMeta && loginMeta.signupSchoolId
           ? String(loginMeta.signupSchoolId).trim()
