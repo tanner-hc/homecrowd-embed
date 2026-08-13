@@ -1609,6 +1609,7 @@ function renderLayout(route) {
   var isStoresMapPage = pathOnly === '/offers/map';
   var isLinkCardIntroPage = pathOnly === '/cards/link-intro';
   var isAddCardPage = pathOnly === '/cards/link';
+  var isManageCardsPage = pathOnly === '/cards';
   var isSafariOnPage = pathOnly === '/browser-extension';
   // Rewards now renders its own AppHeader, so the shell's lockup would sit
   // above it as a second header. The reward detail does the same, and /confirm
@@ -1631,6 +1632,7 @@ function renderLayout(route) {
     isPrizeDetailPage ||
     isLinkCardIntroPage ||
     isAddCardPage ||
+    isManageCardsPage ||
     isSafariOnPage;
   var hideTabBar =
     (isRewardDetailPage && !isPrizeDetailPage) ||
@@ -1638,6 +1640,9 @@ function renderLayout(route) {
     isPreviewPage ||
     isLinkCardIntroPage ||
     isAddCardPage ||
+    // Reached by a back button and ends in a pinned "Add card", which the tab
+    // bar would sit over — same reason as the two link-card steps above.
+    isManageCardsPage ||
     isSafariOnPage ||
     // Focused full-screen flow with its own exit ("Maybe later"); the tab bar
     // would otherwise sit over the actions pinned to the bottom.
@@ -1646,6 +1651,7 @@ function renderLayout(route) {
     pathOnly === '/invite-friend' ||
     pathOnly === '/support' ||
     pathOnly === '/upload-receipt' ||
+    pathOnly === '/cards' ||
     pathOnly === '/cards/link' ||
     pathOnly === '/cards/link-intro' ||
     pathOnly === '/browser-extension' ||

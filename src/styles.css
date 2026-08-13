@@ -5309,7 +5309,7 @@ html.hc-embed--no-school-brand .hc-login-card {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 8px 20px 24px;
+  padding: 8px 16px 24px;
 }
 
 .hc-shop-detail-hero {
@@ -5317,18 +5317,18 @@ html.hc-embed--no-school-brand .hc-login-card {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 12px 8px 28px;
+  padding: 12px 8px 18px;
 }
 
 .hc-shop-detail-logo-wrap {
-  width: 112px;
-  height: 112px;
-  border-radius: 24px;
+  width: 98px;
+  height: 98px;
+  border-radius: 12px;
   overflow: hidden;
   /* White for the same reason as the Eat local tiles: the bands a letterboxed
      logo leaves should read as part of the artwork, not as a plate behind it. */
   background: #fff;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5336,7 +5336,7 @@ html.hc-embed--no-school-brand .hc-login-card {
 
 /* Sizing comes from img[data-hc-square]; only the radius is local to this tile. */
 .hc-shop-detail-logo {
-  border-radius: 24px;
+  border-radius: 12px;
 }
 
 .hc-shop-detail-logo-ph {
@@ -5347,11 +5347,11 @@ html.hc-embed--no-school-brand .hc-login-card {
 }
 
 .hc-shop-detail-name {
-  margin: 0 0 8px;
+  margin: 18px 0 0;
   font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
-  font-size: 40px;
+  font-size: 36px;
   font-weight: 700;
-  line-height: 40px;
+  line-height: 0.9;
   color: #000;
 }
 
@@ -5360,10 +5360,11 @@ html.hc-embed--no-school-brand .hc-login-card {
   padding: 0;
   border: none;
   background: transparent;
-  font-family: 'Baikal-Regular', var(--hc-font);
-  font-size: 14px;
-  line-height: 20px;
-  color: #6b6b6b;
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-size: 13px;
+  font-weight: 340;
+  line-height: 16px;
+  color: #888;
   text-align: center;
   max-width: 100%;
 }
@@ -5385,36 +5386,38 @@ button.hc-shop-detail-cats--expandable {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 5px 12px;
-  border-radius: 8px;
-  background: var(--hc-app-primary, #05c8fb);
-  color: #fff;
-  font-family: 'Baikal-Bold', var(--hc-font);
+  margin-top: 10px;
+  min-height: 20px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: var(--hc-app-primary, #00c8ff);
+  color: #000;
+  font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 12px;
-  font-weight: 700;
-  line-height: 14px;
+  font-weight: 500;
+  line-height: 1.1;
 }
 
 .hc-shop-detail-card-banner {
   position: relative;
-  margin-bottom: 16px;
-  padding: 16px;
-  border-radius: 20px;
-  background: #e8f8ff;
+  margin-bottom: 12px;
+  padding: 20px;
+  border-radius: 12px;
+  background: #f0f9ff;
   box-sizing: border-box;
 }
 
 .hc-shop-detail-card-banner-main {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   min-width: 0;
 }
 
 .hc-shop-detail-card-icon {
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -5422,9 +5425,12 @@ button.hc-shop-detail-cats--expandable {
   color: #000;
 }
 
+/* Figma draws this as a 21x15 glyph inside a 24px box, shown at 20px — so the
+   leaf is 17.5x12.5 in the 20px slot above. card-filled.svg is the bare glyph
+   (viewBox 0 0 21 15), hence both dimensions set rather than a square size. */
 .hc-shop-detail-card-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 17.5px;
+  height: 12.5px;
   display: block;
 }
 
@@ -5434,33 +5440,25 @@ button.hc-shop-detail-cats--expandable {
 }
 
 .hc-shop-detail-card-title {
-  font-family: 'Baikal-Bold', var(--hc-font);
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 18px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 20px;
   color: #000;
-  margin-bottom: 2px;
-}
-
-.hc-shop-detail-card-sub {
-  font-family: 'Baikal-Regular', var(--hc-font);
-  font-size: 12px;
-  line-height: 16px;
-  color: #6b6b6b;
 }
 
 .hc-shop-detail-card-cta {
   flex-shrink: 0;
   border: none;
   cursor: pointer;
-  padding: 10px 16px;
+  padding: 9px 14px;
   border-radius: 100px;
-  background: var(--hc-app-primary, #05c8fb);
+  background: var(--hc-app-primary, #00c8ff);
   color: #000;
-  font-family: 'Baikal-Bold', var(--hc-font);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 16px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 14px;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -5468,27 +5466,14 @@ button.hc-shop-detail-cats--expandable {
   opacity: 0.85;
 }
 
-.hc-shop-detail-card-avatar {
-  position: absolute;
-  right: 14px;
-  bottom: -14px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #fff;
-  background: #ddd;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-}
-
 .hc-shop-detail-tips {
-  margin-top: 8px;
-  padding: 18px 16px;
-  border-radius: 20px;
-  background: #f3f3f3;
+  margin-top: 0;
+  padding: 24px 17px;
+  border-radius: 12px;
+  background: #f8f8f8;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 27px;
   box-sizing: border-box;
 }
 
@@ -5496,29 +5481,29 @@ button.hc-shop-detail-cats--expandable {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 12px;
+  gap: 18px;
 }
 
 .hc-shop-detail-tip-icon {
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #111;
-  margin-top: 2px;
+  color: #000;
+  margin-top: 0;
 }
 
 .hc-shop-detail-tip-icon svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   display: block;
 }
 
 .hc-shop-detail-tip-icon-img {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   object-fit: contain;
   display: block;
 }
@@ -5529,19 +5514,20 @@ button.hc-shop-detail-cats--expandable {
 }
 
 .hc-shop-detail-tip-title {
-  font-family: 'Baikal-Bold', var(--hc-font);
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 18px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: normal;
   color: #000;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .hc-shop-detail-tip-sub {
   font-family: 'Baikal-Regular', var(--hc-font);
-  font-size: 13px;
-  line-height: 18px;
-  color: #6b6b6b;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: normal;
+  color: #888;
 }
 
 .hc-shop-detail-exclusions {
@@ -5550,11 +5536,14 @@ button.hc-shop-detail-cats--expandable {
   list-style: disc;
 }
 
+/* Olive offers list their terms as bullets rather than the single paragraph the
+   design shows, so the list items carry the same Book/14 grey as .-tip-sub. */
 .hc-shop-detail-exclusions li {
   font-family: 'Baikal-Regular', var(--hc-font);
-  font-size: 13px;
-  line-height: 18px;
-  color: #6b6b6b;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: normal;
+  color: #888;
   margin: 0 0 6px;
 }
 
@@ -5564,7 +5553,7 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-shop-detail-footer {
   flex-shrink: 0;
-  padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px));
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
   background: #fff;
 }
 
@@ -5576,11 +5565,11 @@ button.hc-shop-detail-cats--expandable {
   justify-content: center;
   border: none;
   border-radius: 100px;
-  background: var(--hc-app-primary, #05c8fb);
+  background: var(--hc-app-primary, #00c8ff);
   color: #000;
-  font-family: 'Baikal-Bold', var(--hc-font);
+  font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -5601,86 +5590,11 @@ button.hc-shop-detail-cats--expandable {
 }
 
 .hc-shop-detail-card-slot {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .hc-shop-detail-card-slot .hc-shop-detail-card-banner {
   margin-bottom: 0;
-}
-
-.hc-shop-card-picker {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-bottom: 8px;
-}
-
-.hc-shop-card-pick {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  border: 1px solid #ebebeb;
-  background: #fff;
-  border-radius: 16px;
-  padding: 14px 16px;
-  cursor: pointer;
-  text-align: left;
-  font-family: var(--hc-font);
-  -webkit-tap-highlight-color: transparent;
-  box-sizing: border-box;
-}
-
-.hc-shop-card-pick--selected {
-  border-color: var(--hc-app-primary, #05c8fb);
-  background: #e8f8ff;
-}
-
-.hc-shop-card-pick--add {
-  border-style: dashed;
-  justify-content: center;
-}
-
-.hc-shop-card-pick-icon {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #000;
-}
-
-.hc-shop-card-pick-icon svg {
-  width: 22px;
-  height: 22px;
-  display: block;
-}
-
-.hc-shop-card-pick-label {
-  flex: 1;
-  min-width: 0;
-  font-family: 'Baikal-Medium', var(--hc-font);
-  font-size: 15px;
-  font-weight: 500;
-  color: #000;
-}
-
-.hc-shop-card-pick-check {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  color: var(--hc-app-primary, #05c8fb);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hc-shop-card-pick-check svg {
-  width: 18px;
-  height: 18px;
-  display: block;
 }
 
 .hc-offer-logo-wrap {
@@ -16177,10 +16091,32 @@ button.hc-shop-detail-cats--expandable {
 
 
 /* Link Card Intro — "This never costs you anything" */
+
+/* renderLayout returns the inner #hc-content div, so both links in the chain
+   need flex sizing or the CTA cannot pin to the bottom of the shell. */
+.hc-content:has(.hc-lci-page) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
+  background: #fff;
+}
+
+.hc-content:has(.hc-lci-page) #hc-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  background: #fff;
+}
+
 .hc-lci-page {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   background: #fff;
   box-sizing: border-box;
 }
@@ -16225,7 +16161,8 @@ button.hc-shop-detail-cats--expandable {
 }
 
 .hc-lci-scroll {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -16345,7 +16282,7 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-lci-footer {
   flex-shrink: 0;
-  padding: 12px 24px 16px;
+  padding: 10px 16px max(32px, env(safe-area-inset-bottom, 0px));
   background: #fff;
   will-change: opacity, transform;
 }
@@ -18783,11 +18720,149 @@ body:has(.hc-fr-success) {
    so a failed placeholder never costs another network request.
 --------------------------------------------------------------------------- */
 .hc-img-ph,
+/* Manage Cards — Figma 1428:14551. A security note, then one row per linked
+   card, with "Add card" pinned to the bottom of the screen. */
+.hc-cards-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* 24px below the header row, per the frame's gap — the sticky header supplies
+     8px of it, so this adds the rest. */
+  padding: 16px 16px 0;
+  /* Clears the pinned footer so the last card can always be reached. */
+  padding-bottom: 120px;
+}
+
+.hc-cards-secure {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 24px 17px;
+  border-radius: 12px;
+  background: #f0f9ff;
+}
+
+.hc-cards-secure-icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.hc-cards-secure-icon img {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.hc-cards-secure-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hc-cards-secure-title {
+  font-size: 16px;
+  line-height: normal;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+}
+
+.hc-cards-secure-desc {
+  font-size: 14px;
+  line-height: normal;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-weight: 400;
+  color: #888;
+}
+
+/* One card. A button, not a row of controls — the whole thing opens the card's
+   options, which is what the chevron promises. */
+.hc-cards-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 30px;
+  width: 100%;
+  padding: 18px 16px;
+  border: none;
+  border-radius: 12px;
+  background: #f8f8f8;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--hc-font);
+}
+
+/* Fixed box so the labels line up whatever the brand mark's proportions. */
+.hc-cards-row-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 43px;
+  height: 32px;
+}
+
+.hc-cards-row-brand img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.hc-cards-row-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 16px;
+  line-height: normal;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-cards-row-chevron {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.hc-cards-row-chevron svg {
+  display: block;
+  width: 7px;
+  height: 13px;
+}
+
+.hc-cards-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 16px calc(32px + env(safe-area-inset-bottom, 0px));
+  background: #fff;
+}
+
+.hc-cards-add {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 100px;
+  background: var(--hc-app-primary, #00c8ff);
+  font-size: 16px;
+  line-height: normal;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+  text-align: center;
+  cursor: pointer;
+}
+
 /* ── Square logo tiles ──
    Merchant logos arrive at every proportion — square brand tiles, wide wordmarks
    with a tagline. These tiles pad each one out to a square with white so they all
    present the same way: the Eat local row (.hc-merchant-img-wrap, 60x60), the
-   offer detail hero (.hc-shop-detail-logo-wrap, 112x112) and the map pin card
+   offer detail hero (.hc-shop-detail-logo-wrap, 98x98) and the map pin card
    (.hc-map-merchant-card-logo, 72x72).
 
    The element is the square, not the artwork, so border-radius rounds the square

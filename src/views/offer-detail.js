@@ -6,13 +6,11 @@ import { showWebviewOverlay } from '../webview-overlay.js';
 import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import { buildAppHeaderHtml, attachAppHeader } from '../base-components/AppHeader.js';
-import { openBottomSheet } from '../base-components/BottomSheetModal.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import cardFilledSvg from '../assets/icons/card-filled.svg?raw';
-import storeSvg from '../assets/icons/store.svg?raw';
+import storeFilledSvg from '../assets/icons/store-filled.svg?raw';
 import locationSvg from '../assets/icon-location.svg?raw';
 import crossIconUrl from '../assets/icons/cross.png';
-import checkmarkSvg from '../assets/icons/checkmark.svg?raw';
 
 var PREFERRED_CARD_KEY = 'hc_preferred_card_id';
 
@@ -174,56 +172,10 @@ function pickOliveOfferId(offer) {
   return offer.offer_id || offer.offerId || offer.id || '';
 }
 
-function cardBrandLabel(card) {
-  var raw = String(
-    (card && (card.brand || card.scheme || card.network || card.card_brand || card.type)) || ''
-  ).toLowerCase();
-  if (raw.indexOf('master') >= 0 || raw === 'mc') return 'Mastercard';
-  if (raw.indexOf('amex') >= 0 || raw.indexOf('american') >= 0) return 'Amex';
-  if (raw.indexOf('discover') >= 0) return 'Discover';
-  if (raw.indexOf('visa') >= 0 || !raw) return 'Visa';
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
-}
-
-function pickAvatar(user) {
-  if (!user) return '';
-  return (
-    user.avatar_url ||
-    user.avatarUrl ||
-    user.profile_image ||
-    user.profileImage ||
-    ''
-  );
-}
-
-function buildLinkedCardHtml(card, avatarUri) {
-  if (card && card.last4) {
-    return (
-      '<div class="hc-shop-detail-card-slot" data-shop-card-slot>' +
-      '<div class="hc-shop-detail-card-banner">' +
-      '<div class="hc-shop-detail-card-banner-main">' +
-      '<span class="hc-shop-detail-card-icon" aria-hidden="true">' +
-      cardFilledSvg +
-      '</span>' +
-      '<div class="hc-shop-detail-card-copy">' +
-      '<div class="hc-shop-detail-card-title">Use ' +
-      escapeHtml(cardBrandLabel(card)) +
-      ' •••• ' +
-      escapeHtml(String(card.last4)) +
-      '</div>' +
-      '<div class="hc-shop-detail-card-sub">Pay with this linked card to earn points</div>' +
-      '</div>' +
-      '<button type="button" class="hc-shop-detail-card-cta" data-shop-manage-card>Manage</button>' +
-      '</div>' +
-      (avatarUri
-        ? '<img data-hc-ph="store" src="' +
-          escapeAttr(avatarUri) +
-          '" alt="" class="hc-shop-detail-card-avatar" />'
-        : '') +
-      '</div></div>'
-    );
-  }
-
+// One line of copy plus a pill on the right, per the design — the linked/unlinked
+// states differ only in what the pill does, so the copy stays card-agnostic.
+function buildLinkedCardHtml(card) {
+  var linked = !!(card && card.last4);
   return (
     '<div class="hc-shop-detail-card-slot" data-shop-card-slot>' +
     '<div class="hc-shop-detail-card-banner">' +
@@ -232,58 +184,13 @@ function buildLinkedCardHtml(card, avatarUri) {
     cardFilledSvg +
     '</span>' +
     '<div class="hc-shop-detail-card-copy">' +
-    '<div class="hc-shop-detail-card-title">Link a card to earn</div>' +
-    '<div class="hc-shop-detail-card-sub">Pay with a linked card to earn points</div>' +
+    '<div class="hc-shop-detail-card-title">Pay with a linked card to earn points</div>' +
     '</div>' +
-    '<button type="button" class="hc-shop-detail-card-cta" data-shop-link-card>Link</button>' +
+    (linked
+      ? '<button type="button" class="hc-shop-detail-card-cta" data-shop-manage-card>Manage</button>'
+      : '<button type="button" class="hc-shop-detail-card-cta" data-shop-link-card>Link</button>') +
     '</div>' +
-    (avatarUri
-      ? '<img data-hc-ph="store" src="' +
-        escapeAttr(avatarUri) +
-        '" alt="" class="hc-shop-detail-card-avatar" />'
-      : '') +
     '</div></div>'
-  );
-}
-
-function buildCardPickerBodyHtml(cards, selectedId) {
-  var rows = (cards || [])
-    .map(function (card) {
-      var selected = String(card.id) === String(selectedId);
-      var label =
-        cardBrandLabel(card) +
-        ' •••• ' +
-        String(card.last4 || '') +
-        (card.nickname ? ' · ' + card.nickname : '');
-      return (
-        '<button type="button" class="hc-shop-card-pick' +
-        (selected ? ' hc-shop-card-pick--selected' : '') +
-        '" data-shop-pick-card="' +
-        escapeAttr(String(card.id)) +
-        '">' +
-        '<span class="hc-shop-card-pick-icon" aria-hidden="true">' +
-        cardFilledSvg +
-        '</span>' +
-        '<span class="hc-shop-card-pick-label">' +
-        escapeHtml(label) +
-        '</span>' +
-        (selected
-          ? '<span class="hc-shop-card-pick-check" aria-hidden="true">' +
-            checkmarkSvg +
-            '</span>'
-          : '') +
-        '</button>'
-      );
-    })
-    .join('');
-
-  return (
-    '<div class="hc-shop-card-picker">' +
-    rows +
-    '<button type="button" class="hc-shop-card-pick hc-shop-card-pick--add" data-shop-pick-add>' +
-    '<span class="hc-shop-card-pick-label">Add another card</span>' +
-    '</button>' +
-    '</div>'
   );
 }
 
@@ -489,13 +396,12 @@ function truncateDescription(text, maxLen) {
   return { short: cut.replace(/[.,;:\s]+$/, '') + '…', full: full, needsExpand: true };
 }
 
-function buildShopDetailHtml(offer, card, user) {
+function buildShopDetailHtml(offer, card) {
   var name = pickName(offer);
   var logo = pickLogo(offer);
   var categories = pickCategories(offer);
   var descParts = truncateDescription(categories, 72);
   var showNew = isNewOffer(offer);
-  var avatarUri = pickAvatar(user);
   var initials = name
     .split(/\s+/)
     .map(function (w) {
@@ -506,7 +412,7 @@ function buildShopDetailHtml(offer, card, user) {
     .toUpperCase();
   var isOlive = !isWildfireOffer(offer);
   var showInStoreTip = isOlive;
-  var linkedCardHtml = isOlive ? buildLinkedCardHtml(card, avatarUri) : '';
+  var linkedCardHtml = isOlive ? buildLinkedCardHtml(card) : '';
 
   var catsHtml = '';
   if (descParts.full) {
@@ -546,10 +452,10 @@ function buildShopDetailHtml(offer, card, user) {
     (showInStoreTip
       ? '<div class="hc-shop-detail-tip">' +
         '<span class="hc-shop-detail-tip-icon" aria-hidden="true">' +
-        storeSvg +
+        storeFilledSvg +
         '</span>' +
         '<div class="hc-shop-detail-tip-copy">' +
-        '<div class="hc-shop-detail-tip-title">Shopping in the store?</div>' +
+        '<div class="hc-shop-detail-tip-title">Shopping in the app or store?</div>' +
         '<div class="hc-shop-detail-tip-sub">Use your linked card to earn points.</div>' +
         '</div></div>'
       : '') +
@@ -698,14 +604,11 @@ async function loadShopDetail(container, offerId) {
       hasWildfireDetail: !!wildfireDetail,
       wildlinkPreload: !!wildlinkPromise,
     });
-    body.innerHTML = buildShopDetailHtml(offer, card, user);
+    body.innerHTML = buildShopDetailHtml(offer, card);
 
     analytics.trackEmbedOfferDetailView(offer);
     bindShopDetailActions(container, {
       offer: offer,
-      cards: listActiveCards(cards),
-      user: user,
-      selectedCard: card,
       wildlinkPromise: wildlinkPromise,
     });
   } catch (err) {
@@ -1144,67 +1047,10 @@ async function handleShopNow(offer, btn, wildlinkPromise) {
   }
 }
 
-function refreshLinkedCardBanner(container, state) {
-  var slot = container.querySelector('[data-shop-card-slot]');
-  if (!slot) return;
-  var html = buildLinkedCardHtml(state.selectedCard, pickAvatar(state.user));
-  slot.outerHTML = html;
-  bindCardBannerActions(container, state);
-}
-
-function openCardPicker(container, state) {
-  var cards = state.cards || [];
-  var selectedId = state.selectedCard && state.selectedCard.id;
-  var sheet = openBottomSheet({
-    title: 'Choose a card',
-    bodyHtml: buildCardPickerBodyHtml(cards, selectedId),
-    secondaryButton: {
-      label: 'Manage cards',
-      onPress: function () {
-        navigate('/cards');
-      },
-    },
-  });
-
-  var root = sheet && sheet.root;
-  if (!root) return;
-
-  root.querySelectorAll('[data-shop-pick-card]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var id = btn.getAttribute('data-shop-pick-card');
-      var next = cards.find(function (c) {
-        return String(c.id) === String(id);
-      });
-      if (!next) return;
-      setPreferredCardId(next.id);
-      state.selectedCard = next;
-      refreshLinkedCardBanner(container, state);
-      if (typeof sheet.close === 'function') sheet.close();
-    });
-  });
-
-  var addBtn = root.querySelector('[data-shop-pick-add]');
-  if (addBtn) {
-    addBtn.addEventListener('click', function () {
-      if (typeof sheet.close === 'function') {
-        sheet.close(function () {
-          navigate('/cards/link-intro');
-        });
-      } else {
-        navigate('/cards/link-intro');
-      }
-    });
-  }
-}
-
 function bindCardBannerActions(container, state) {
   var manageBtn = container.querySelector('[data-shop-manage-card]');
   if (manageBtn) {
     manageBtn.addEventListener('click', function () {
-      if ((state.cards || []).length) {
-        openCardPicker(container, state);
-        return;
-      }
       navigate('/cards');
     });
   }

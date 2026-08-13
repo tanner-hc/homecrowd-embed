@@ -3,7 +3,6 @@ import chevronLeftSvg from '../assets/icons/chevron-left.svg?raw';
 import cardFilledSvg from '../assets/icons/card-filled.svg?raw';
 import bagSvg from '../assets/icons/bag.svg?raw';
 import starSvg from '../assets/icons/star.svg?raw';
-import headerUrl from '../assets/header.png';
 
 var STEPS = [
   {
@@ -171,9 +170,6 @@ export function renderLinkCardIntro(container, opts) {
     '<button type="button" class="hc-lci-back" id="hc-lci-back" aria-label="Back">' +
     chevronLeftSvg +
     '</button>' +
-    '<img data-hc-ph="none" src="' +
-    headerUrl +
-    '" alt="HomeCrowd" class="hc-lci-logo" />' +
     '<div class="hc-lci-nav-spacer" aria-hidden="true"></div>' +
     '</div>' +
     '<div class="hc-lci-scroll">' +

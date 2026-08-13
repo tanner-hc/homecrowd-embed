@@ -2,6 +2,17 @@ import lottie from 'lottie-web';
 import * as api from '../api.js';
 import { navigate } from '../router.js';
 import { escapeAttr } from '../base-components/html.js';
+import { getHeaderLogoUrl, hasCustomHeaderLogo } from '../brand.js';
+
+/**
+ * The mark that animates in on the success screen (Figma 1216:13273). The
+ * school's own when the embed was opened with one, otherwise the Homecrowd
+ * icon. The square app mark, not the wide header lockup — it is what the
+ * scale-in animation is built around.
+ */
+function successLogoUrl() {
+  return hasCustomHeaderLogo() ? getHeaderLogoUrl() : hcIconUrl;
+}
 import { showError } from '../base-components/toastApi.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
 import { openBottomSheet } from '../base-components/BottomSheetModal.js';
@@ -10,7 +21,6 @@ import { claimSetupTaskReward } from '../setup-rewards.js';
 import { openCardScannerWithPermission } from '../components/CardScanner.js';
 import chevronLeftSvg from '../assets/icons/chevron-left.svg?raw';
 import cardFilledSvg from '../assets/icons/card-filled.svg?raw';
-import headerUrl from '../assets/header.png';
 import cardIconUrl from '../assets/icons/card.png';
 import cameraIconUrl from '../assets/icons/pinhead_camera.png';
 import hcIconUrl from '../assets/logos/icon.png';
@@ -163,8 +173,8 @@ function renderSuccess(container, earnedPoints) {
     '<div class="hc-add-card-success-content">' +
     '<div class="hc-add-card-success-logo-stage">' +
     '<div class="hc-add-card-success-logo-wrap" data-success-logo>' +
-    '<img data-hc-ph="none" src="' +
-    escapeAttr(hcIconUrl) +
+    '<img data-hc-ph="school" src="' +
+    escapeAttr(successLogoUrl()) +
     '" alt="" class="hc-add-card-success-logo" />' +
     '</div>' +
     '<div class="hc-add-card-success-confetti" data-success-confetti aria-hidden="true"></div>' +
@@ -353,9 +363,6 @@ export function renderLinkCards(container) {
       '<button type="button" class="hc-add-card-back" id="hc-add-card-back" aria-label="Back">' +
       chevronLeftSvg +
       '</button>' +
-      '<img data-hc-ph="none" src="' +
-      escapeAttr(headerUrl) +
-      '" alt="HomeCrowd" class="hc-add-card-logo" />' +
       '<div class="hc-add-card-nav-spacer" aria-hidden="true"></div>' +
       '</div>' +
       '<div class="hc-add-card-body">' +
