@@ -1296,7 +1296,7 @@ html.hc-embed--no-school-brand .hc-login-card {
 }
 
 .hc-login-submit-btn.hc-btn-primary {
-  color: #000000;
+  color: var(--hc-app-accent, #000000);
 }
 
 /* School login: white page + school-color card */
@@ -1505,8 +1505,8 @@ html.hc-embed--no-school-brand .hc-login-card {
   line-height: normal;
   border-radius: 999px;
   border: none;
-  background: var(--hc-welcome-card-bg, #00c8ff);
-  color: #ffffff;
+  background: var(--hc-app-primary, #00c8ff);
+  color: var(--hc-app-accent, #000000);
   font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 16px;
   opacity: 1;
@@ -1514,7 +1514,7 @@ html.hc-embed--no-school-brand .hc-login-card {
 }
 
 .hc-login-shell--school .hc-login-container .hc-login-submit-btn.hc-btn-primary:hover {
-  background: var(--hc-welcome-card-bg, #00c8ff);
+  background: var(--hc-app-primary, #00c8ff);
   opacity: 0.92;
   box-shadow: none;
 }
@@ -1608,13 +1608,13 @@ html.hc-embed--no-school-brand .hc-login-card {
 }
 
 .hc-login-container .hc-btn-primary {
-  background: var(--hc-welcome-card-bg, #00c8ff);
-  color: #000000;
+  background: var(--hc-app-primary, #00c8ff);
+  color: var(--hc-app-accent, #000000);
   border-radius: 25px;
 }
 
 .hc-login-container .hc-btn-primary:hover {
-  background: color-mix(in srgb, var(--hc-welcome-card-bg, #00c8ff) 85%, #000000);
+  background: color-mix(in srgb, var(--hc-app-primary, #00c8ff) 85%, #000000);
 }
 
 /* Error / Alert */
@@ -12530,11 +12530,11 @@ button.hc-shop-detail-cats--expandable {
 }
 
 .hc-get-started--school .hc-get-started-btn--primary {
-  background: var(--hc-welcome-card-bg, #00c8ff);
+  background: var(--hc-app-primary, #00c8ff);
   /* School colours are mostly dark saturated brand tones, so the default black
      label reads poorly on them — force white. The unbranded cyan default keeps
      its black label. */
-  color: #ffffff;
+  color: var(--hc-app-accent, #000000);
 }
 
 .hc-get-started--school .hc-get-started-btn--secondary {
@@ -12590,9 +12590,9 @@ button.hc-shop-detail-cats--expandable {
 }
 
 .hc-get-started-btn--primary {
-  background: var(--hc-welcome-card-bg, #00c8ff);
+  background: var(--hc-app-primary, #00c8ff);
   border: none;
-  color: #000000;
+  color: var(--hc-app-accent, #000000);
 }
 
 .hc-get-started-btn--primary:active {
@@ -12601,7 +12601,7 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-get-started-btn--secondary {
   background: #fff;
-  border: 1.5px solid var(--hc-welcome-card-bg, #00c8ff);
+  border: 1.5px solid var(--hc-app-primary, #00c8ff);
 }
 
 .hc-get-started-btn--secondary:active {
@@ -13514,11 +13514,11 @@ button.hc-shop-detail-cats--expandable {
   height: 53px;
   border-radius: 100px;
   border: none;
-  background: var(--hc-welcome-card-bg, #00c8ff);
+  background: var(--hc-app-primary, #00c8ff);
   font-family: 'Baikal-Bold', 'Baikal', sans-serif;
   font-size: 16px;
   font-weight: 700;
-  color: #000000;
+  color: var(--hc-app-accent, #000000);
   cursor: pointer;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
@@ -13537,8 +13537,8 @@ button.hc-shop-detail-cats--expandable {
 .hc-create-account-btn-spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(0, 0, 0, 0.2);
-  border-top-color: #000;
+  border: 2px solid color-mix(in srgb, var(--hc-app-accent, #000000) 35%, transparent);
+  border-top-color: var(--hc-app-accent, #000000);
   border-radius: 50%;
   animation: hc-spin 0.8s linear infinite;
 }
@@ -13713,25 +13713,14 @@ button.hc-shop-detail-cats--expandable {
   height: 53px;
   border-radius: 100px;
   border: none;
-  background: var(--hc-welcome-card-bg, #00c8ff);
+  background: var(--hc-app-primary, #00c8ff);
   font-family: 'Baikal-Bold', 'Baikal', sans-serif;
   font-size: 16px;
   font-weight: 700;
-  color: #000000;
+  color: var(--hc-app-accent, #000000);
   cursor: pointer;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
-}
-
-html:not(.hc-embed--no-school-brand) .hc-create-account-btn,
-html:not(.hc-embed--no-school-brand) .hc-signup-field-btn,
-html:not(.hc-embed--no-school-brand) .hc-account-created-btn {
-  color: #ffffff;
-}
-
-html:not(.hc-embed--no-school-brand) .hc-create-account-btn-spinner {
-  border-color: rgba(255, 255, 255, 0.35);
-  border-top-color: #ffffff;
 }
 
 .hc-signup-field-btn:active:not(:disabled) {
@@ -13880,11 +13869,11 @@ html:not(.hc-embed--no-school-brand) .hc-create-account-btn-spinner {
   height: 53px;
   border-radius: 100px;
   border: none;
-  background: var(--hc-welcome-card-bg, #00c8ff);
+  background: var(--hc-app-primary, #00c8ff);
   font-family: 'Baikal-Bold', 'Baikal', sans-serif;
   font-size: 16px;
   font-weight: 700;
-  color: #000000;
+  color: var(--hc-app-accent, #000000);
   cursor: pointer;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;

@@ -188,7 +188,7 @@ export function renderGetStarted(container) {
   var inAppColor = getInAppColor();
   var inAppAccent = getInAppAccentColor();
   var rootClass = schoolMode ? 'hc-get-started hc-get-started--school' : 'hc-get-started';
-  var phoneStyle =
+  var inAppStyle =
     ' style="' +
     escapeAttr('--hc-app-primary: ' + inAppColor + '; --hc-app-accent: ' + inAppAccent) +
     ';"';
@@ -196,7 +196,9 @@ export function renderGetStarted(container) {
   container.innerHTML =
     '<div class="' +
     rootClass +
-    '">' +
+    '"' +
+    inAppStyle +
+    '>' +
     '<div class="hc-get-started-top">' +
     '<img data-hc-ph="school" src="' +
     escapeAttr(logoUrl) +
@@ -210,9 +212,7 @@ export function renderGetStarted(container) {
     '</div>' +
     (schoolMode ? '' : CurvedLogoCarouselHtml()) +
     '<div class="hc-get-started-hero">' +
-    '<div class="hc-get-started-phone"' +
-    phoneStyle +
-    '>' +
+    '<div class="hc-get-started-phone">' +
     '<span class="hc-get-started-iphone-btn hc-get-started-iphone-btn--silent"></span>' +
     '<span class="hc-get-started-iphone-btn hc-get-started-iphone-btn--vol-up"></span>' +
     '<span class="hc-get-started-iphone-btn hc-get-started-iphone-btn--vol-down"></span>' +
