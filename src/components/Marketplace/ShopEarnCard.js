@@ -2,17 +2,56 @@ import { escapeAttr, escapeHtml } from '../../base-components/html.js';
 import closeSvg from '../../assets/icons/close-x.svg?raw';
 
 /**
+ * How long the card stays away once dismissed. It explains what the screen is
+ * for rather than announcing something new, so it comes back — just not on the
+ * very next visit.
+ */
+var DISMISS_WINDOW_MS = 2 * 60 * 60 * 1000;
+var DISMISS_KEY = 'hc_shop_earn_dismissed_at';
+
+function readDismissedAt() {
+  try {
+    var at = Number(window.localStorage.getItem(DISMISS_KEY));
+    return Number.isFinite(at) && at > 0 ? at : 0;
+  } catch (_e) {
+    // Storage can throw outright in private mode; treat that as never dismissed.
+    return 0;
+  }
+}
+
+function markDismissed() {
+  try {
+    window.localStorage.setItem(DISMISS_KEY, String(Date.now()));
+  } catch (_e) {}
+}
+
+/**
+ * Whether the card is still inside its dismissal window.
+ *
+ * @param {number} [nowMs]
+ */
+export function isShopEarnCardHidden(nowMs) {
+  var now = nowMs == null ? Date.now() : nowMs;
+  var at = readDismissedAt();
+  if (!at) return false;
+  // A stored timestamp in the future — a clock change, or another device —
+  // would otherwise hide the card until that time passes.
+  if (at > now) return false;
+  return now - at < DISMISS_WINDOW_MS;
+}
+
+/**
  * The "Earn as you shop" intro card at the top of the Shop screen (Figma
  * 1421:9134).
  *
- * Dismissing it only removes the node — there is no persistence, so it is back
- * on the next load. That is deliberate: it explains what the screen is for
- * rather than announcing something new, so it should keep greeting people who
- * have not linked a card yet.
+ * Returns nothing while the card is inside its dismissal window, so the caller
+ * does not have to know about that — the rest of the page closes up on its own
+ * because the section below carries the gap as a margin.
  *
  * @param {{ logos?: string[] }} props up to three store marks for the cluster
  */
 export function buildShopEarnCardHtml(props) {
+  if (isShopEarnCardHidden()) return '';
   props = props || {};
   var logos = (Array.isArray(props.logos) ? props.logos : [])
     .filter(Boolean)
@@ -70,6 +109,7 @@ export function bindShopEarnCard(root, handlers) {
   var close = card.querySelector('[data-shop-earn-close]');
   if (close) {
     close.addEventListener('click', function () {
+      markDismissed();
       card.remove();
     });
   }
@@ -82,4 +122,4 @@ export function bindShopEarnCard(root, handlers) {
   }
 }
 
-export default { buildShopEarnCardHtml, bindShopEarnCard };
+export default { buildShopEarnCardHtml, bindShopEarnCard, isShopEarnCardHidden };

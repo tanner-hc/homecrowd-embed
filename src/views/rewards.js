@@ -3,7 +3,7 @@ import * as analytics from '../analytics.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import { buildAppHeaderHtml, attachAppHeader } from '../base-components/AppHeader.js';
 import { escapeHtml } from '../base-components/html.js';
-import { getNavEpoch } from '../router.js';
+import { getNavEpoch, navigate } from '../router.js';
 import {
   getRewardEndDate,
   getRewardStartDate,
@@ -22,6 +22,10 @@ import {
   bindPrizeCards,
   bindPrizeCardCountdowns,
 } from '../components/Rewards/PrizeCard.js';
+import {
+  buildDailyCardDrawHtml,
+  bindDailyCardDraw,
+} from '../components/Rewards/DailyCardDraw.js';
 import {
   buildRewardListHtml,
   buildRewardSectionsHtml,
@@ -521,6 +525,19 @@ async function loadRewards(container, routeEpoch) {
     // featured: a flagged reward that has not opened yet fails the window check
     // above, and keying this off `is_featured` would drop it from the page
     // altogether rather than listing it here with its "Opens ..." pill.
+    // Above the Prizes catalogue. Outside that section's guard so the draw still
+    // shows when there is nothing in the catalogue. Schools opt in, so it is
+    // absent unless this one has turned it on.
+    var cardDrawEnabled = !!(
+      summary &&
+      (summary.cardDrawEnabled != null
+        ? summary.cardDrawEnabled
+        : summary.card_draw_enabled)
+    );
+    if (cardDrawEnabled) {
+      html += buildDailyCardDrawHtml();
+    }
+
     var otherRewards = formattedRewards.filter(function (r) {
       return r && r.id != null && r.is_active !== false && !featuredIds[String(r.id)];
     });
@@ -562,6 +579,11 @@ async function loadRewards(container, routeEpoch) {
     container.innerHTML = html;
 
     attachAppHeader(container, { user: currentUser });
+    bindDailyCardDraw(container, {
+      onPress: function () {
+        navigate('/card-draw');
+      },
+    });
     attachWeeklyCountdown(container);
 
     // Same lookup + analytics path the old weekly/overall tiles used, so the

@@ -225,15 +225,15 @@ export function renderOffers(container) {
       populateMarketplacePreferredPartners(container, [], false);
     });
 
-  // "Shop online" previews the first 8 of the online catalog — two rows of four,
-  // per Figma 1421:9172 — and its "View all" opens the rest. It used to show
+  // "Shop online" previews the first 30 of the online catalog — two rows of
+  // fifteen that scroll sideways — and its "View all" opens the rest. It used to show
   // only top/bottom-featured offers, which is a different (promoted) set than
   // the list behind it.
   api
     .getWildfireOffers(1, 60)
     .then(function (raw) {
       if (!container.isConnected) return;
-      populateMarketplaceFeaturedShops(container, normalizeOnlineStores(raw, 8));
+      populateMarketplaceFeaturedShops(container, normalizeOnlineStores(raw, 30));
     })
     .catch(function () {
       if (!container.isConnected) return;

@@ -181,14 +181,12 @@ export function renderRedemptionConfirmation(container, rewardId) {
       (initialQty !== 1 ? ' entries' : '') +
       '</span>';
   } else if (rt === 'raffle' && showEntryQuantitySelector) {
+    // Just the points, per Figma 1426:10902 — the entry count is already the
+    // number in the stepper right above this row.
     costValueHtml =
       '<span id="hc-rc-cost-val">' +
-      initialQty +
-      ' entry' +
-      (initialQty !== 1 ? ' entries' : '') +
-      ' (' +
       formatDisplayNumber(ptsCost * initialQty) +
-      ' pts)</span>';
+      ' pts</span>';
   } else {
     costValueHtml = formatDisplayNumber(ptsCost) + ' pts';
   }
@@ -351,12 +349,7 @@ export function renderRedemptionConfirmation(container, rewardId) {
           selectedQuantity + ' entry' + (selectedQuantity !== 1 ? ' entries' : '');
       } else {
         costEl.textContent =
-          selectedQuantity +
-          ' entry' +
-          (selectedQuantity !== 1 ? ' entries' : '') +
-          ' (' +
-          formatDisplayNumber(ptsCost * selectedQuantity) +
-          ' pts)';
+          formatDisplayNumber(ptsCost * selectedQuantity) + ' pts';
       }
     }
     if (remEl) {
