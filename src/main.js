@@ -75,6 +75,13 @@ import playFilledSvg from './assets/icons/play-filled.svg?raw';
 installImageFallback();
 
 var appEl = document.getElementById('app');
+try {
+  if (window.self !== window.top) {
+    document.documentElement.classList.add('hc-embed--framed');
+  }
+} catch (e) {
+  document.documentElement.classList.add('hc-embed--framed');
+}
 var user = null;
 var profileUserForTabs = null;
 var profileUserForTabsLoading = false;

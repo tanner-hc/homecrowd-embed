@@ -539,6 +539,7 @@ html.hc-embed--no-school-brand .hc-embed--email-selection {
      the browser. */
   padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: max(0px, calc(min(env(safe-area-inset-bottom, 0px), 34px) - 20px));
   z-index: 150;
   overflow: hidden;
   overscroll-behavior: none;
@@ -548,6 +549,28 @@ html.hc-embed--no-school-brand .hc-embed--email-selection {
 .hc-tab-bar-shell--locked {
   background: #bfc3c8;
   opacity: 0.75;
+}
+
+html.hc-embed--framed .hc-tab-bar-shell {
+  padding-bottom: 0;
+}
+
+html.hc-embed--framed,
+html.hc-embed--framed body {
+  height: 100%;
+  min-height: 100%;
+  max-height: 100%;
+}
+
+html.hc-embed--framed #app {
+  min-height: calc(100% / var(--hc-embed-scale));
+  height: calc(100% / var(--hc-embed-scale));
+  max-height: calc(100% / var(--hc-embed-scale));
+}
+
+html.hc-embed--framed .hc-embed {
+  height: 100%;
+  max-height: 100%;
 }
 
 .hc-tab-bar {
