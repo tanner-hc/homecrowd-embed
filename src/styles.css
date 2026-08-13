@@ -12805,6 +12805,9 @@ button.hc-shop-detail-cats--expandable {
   flex-direction: column;
   padding: 28px 20px 0;
   box-sizing: border-box;
+  width: 100%;
+  max-width: 410px;
+  align-self: center;
 }
 
 .hc-find-school-title {
@@ -12892,6 +12895,8 @@ button.hc-shop-detail-cats--expandable {
 .hc-find-school-results {
   flex: 1 1 auto;
   min-height: 0;
+  width: 100%;
+  overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -12915,11 +12920,14 @@ button.hc-shop-detail-cats--expandable {
   flex-direction: row;
   align-items: center;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 14px 0;
   border: none;
   background: transparent;
   cursor: pointer;
   text-align: left;
+  box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
 
