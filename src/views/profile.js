@@ -13,7 +13,6 @@ import dollarSignIconSvg from '../assets/icons/dollar-sign.svg?raw';
 import activityIconSvg from '../assets/icons/activity.svg?raw';
 import extensionIconSvg from '../assets/icons/extension.svg?raw';
 import referralIconSvg from '../assets/icons/referral.svg?raw';
-import bagIconSvg from '../assets/icons/bag.svg?raw';
 import chevronRightIconSvg from '../assets/icons/chevron-right.svg?raw';
 import { getReferralReward } from '../referral-reward.js';
 
@@ -174,11 +173,6 @@ async function loadProfile(container) {
     prefsUser &&
     (prefsUser.emailVerified === false || prefsUser.email_verified === false)
   );
-  var isSuperuser = !!(
-    prefsUser &&
-    (prefsUser.is_superuser === true || prefsUser.isSuperuser === true)
-  );
-
   var html = '';
   html += '<div id="hc-profile-root" class="hc-profile-view">';
   html += '<div class="hc-profile-sticky-head">';
@@ -253,16 +247,6 @@ async function loadProfile(container) {
     id: 'hc-profile-upload-receipt',
   });
 
-  if (isSuperuser) {
-    html += SecondaryButton({
-      leftHtml: secondaryIconHtml(bagIconSvg),
-      title: 'Draw a Card',
-      subtitle: 'Daily card draw for bonus points',
-      rightHtml: chevronRightHtml(),
-      id: 'hc-profile-card-draw',
-    });
-  }
-
   html += '</div>';
   html += '<div class="hc-profile-logout-section">';
   html += MainButton({
@@ -320,13 +304,6 @@ async function loadProfile(container) {
   if (uploadReceiptBtn) {
     uploadReceiptBtn.addEventListener('click', function () {
       navigate('/upload-receipt');
-    });
-  }
-
-  var cardDrawBtn = container.querySelector('#hc-profile-card-draw');
-  if (cardDrawBtn) {
-    cardDrawBtn.addEventListener('click', function () {
-      navigate('/card-draw');
     });
   }
 
