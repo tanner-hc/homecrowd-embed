@@ -6,6 +6,7 @@ import { validatePassword } from '../signup-validation.js';
 import { getPendingSignupEmail } from './create-account.js';
 import { getPendingSignupFullName } from './enter-full-name.js';
 import { getPendingSignupSchool } from './find-your-school.js';
+import { getEmbedSchoolId } from '../brand.js';
 
 function splitFullName(fullName) {
   var parts = String(fullName || '')
@@ -49,7 +50,12 @@ export function renderEnterPassword(container, onSuccess) {
   var email = getPendingSignupEmail();
   var fullName = getPendingSignupFullName();
   var school = getPendingSignupSchool() || {};
-  var schoolId = school.id || '';
+  var schoolId = school.id || getEmbedSchoolId() || '';
+  if (!schoolId) {
+    try {
+      schoolId = sessionStorage.getItem('hc_embed_pending_signup_school_id') || '';
+    } catch (_e) { }
+  }
   var loading = false;
 
   if (!email) {
@@ -103,23 +109,8 @@ export function renderEnterPassword(container, onSuccess) {
         })
         .then(function (response) {
           var user = response && response.user ? response.user : null;
-          var assignId = schoolId;
-          if (!assignId) {
-            try {
-              assignId = sessionStorage.getItem('hc_embed_pending_signup_school_id') || '';
-            } catch (_e) { }
-          }
-
-          var assignPromise = assignId
-            ? api.assignSchool(assignId).catch(function () {
-                return null;
-              })
-            : Promise.resolve(null);
-
-          return assignPromise.then(function () {
-            return api.fetchCurrentUser().catch(function () {
-              return user;
-            });
+          return api.fetchCurrentUser().catch(function () {
+            return user;
           });
         })
         .then(function (user) {

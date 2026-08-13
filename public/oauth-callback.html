@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Signing in…</title>
+  </head>
+  <body>
+    <script>
+      (function () {
+        var hash = String(window.location.hash || '').replace(/^#/, '');
+        var params = new URLSearchParams(hash);
+        var search = new URLSearchParams(window.location.search);
+        var payload = {
+          type: 'hc-google-oauth',
+          id_token: params.get('id_token') || search.get('id_token') || '',
+          error: params.get('error') || search.get('error') || '',
+          error_description:
+            params.get('error_description') || search.get('error_description') || '',
+          state: params.get('state') || search.get('state') || '',
+        };
+        try {
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage(payload, window.location.origin);
+            window.close();
+            return;
+          }
+        } catch (e) {}
+        try {
+          sessionStorage.setItem('hc_google_oauth_result', JSON.stringify(payload));
+        } catch (e) {}
+        var returnTo = '/';
+        try {
+          returnTo = sessionStorage.getItem('hc_oauth_return') || '/';
+        } catch (e) {}
+        window.location.replace(returnTo);
+      })();
+    </script>
+  </body>
+</html>

@@ -75,6 +75,13 @@ import playFilledSvg from './assets/icons/play-filled.svg?raw';
 installImageFallback();
 
 var appEl = document.getElementById('app');
+try {
+  if (window.self !== window.top) {
+    document.documentElement.classList.add('hc-embed--framed');
+  }
+} catch (e) {
+  document.documentElement.classList.add('hc-embed--framed');
+}
 var user = null;
 var profileUserForTabs = null;
 var profileUserForTabsLoading = false;
@@ -113,6 +120,20 @@ var schoolId =
   normalizeSchoolId(
     params.get('schoolId') || params.get('schoolID') || params.get('school_id') || '',
   );
+function getWildfireAppIdFromConfig(config) {
+  if (!config || typeof config !== 'object') return '';
+  return String(config.wildfireAppId || config.wildfire_app_id || '').trim();
+}
+function getWildfireAppIdFromUrl() {
+  var urlParams = new URLSearchParams(window.location.search);
+  return String(
+    urlParams.get('wildfireAppId') || urlParams.get('wildfire_app_id') || '',
+  ).trim();
+}
+var wildfireAppId = getWildfireAppIdFromConfig(hostConfig) || getWildfireAppIdFromUrl();
+if (wildfireAppId) {
+  api.setEmbedContext({ wildfireAppId: wildfireAppId });
+}
 var partnerToken = (hostConfig && hostConfig.token) || params.get('token') || '';
 var initialView = (hostConfig && hostConfig.view) || params.get('view') || 'home';
 
@@ -271,6 +292,20 @@ function completeLoginState(nextUser, tokenUsed) {
   ensureBrandConfigForUser(nextUser).then(function (applied) {
     if (applied) render(getRoute());
   });
+}
+
+async function finishEmbedSocialLogin(result) {
+  var nextUser = result && result.user ? result.user : null;
+  var isNewUser = !!(result && result.isNewUser);
+  if (!nextUser) {
+    nextUser = await api.fetchCurrentUser();
+  }
+  completeLoginState(nextUser);
+  if (isNewUser) {
+    navigate('/account-created');
+    return;
+  }
+  navigate(routeAfterAuth(nextUser));
 }
 
 function startSchoolEmailConfirmationPolling(confirmationId) {
@@ -732,6 +767,11 @@ async function init() {
     if (injected.view) {
       initialView = injected.view;
     }
+    var injectedWildfireAppId = getWildfireAppIdFromConfig(injected);
+    if (injectedWildfireAppId) {
+      wildfireAppId = injectedWildfireAppId;
+      api.setEmbedContext({ wildfireAppId: wildfireAppId });
+    }
   }
   await applySchoolConfig(schoolId);
   if (partnerToken) {
@@ -811,11 +851,7 @@ async function init() {
       getRoute() === '/school-selection' ||
       isPublicAuthPath(routePathOnly(getRoute())))
   ) {
-    if (!hasActiveSchool(user)) {
-      navigate('/school-selection');
-    } else {
-      navigate('/' + initialView);
-    }
+    navigate(routeAfterAuth(user));
   }
 
   // Tell the native app we're ready
@@ -865,6 +901,21 @@ function hasActiveSchool(currentUser) {
   var schoolIdValue =
     school.id != null ? school.id : school.schoolId != null ? school.schoolId : school.school_id;
   return String(schoolIdValue || '').trim() !== '';
+}
+
+function getLockedEmbedSchoolId() {
+  return (
+    normalizeSchoolId(schoolId) ||
+    normalizeSchoolId(getEmbedSchoolId()) ||
+    getSchoolIdFromUrl()
+  );
+}
+
+function routeAfterAuth(currentUser) {
+  if (hasActiveSchool(currentUser) || getLockedEmbedSchoolId()) {
+    return '/' + initialView;
+  }
+  return '/school-selection';
 }
 
 function refreshProfileUserForTabs() {
@@ -1182,16 +1233,23 @@ function render(route) {
     navigate(partnerToken ? '/preview' : '/get-started');
     return;
   }
-  if (user && !hasActiveSchool(user) && route !== '/school-selection' && !isSignupOnboardingPath(pathOnly)) {
-    navigate('/school-selection');
-    return;
+  if (user && !hasActiveSchool(user) && !isSignupOnboardingPath(pathOnly)) {
+    if (getLockedEmbedSchoolId()) {
+      if (route === '/school-selection') {
+        navigate('/' + initialView);
+        return;
+      }
+    } else if (route !== '/school-selection') {
+      navigate('/school-selection');
+      return;
+    }
   }
   if (user && hasActiveSchool(user) && route === '/school-selection') {
     navigate('/' + initialView);
     return;
   }
   if (user && isPublicAuthPath(pathOnly) && !isSignupOnboardingPath(pathOnly)) {
-    navigate(hasActiveSchool(user) ? '/' + initialView : '/school-selection');
+    navigate(routeAfterAuth(user));
     return;
   }
 
@@ -1215,7 +1273,7 @@ function render(route) {
 
   if (pathOnly === '/create-account') {
     appEl.innerHTML = '';
-    renderCreateAccount(appEl);
+    renderCreateAccount(appEl, finishEmbedSocialLogin);
     return;
   }
 
@@ -1243,7 +1301,7 @@ function render(route) {
     renderAccountCreated(appEl, {
       user: user,
       onContinue: function () {
-        navigate(hasActiveSchool(user) ? '/' + initialView : '/school-selection');
+        navigate(routeAfterAuth(user));
       },
     });
     return;
@@ -1264,6 +1322,14 @@ function render(route) {
       : '';
     appEl.innerHTML = '';
     renderLogin(appEl, async function (u, loginMeta) {
+      var socialSource = loginMeta && loginMeta.source ? String(loginMeta.source) : '';
+      if (socialSource === 'google_sign_in' || socialSource === 'apple_sign_in') {
+        await finishEmbedSocialLogin({
+          user: u,
+          isNewUser: !!(loginMeta && loginMeta.isNewUser),
+        });
+        return;
+      }
       var assignSchoolId =
         loginMeta && loginMeta.signupSchoolId
           ? String(loginMeta.signupSchoolId).trim()
@@ -1290,7 +1356,7 @@ function render(route) {
         } catch (e) { }
       }
       completeLoginState(u);
-      navigate('/' + initialView);
+      navigate(routeAfterAuth(u));
     }, {
       schoolId: schoolId,
       initialEmail: pendingEmail,

@@ -9,6 +9,13 @@ import googleIconUrl from '../assets/providers/googleIcon.png';
 import appleIconUrl from '../assets/providers/apple_icon_dark.png';
 import chevronLeftSvg from '../assets/icons/chevron-left.svg?raw';
 import { isValidEmail } from '../contact-validation.js';
+import {
+  authenticateWithApple,
+  authenticateWithGoogle,
+  isSocialAuthCancelled,
+  shouldShowAppleSignIn,
+  takePendingGoogleOAuth,
+} from '../social-auth.js';
 
 function isSchoolMode() {
   var params = new URLSearchParams(window.location.search);
@@ -42,16 +49,12 @@ export function clearPendingSignupEmail() {
   } catch (_e) { }
 }
 
-function shouldShowApple() {
-  var ua = String(navigator.userAgent || '');
-  return /iPhone|iPad|iPod|Macintosh/.test(ua);
-}
-
-export function renderCreateAccount(container) {
+export function renderCreateAccount(container, onSocialSuccess) {
   var school = getPendingSignupSchool() || {};
-  var schoolId = school.id || '';
+  var schoolId = school.id || getEmbedSchoolId() || '';
   var checkingEmail = false;
   var emailExists = false;
+  var socialBusy = false;
 
   container.innerHTML =
     '<div class="hc-create-account">' +
@@ -72,7 +75,7 @@ export function renderCreateAccount(container) {
     '" alt="" class="hc-create-account-social-icon" />' +
     '<span>Continue with Google</span>' +
     '</button>' +
-    (shouldShowApple()
+    (shouldShowAppleSignIn()
       ? '<button type="button" id="hc-create-apple" class="hc-create-account-social">' +
         '<img data-hc-ph="none" src="' +
         escapeAttr(appleIconUrl) +
@@ -133,6 +136,35 @@ export function renderCreateAccount(container) {
     if (submitSpinner) submitSpinner.style.display = checkingEmail ? '' : 'none';
   }
 
+  function setSocialBusy(next) {
+    socialBusy = !!next;
+    if (googleBtn) googleBtn.disabled = socialBusy;
+    if (appleBtn) appleBtn.disabled = socialBusy;
+    if (submitBtn) submitBtn.disabled = socialBusy || checkingEmail;
+  }
+
+  function finishSocial(result) {
+    if (typeof onSocialSuccess === 'function') {
+      return onSocialSuccess(result);
+    }
+    navigate('/');
+  }
+
+  function runSocial(provider) {
+    if (socialBusy || checkingEmail) return;
+    setSocialBusy(true);
+    var run = provider === 'apple' ? authenticateWithApple(schoolId) : authenticateWithGoogle(schoolId);
+    run
+      .then(function (result) {
+        return finishSocial(result);
+      })
+      .catch(function (err) {
+        setSocialBusy(false);
+        if (isSocialAuthCancelled(err)) return;
+        showError((err && err.message) || 'Unable to sign in');
+      });
+  }
+
   function goToLogin() {
     var email = emailInput ? String(emailInput.value || '').trim().toLowerCase() : '';
     var q = email ? '?email=' + encodeURIComponent(email) : '';
@@ -159,13 +191,13 @@ export function renderCreateAccount(container) {
 
   if (googleBtn) {
     googleBtn.addEventListener('click', function () {
-      showError('Google Sign-In is coming soon in the web embed. Please use email for now.');
+      runSocial('google');
     });
   }
 
   if (appleBtn) {
     appleBtn.addEventListener('click', function () {
-      showError('Apple Sign-In is coming soon in the web embed. Please use email for now.');
+      runSocial('apple');
     });
   }
 
@@ -176,7 +208,7 @@ export function renderCreateAccount(container) {
         showError('Please enter a valid email');
         return;
       }
-      if (checkingEmail) return;
+      if (checkingEmail || socialBusy) return;
 
       setChecking(true);
       setEmailExists(false);
@@ -209,5 +241,21 @@ export function renderCreateAccount(container) {
     window.setTimeout(function () {
       emailInput.focus();
     }, 200);
+  }
+
+  var pendingGoogle = takePendingGoogleOAuth();
+  if (pendingGoogle && pendingGoogle.id_token) {
+    setSocialBusy(true);
+    api
+      .googleLogin(pendingGoogle.id_token, schoolId)
+      .then(function (result) {
+        return finishSocial(result);
+      })
+      .catch(function (err) {
+        setSocialBusy(false);
+        showError((err && err.message) || 'Unable to sign in');
+      });
+  } else if (pendingGoogle && pendingGoogle.error && pendingGoogle.error !== 'access_denied') {
+    showError(pendingGoogle.error_description || pendingGoogle.error || 'Google Sign-In failed');
   }
 }

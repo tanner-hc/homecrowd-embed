@@ -16,4 +16,11 @@ export function isAndroid() {
   return /Android/i.test(String(navigator.userAgent || ''));
 }
 
-export default { isIOS, isAndroid };
+export function shouldShowAppleSignIn() {
+  if (isAndroid()) return false;
+  if (isIOS()) return true;
+  if (typeof navigator === 'undefined') return false;
+  return /Macintosh/i.test(String(navigator.userAgent || ''));
+}
+
+export default { isIOS, isAndroid, shouldShowAppleSignIn };

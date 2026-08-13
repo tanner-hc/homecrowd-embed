@@ -10,6 +10,28 @@ var maplibreWorkerFiles = {
   '/maplibre-gl-shared.mjs': path.join(maplibreDist, 'maplibre-gl-shared.mjs'),
 };
 
+function oauthCallbackPlugin() {
+  var file = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public/oauth-callback.html');
+  return {
+    name: 'hc-oauth-callback',
+    configureServer(server) {
+      server.middlewares.use(function (req, res, next) {
+        var url = (req.url || '').split('?')[0];
+        if (url !== '/oauth-callback' && url !== '/oauth-callback/') return next();
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        fs.createReadStream(file).pipe(res);
+      });
+    },
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'oauth-callback',
+        source: fs.readFileSync(file),
+      });
+    },
+  };
+}
+
 function mapLibreWorkerPlugin() {
   return {
     name: 'maplibre-worker-static',
@@ -42,7 +64,7 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['maplibre-gl'],
   },
-  plugins: [
+    plugins: [
     // HTTPS only when asked for: `HTTPS=1 npm run dev`.
     //
     // http://localhost is already a secure context per spec, so geolocation and
@@ -50,6 +72,7 @@ export default defineConfig({
     // the dev server from another device over the LAN (server.host below), where
     // the origin is an IP and no longer counts as trustworthy.
     ...(process.env.HTTPS ? [basicSsl()] : []),
+    oauthCallbackPlugin(),
     mapLibreWorkerPlugin(),
     {
       name: 'hc-browser-log-to-terminal',

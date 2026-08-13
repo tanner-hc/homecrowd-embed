@@ -217,8 +217,7 @@ body {
   min-height: 0;
   min-height: 100%;
   height: 100%;
-  height: 100dvh;
-  max-height: 100dvh;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
   background-color: var(--hc-bg);
@@ -539,6 +538,7 @@ html.hc-embed--no-school-brand .hc-embed--email-selection {
      the browser. */
   padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: 0;
   z-index: 150;
   overflow: hidden;
   overscroll-behavior: none;
@@ -548,6 +548,28 @@ html.hc-embed--no-school-brand .hc-embed--email-selection {
 .hc-tab-bar-shell--locked {
   background: #bfc3c8;
   opacity: 0.75;
+}
+
+html.hc-embed--framed .hc-tab-bar-shell {
+  padding-bottom: 0;
+}
+
+html.hc-embed--framed,
+html.hc-embed--framed body {
+  height: 100%;
+  min-height: 100%;
+  max-height: 100%;
+}
+
+html.hc-embed--framed #app {
+  min-height: calc(100% / var(--hc-embed-scale));
+  height: calc(100% / var(--hc-embed-scale));
+  max-height: calc(100% / var(--hc-embed-scale));
+}
+
+html.hc-embed--framed .hc-embed {
+  height: 100%;
+  max-height: 100%;
 }
 
 .hc-tab-bar {
@@ -566,7 +588,7 @@ html.hc-embed--no-school-brand .hc-embed--email-selection {
      icons and 20px below the label. The component's own pb-46 is the
      home-indicator allowance, and the page clips it to this 75px. No
      min-height, so the padding alone sets the height. */
-  padding: 16px 16px 20px;
+  padding: 16px 16px 16px;
   min-height: 0;
   box-sizing: border-box;
   background: transparent;
@@ -1060,6 +1082,88 @@ html.hc-embed--no-school-brand .hc-login-card {
   font-size: 13px;
   padding: 0;
   text-decoration: underline;
+}
+
+.hc-login-social-wrap {
+  width: 100%;
+  margin: 4px 0 8px;
+}
+
+.hc-login-social-divider {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin: 0 0 12px;
+}
+
+.hc-login-social-divider-line {
+  flex: 1 1 auto;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.hc-login-social-divider-text {
+  margin: 0 12px;
+  color: rgba(255, 255, 255, 0.85);
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.hc-login-social {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 54px;
+  margin-bottom: 10px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border-radius: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 14px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-login-social:last-child {
+  margin-bottom: 0;
+}
+
+.hc-login-social:active,
+.hc-login-social:disabled {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.hc-login-social:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.hc-login-social-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  margin-right: 8px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.hc-login-shell--school .hc-login-social-divider-line {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.hc-login-shell--school .hc-login-social-divider-text,
+.hc-login-shell--school .hc-login-social {
+  color: #ffffff;
+}
+
+.hc-login-shell--school .hc-login-social {
+  border-color: rgba(255, 255, 255, 0.55);
 }
 
 .hc-signup-back-btn {
@@ -12723,6 +12827,9 @@ button.hc-shop-detail-cats--expandable {
   flex-direction: column;
   padding: 28px 20px 0;
   box-sizing: border-box;
+  width: 100%;
+  max-width: 410px;
+  align-self: center;
 }
 
 .hc-find-school-title {
@@ -12810,6 +12917,8 @@ button.hc-shop-detail-cats--expandable {
 .hc-find-school-results {
   flex: 1 1 auto;
   min-height: 0;
+  width: 100%;
+  overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -12833,11 +12942,14 @@ button.hc-shop-detail-cats--expandable {
   flex-direction: row;
   align-items: center;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 14px 0;
   border: none;
   background: transparent;
   cursor: pointer;
   text-align: left;
+  box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -13218,6 +13330,11 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-create-account-social:active {
   opacity: 0.85;
+}
+
+.hc-create-account-social:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 
 .hc-create-account-social-icon {

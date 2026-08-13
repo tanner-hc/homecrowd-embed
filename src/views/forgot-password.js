@@ -88,7 +88,7 @@ export function renderForgotPassword(container) {
   var backBtn = document.getElementById('hc-forgot-back');
 
   function goToLogin() {
-    window.location.hash = '#/login';
+    api.goToEmbedLogin();
   }
 
   function showError(message) {

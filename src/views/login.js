@@ -12,6 +12,15 @@ import {
 import Input from '../base-components/Input.js';
 import { escapeAttr, escapeHtml } from '../base-components/html.js';
 import { PRIVACY_URL, TERMS_URL } from '../legal-urls.js';
+import googleIconUrl from '../assets/providers/googleIcon.png';
+import appleIconUrl from '../assets/providers/appleIcon.png';
+import {
+  authenticateWithApple,
+  authenticateWithGoogle,
+  isSocialAuthCancelled,
+  shouldShowAppleSignIn,
+  takePendingGoogleOAuth,
+} from '../social-auth.js';
 
 function isSchoolMode(optionsSchoolId) {
   var params = new URLSearchParams(window.location.search);
@@ -97,6 +106,29 @@ export function renderLogin(container, onLoginSuccess, options) {
     'Log in to your account to get access to your dashboard. New to the app? ' +
     '<button type="button" id="hc-login-signup-link" class="hc-login-signup-link">Sign Up</button>' +
     '</p>';
+  var showApple = shouldShowAppleSignIn();
+  var socialHtml =
+    '<div id="hc-login-social" class="hc-login-social-wrap">' +
+    '<div class="hc-login-social-divider">' +
+    '<span class="hc-login-social-divider-line"></span>' +
+    '<span class="hc-login-social-divider-text">or</span>' +
+    '<span class="hc-login-social-divider-line"></span>' +
+    '</div>' +
+    (showApple
+      ? '<button type="button" id="hc-login-apple" class="hc-login-social">' +
+        '<img data-hc-ph="none" src="' +
+        escapeAttr(appleIconUrl) +
+        '" alt="" class="hc-login-social-icon" />' +
+        '<span>Continue with Apple</span>' +
+        '</button>'
+      : '') +
+    '<button type="button" id="hc-login-google" class="hc-login-social">' +
+    '<img data-hc-ph="none" src="' +
+    escapeAttr(googleIconUrl) +
+    '" alt="" class="hc-login-social-icon" />' +
+    '<span>Continue with Google</span>' +
+    '</button>' +
+    '</div>';
   container.innerHTML =
     '<div class="' +
     shellClass +
@@ -181,6 +213,7 @@ export function renderLogin(container, onLoginSuccess, options) {
     '</div>' +
     '</div>' +
     (schoolMode ? signupPromptHtml + forgotHtml : forgotHtml + signupPromptHtml) +
+    socialHtml +
     '<div id="hc-signup-terms-wrap" class="hc-form-group hc-login-terms" style="display:none">' +
     '<label class="hc-login-checkbox-label">' +
     '<input id="hc-accept-terms" type="checkbox" />' +
@@ -226,9 +259,13 @@ export function renderLogin(container, onLoginSuccess, options) {
   var loginCardEl = container.querySelector('.hc-login-card');
   var titleEls = container.querySelectorAll('.hc-login-title');
   var subtitleEl = container.querySelector('.hc-login-subtitle');
+  var socialWrap = document.getElementById('hc-login-social');
+  var googleBtn = document.getElementById('hc-login-google');
+  var appleBtn = document.getElementById('hc-login-apple');
   var mode = 'signin';
   var schoolsLoaded = false;
   var schoolsLoading = false;
+  var socialBusy = false;
 
   function clearSignupFieldErrors() {
     var fields = document.querySelectorAll(
@@ -339,6 +376,7 @@ export function renderLogin(container, onLoginSuccess, options) {
     }
     forgotPasswordWrap.style.display = isSignup ? 'none' : '';
     signupPrompt.style.display = isSignup ? 'none' : '';
+    if (socialWrap) socialWrap.style.display = isSignup ? 'none' : '';
     signupBackBtn.style.display = isSignup ? 'inline-flex' : 'none';
     if (signupModeBtn) {
       signupModeBtn.classList.toggle('active', isSignup);
@@ -423,6 +461,7 @@ export function renderLogin(container, onLoginSuccess, options) {
 
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
+    if (socialBusy) return;
     var isSignup = mode === 'signup';
     var email = emailInput.value.trim();
     var password = passwordInput.value.trim();
@@ -508,5 +547,74 @@ export function renderLogin(container, onLoginSuccess, options) {
     }
   });
 
+  function setSocialBusy(next) {
+    socialBusy = !!next;
+    if (googleBtn) googleBtn.disabled = socialBusy;
+    if (appleBtn) appleBtn.disabled = socialBusy;
+    submitBtn.disabled = socialBusy;
+  }
+
+  function finishSocial(result) {
+    return api.fetchCurrentUser().catch(function () {
+      return result && result.user ? result.user : null;
+    }).then(function (user) {
+      return onLoginSuccess(user, {
+        mode: 'signin',
+        isNewUser: !!(result && result.isNewUser),
+        source: result && result.source ? result.source : 'social',
+      });
+    });
+  }
+
+  function runSocial(provider) {
+    if (socialBusy) return;
+    setSocialBusy(true);
+    errorEl.style.display = 'none';
+    var run = provider === 'apple' ? authenticateWithApple() : authenticateWithGoogle();
+    run
+      .then(function (result) {
+        result = result || {};
+        result.source = provider === 'apple' ? 'apple_sign_in' : 'google_sign_in';
+        return finishSocial(result);
+      })
+      .catch(function (err) {
+        setSocialBusy(false);
+        if (isSocialAuthCancelled(err)) return;
+        errorEl.textContent = (err && err.message) || 'Unable to sign in';
+        errorEl.style.display = 'block';
+      });
+  }
+
+  if (googleBtn) {
+    googleBtn.addEventListener('click', function () {
+      runSocial('google');
+    });
+  }
+  if (appleBtn) {
+    appleBtn.addEventListener('click', function () {
+      runSocial('apple');
+    });
+  }
+
   applyMode('signin');
+
+  var pendingGoogle = takePendingGoogleOAuth();
+  if (pendingGoogle && pendingGoogle.id_token) {
+    setSocialBusy(true);
+    api
+      .googleLogin(pendingGoogle.id_token)
+      .then(function (result) {
+        result = result || {};
+        result.source = 'google_sign_in';
+        return finishSocial(result);
+      })
+      .catch(function (err) {
+        setSocialBusy(false);
+        errorEl.textContent = (err && err.message) || 'Unable to sign in';
+        errorEl.style.display = 'block';
+      });
+  } else if (pendingGoogle && pendingGoogle.error && pendingGoogle.error !== 'access_denied') {
+    errorEl.textContent = pendingGoogle.error_description || pendingGoogle.error || 'Google Sign-In failed';
+    errorEl.style.display = 'block';
+  }
 }

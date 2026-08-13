@@ -1,6 +1,15 @@
 import * as api from '../api.js';
-import { getHeaderLogoUrl, renderPoweredByLockup } from '../brand.js';
+import {
+  getEmbedSchoolId,
+  getHeaderLogoUrl,
+  getSchoolColor,
+  hasCustomHeaderLogo,
+  hasSchoolBrand,
+  renderBrandLockup,
+  renderPoweredByLockup,
+} from '../brand.js';
 import Button from '../base-components/Button.js';
+import { escapeAttr } from '../base-components/html.js';
 
 function getResetParams(route) {
   var params = new URLSearchParams(route.indexOf('?') >= 0 ? route.slice(route.indexOf('?') + 1) : '');
@@ -18,6 +27,16 @@ function getResetParams(route) {
     token = token || pageParams.get('token') || '';
   }
   return { uid: uid, token: token };
+}
+
+function isSchoolMode() {
+  var params = new URLSearchParams(window.location.search);
+  var urlSchoolId = String(
+    params.get('schoolId') || params.get('schoolID') || params.get('school_id') || '',
+  )
+    .trim()
+    .replace(/^\/+|\/+$/g, '');
+  return hasSchoolBrand() || !!getEmbedSchoolId() || !!urlSchoolId;
 }
 
 function validatePassword(password, confirmPassword) {
@@ -55,19 +74,31 @@ function passwordField(id, label, placeholder) {
 }
 
 export function renderResetPassword(container, route) {
-  var logoUrl = getHeaderLogoUrl();
+  var schoolMode = isSchoolMode();
+  var schoolColor = schoolMode ? getSchoolColor() : '';
+  var shellClass = schoolMode ? 'hc-login-shell hc-login-shell--school' : 'hc-login-shell';
+  var shellStyle = schoolColor
+    ? ' style="--hc-welcome-card-bg: ' + escapeAttr(schoolColor) + ';"'
+    : '';
+  var logoBlock =
+    hasCustomHeaderLogo() || schoolMode
+      ? '<div class="hc-login-logo hc-login-logo--brand">' + renderBrandLockup() + '</div>'
+      : '<div class="hc-login-logo"><img data-hc-ph="none" src="' +
+        escapeAttr(getHeaderLogoUrl()) +
+        '" alt="Homecrowd" class="hc-login-logo-img" /></div>';
+  var footerHtml = schoolMode ? '' : renderPoweredByLockup('hc-login-footer');
   var params = getResetParams(route || '');
   var isInvalid = !params.uid || !params.token;
   container.innerHTML =
-    '<div class="hc-login-shell">' +
+    '<div class="' +
+    shellClass +
+    '"' +
+    shellStyle +
+    '>' +
     '<div class="hc-login-bg"></div>' +
     '<div class="hc-login-overlay">' +
     '<div class="hc-login-container">' +
-    '<div class="hc-login-logo">' +
-    '<img data-hc-ph="none" src="' +
-    logoUrl +
-    '" alt="Homecrowd" class="hc-login-logo-img" />' +
-    '</div>' +
+    logoBlock +
     '<div class="hc-login-card hc-auth-card">' +
     '<div class="hc-login-heading">' +
     '<h1 class="hc-login-title">' +
@@ -97,14 +128,14 @@ export function renderResetPassword(container, route) {
       }) +
       '</form>') +
     '<button type="button" id="hc-reset-back" class="hc-auth-link">Back to Login</button>' +
-    renderPoweredByLockup('hc-login-footer') +
+    footerHtml +
     '</div>' +
     '</div>' +
     '</div>' +
     '</div>';
 
   document.getElementById('hc-reset-back').addEventListener('click', function () {
-    window.location.hash = '#/login';
+    api.goToEmbedLogin();
   });
 
   if (isInvalid) {
@@ -148,7 +179,7 @@ export function renderResetPassword(container, route) {
         token: params.token,
         new_password: newPassword,
       });
-      window.location.hash = '#/login';
+      api.goToEmbedLogin();
     } catch (err) {
       var body = err && err.body ? err.body : null;
       var tokenError = body && body.token
