@@ -153,7 +153,7 @@ export function renderCreateAccount(container, onSocialSuccess) {
   function runSocial(provider) {
     if (socialBusy || checkingEmail) return;
     setSocialBusy(true);
-    var run = provider === 'apple' ? authenticateWithApple() : authenticateWithGoogle();
+    var run = provider === 'apple' ? authenticateWithApple(schoolId) : authenticateWithGoogle(schoolId);
     run
       .then(function (result) {
         return finishSocial(result);
@@ -247,7 +247,7 @@ export function renderCreateAccount(container, onSocialSuccess) {
   if (pendingGoogle && pendingGoogle.id_token) {
     setSocialBusy(true);
     api
-      .googleLogin(pendingGoogle.id_token)
+      .googleLogin(pendingGoogle.id_token, schoolId)
       .then(function (result) {
         return finishSocial(result);
       })

@@ -319,19 +319,23 @@ function applySocialLoginResult(result) {
   };
 }
 
-export async function googleLogin(idToken) {
+export async function googleLogin(idToken, schoolId) {
+  var payload = {
+    id_token: idToken,
+    client_context: embedClientContext(),
+  };
+  if (schoolId) {
+    payload.school_id = schoolId;
+  }
   var result = await request('/api/auth/google/', {
     method: 'POST',
     includeStatus: true,
-    body: JSON.stringify({
-      id_token: idToken,
-      client_context: embedClientContext(),
-    }),
+    body: JSON.stringify(payload),
   });
   return applySocialLoginResult(result);
 }
 
-export async function appleLogin(identityToken, nameFromApple) {
+export async function appleLogin(identityToken, nameFromApple, schoolId) {
   var payload = {
     identity_token: identityToken,
     client_context: embedClientContext(),
@@ -339,6 +343,9 @@ export async function appleLogin(identityToken, nameFromApple) {
   if (nameFromApple && typeof nameFromApple === 'object') {
     payload.first_name = nameFromApple.first_name || '';
     payload.last_name = nameFromApple.last_name || '';
+  }
+  if (schoolId) {
+    payload.school_id = schoolId;
   }
   var result = await request('/api/auth/apple/', {
     method: 'POST',

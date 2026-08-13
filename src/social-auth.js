@@ -247,15 +247,15 @@ export function signInWithApple() {
   });
 }
 
-export function authenticateWithGoogle() {
+export function authenticateWithGoogle(schoolId) {
   return signInWithGoogle().then(function (idToken) {
-    return api.googleLogin(idToken);
+    return api.googleLogin(idToken, schoolId);
   });
 }
 
-export function authenticateWithApple() {
+export function authenticateWithApple(schoolId) {
   return signInWithApple().then(function (apple) {
-    return api.appleLogin(apple.identity_token, apple.name);
+    return api.appleLogin(apple.identity_token, apple.name, schoolId);
   });
 }
 

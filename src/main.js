@@ -16,7 +16,7 @@ import {
 } from './brand.js';
 import { renderLogin } from './views/login.js';
 import { renderGetStarted } from './views/get-started.js';
-import { renderFindYourSchool, getPendingSignupSchool } from './views/find-your-school.js';
+import { renderFindYourSchool } from './views/find-your-school.js';
 import { renderYoureIn } from './views/youre-in.js';
 import { renderCreateAccount } from './views/create-account.js';
 import { renderEnterFullName } from './views/enter-full-name.js';
@@ -279,33 +279,12 @@ async function finishEmbedSocialLogin(result) {
   if (!nextUser) {
     nextUser = await api.fetchCurrentUser();
   }
-  var schoolId = '';
-  var pendingSchool = getPendingSignupSchool();
-  if (pendingSchool && pendingSchool.id) {
-    schoolId = String(pendingSchool.id).trim();
-  }
-  if (!schoolId) {
-    try {
-      schoolId = String(sessionStorage.getItem('hc_embed_pending_signup_school_id') || '').trim();
-    } catch (_e) { }
-  }
-  if (!schoolId) {
-    schoolId = getEmbedSchoolId() || '';
-  }
-  if (isNewUser && schoolId) {
-    try {
-      await api.assignSchool(schoolId);
-      nextUser = await api.fetchCurrentUser();
-    } catch (_e) { }
-  } else if (!nextUser) {
-    nextUser = await api.fetchCurrentUser();
-  }
   completeLoginState(nextUser);
   if (isNewUser) {
     navigate('/account-created');
     return;
   }
-  navigate(hasActiveSchool(nextUser) ? '/' + initialView : '/school-selection');
+  navigate(routeAfterAuth(nextUser));
 }
 
 function startSchoolEmailConfirmationPolling(confirmationId) {
@@ -846,11 +825,7 @@ async function init() {
       getRoute() === '/school-selection' ||
       isPublicAuthPath(routePathOnly(getRoute())))
   ) {
-    if (!hasActiveSchool(user)) {
-      navigate('/school-selection');
-    } else {
-      navigate('/' + initialView);
-    }
+    navigate(routeAfterAuth(user));
   }
 
   // Tell the native app we're ready
@@ -900,6 +875,21 @@ function hasActiveSchool(currentUser) {
   var schoolIdValue =
     school.id != null ? school.id : school.schoolId != null ? school.schoolId : school.school_id;
   return String(schoolIdValue || '').trim() !== '';
+}
+
+function getLockedEmbedSchoolId() {
+  return (
+    normalizeSchoolId(schoolId) ||
+    normalizeSchoolId(getEmbedSchoolId()) ||
+    getSchoolIdFromUrl()
+  );
+}
+
+function routeAfterAuth(currentUser) {
+  if (hasActiveSchool(currentUser) || getLockedEmbedSchoolId()) {
+    return '/' + initialView;
+  }
+  return '/school-selection';
 }
 
 function refreshProfileUserForTabs() {
@@ -1217,16 +1207,23 @@ function render(route) {
     navigate(partnerToken ? '/preview' : '/get-started');
     return;
   }
-  if (user && !hasActiveSchool(user) && route !== '/school-selection' && !isSignupOnboardingPath(pathOnly)) {
-    navigate('/school-selection');
-    return;
+  if (user && !hasActiveSchool(user) && !isSignupOnboardingPath(pathOnly)) {
+    if (getLockedEmbedSchoolId()) {
+      if (route === '/school-selection') {
+        navigate('/' + initialView);
+        return;
+      }
+    } else if (route !== '/school-selection') {
+      navigate('/school-selection');
+      return;
+    }
   }
   if (user && hasActiveSchool(user) && route === '/school-selection') {
     navigate('/' + initialView);
     return;
   }
   if (user && isPublicAuthPath(pathOnly) && !isSignupOnboardingPath(pathOnly)) {
-    navigate(hasActiveSchool(user) ? '/' + initialView : '/school-selection');
+    navigate(routeAfterAuth(user));
     return;
   }
 
@@ -1278,7 +1275,7 @@ function render(route) {
     renderAccountCreated(appEl, {
       user: user,
       onContinue: function () {
-        navigate(hasActiveSchool(user) ? '/' + initialView : '/school-selection');
+        navigate(routeAfterAuth(user));
       },
     });
     return;
@@ -1333,7 +1330,7 @@ function render(route) {
         } catch (e) { }
       }
       completeLoginState(u);
-      navigate('/' + initialView);
+      navigate(routeAfterAuth(u));
     }, {
       schoolId: schoolId,
       initialEmail: pendingEmail,
