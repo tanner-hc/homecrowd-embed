@@ -156,7 +156,7 @@ export function renderUploadReceipt(container) {
   html += '</button>';
   html +=
     '<button type="button" class="hc-upload-receipt-picker-secondary" id="hc-upload-receipt-library-btn">';
-  html += galleryIconSvg(20, '#00C8FF');
+  html += galleryIconSvg(20, 'currentColor');
   html += '<span>Choose from library</span>';
   html += '</button>';
   html += '</div>';

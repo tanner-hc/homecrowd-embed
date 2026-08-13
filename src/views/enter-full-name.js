@@ -34,6 +34,7 @@ export function renderEnterFullName(container) {
   }
 
   var layout = mountSignupFieldLayout(container, {
+    className: 'hc-signup-field--name',
     title: 'Enter your full name',
     subtitle: 'This will be shown on your profile',
     placeholder: 'Full Name',
