@@ -113,6 +113,20 @@ var schoolId =
   normalizeSchoolId(
     params.get('schoolId') || params.get('schoolID') || params.get('school_id') || '',
   );
+function getWildfireAppIdFromConfig(config) {
+  if (!config || typeof config !== 'object') return '';
+  return String(config.wildfireAppId || config.wildfire_app_id || '').trim();
+}
+function getWildfireAppIdFromUrl() {
+  var urlParams = new URLSearchParams(window.location.search);
+  return String(
+    urlParams.get('wildfireAppId') || urlParams.get('wildfire_app_id') || '',
+  ).trim();
+}
+var wildfireAppId = getWildfireAppIdFromConfig(hostConfig) || getWildfireAppIdFromUrl();
+if (wildfireAppId) {
+  api.setEmbedContext({ wildfireAppId: wildfireAppId });
+}
 var partnerToken = (hostConfig && hostConfig.token) || params.get('token') || '';
 var initialView = (hostConfig && hostConfig.view) || params.get('view') || 'home';
 
@@ -745,6 +759,11 @@ async function init() {
     }
     if (injected.view) {
       initialView = injected.view;
+    }
+    var injectedWildfireAppId = getWildfireAppIdFromConfig(injected);
+    if (injectedWildfireAppId) {
+      wildfireAppId = injectedWildfireAppId;
+      api.setEmbedContext({ wildfireAppId: wildfireAppId });
     }
   }
   await applySchoolConfig(schoolId);

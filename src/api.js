@@ -51,6 +51,51 @@ export function setEmbedContext(context) {
   wildfireAppId = normalizeWildfireAppId(next.wildfireAppId);
 }
 
+export function getWildfireAppId() {
+  return wildfireAppId;
+}
+
+function firstSearchParam(search, names) {
+  for (var i = 0; i < names.length; i++) {
+    var value = String(search.get(names[i]) || '').trim();
+    if (value) return { key: names[i], value: value };
+  }
+  return { key: names[0], value: '' };
+}
+
+export function buildEmbedLoginHref() {
+  var search = new URLSearchParams(window.location.search);
+  search.delete('uid');
+  search.delete('token');
+
+  var school = firstSearchParam(search, ['schoolId', 'schoolID', 'school_id']);
+  var schoolId = school.value || getEmbedSchoolId() || '';
+  if (schoolId && !school.value) {
+    search.set('schoolId', schoolId);
+  }
+
+  var wildfire = firstSearchParam(search, ['wildfireAppId', 'wildfire_app_id']);
+  var wildfireId = wildfire.value || wildfireAppId || '';
+  if (wildfireId && !wildfire.value) {
+    search.set('wildfireAppId', wildfireId);
+  }
+
+  var qs = search.toString();
+  return window.location.pathname + (qs ? '?' + qs : '') + '#/login';
+}
+
+export function goToEmbedLogin() {
+  var href = buildEmbedLoginHref();
+  var next = new URL(href, window.location.origin);
+  var currentBase = window.location.pathname + window.location.search;
+  var nextBase = next.pathname + next.search;
+  if (nextBase === currentBase) {
+    window.location.hash = '#/login';
+    return;
+  }
+  window.location.assign(href);
+}
+
 export function setTokens(access, refresh) {
   accessToken = access;
   refreshToken = refresh || null;
@@ -532,6 +577,8 @@ export async function forgotPassword(email) {
     body: JSON.stringify({
       email: email,
       school_id: getEmbedSchoolId() || undefined,
+      wildfire_app_id: getWildfireAppId() || undefined,
+      client_surface: 'embed',
     }),
   });
 }
