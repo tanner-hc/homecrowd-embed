@@ -55,11 +55,55 @@ export function renderCardDraw(container) {
   var prizeEl = container.querySelector('[data-cd-prize]');
   var valueEl = container.querySelector('[data-cd-value]');
   var subEl = container.querySelector('[data-cd-sub]');
+  var stageEl = container.querySelector('.hc-card-draw-stage');
 
   function prefersReducedMotion() {
     return !!(
       window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
     );
+  }
+
+  /**
+   * A burst of paper from behind the card as it lands.
+   *
+   * Built from plain spans rather than a canvas: a couple of dozen nodes for
+   * about a second is cheaper than standing up a render loop, and it removes
+   * itself afterwards so nothing is left animating on the page. Skipped
+   * entirely under reduced motion.
+   */
+  var CONFETTI_COLORS = ['#00c8ff', '#ffd54a', '#ff7bac', '#7ae582', '#ffffff'];
+  var CONFETTI_PIECES = 28;
+  var CONFETTI_MS = 1100;
+
+  function burstConfetti() {
+    if (!stageEl || prefersReducedMotion()) return;
+
+    var layer = document.createElement('div');
+    layer.className = 'hc-card-draw-confetti';
+    layer.setAttribute('aria-hidden', 'true');
+
+    for (var i = 0; i < CONFETTI_PIECES; i++) {
+      var piece = document.createElement('span');
+      piece.className = 'hc-card-draw-confetti-piece';
+      // Spread evenly around the card, jittered so it doesn't read as a ring.
+      var angle = (i / CONFETTI_PIECES) * Math.PI * 2 + Math.random() * 0.4;
+      var distance = 90 + Math.random() * 130;
+      piece.style.setProperty('--hc-cf-dx', Math.cos(angle) * distance + 'px');
+      // Biased downward at the end of the arc so it falls rather than hangs.
+      piece.style.setProperty(
+        '--hc-cf-dy',
+        Math.sin(angle) * distance + 60 + Math.random() * 60 + 'px'
+      );
+      piece.style.setProperty('--hc-cf-rot', Math.round(Math.random() * 720 - 360) + 'deg');
+      piece.style.animationDelay = Math.round(Math.random() * 120) + 'ms';
+      piece.style.background = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+      layer.appendChild(piece);
+    }
+
+    stageEl.appendChild(layer);
+    window.setTimeout(function () {
+      if (layer.parentNode) layer.parentNode.removeChild(layer);
+    }, CONFETTI_MS + 400);
   }
 
   function goBack() {
@@ -75,6 +119,13 @@ export function renderCardDraw(container) {
     drawBtn.disabled = true;
     drawBtn.textContent = label;
     laterBtn.textContent = 'Done';
+  }
+
+  /** Show the prize face outright, no flip — the turn already happened today. */
+  function showSettledPoints(points) {
+    valueEl.textContent = '+' + formatNumber(points);
+    cardEl.classList.add('is-revealed');
+    prizeEl.classList.add('is-in');
   }
 
   /** Flip to the prize face, then pop the number in once it lands. */
@@ -95,10 +146,32 @@ export function renderCardDraw(container) {
         // face can't snap back if the class is ever cleared.
         cardEl.classList.add('is-revealed');
         prizeEl.classList.add('is-in');
+        burstConfetti();
       },
       { once: true }
     );
   }
+
+  // Open in whatever state today is already in, so a card drawn earlier shows
+  // turned over with its points rather than inviting a draw that cannot happen.
+  // Failure is not worth blocking on — the draw itself is still guarded by the
+  // server, so the worst case is the button reporting already-drawn on tap.
+  api
+    .getCardDrawStatus()
+    .then(function (state) {
+      if (!state || !container.isConnected) return;
+      if (state.disabled) {
+        subEl.textContent = 'The card draw is not available right now.';
+        settle('Unavailable');
+        return;
+      }
+      if (state.already_drawn) {
+        showSettledPoints(Number(state.points_awarded) || 0);
+        subEl.textContent = 'You have already drawn today. Come back tomorrow!';
+        settle('Come back tomorrow');
+      }
+    })
+    .catch(function () {});
 
   if (laterBtn) {
     laterBtn.addEventListener('click', goBack);
@@ -126,7 +199,7 @@ export function renderCardDraw(container) {
         revealPoints(points);
         subEl.textContent = 'Added to your balance.';
         settle('Come back tomorrow');
-        showSuccess('You earned ' + formatNumber(points) + ' points');
+        showSuccess('You earned ' + formatNumber(points) + ' points!');
       } catch (err) {
         // Leave the button usable so a network blip can be retried.
         submitting = false;

@@ -186,9 +186,30 @@ export async function renderFirstRewardRedemption(container, rewardId, options) 
   container.innerHTML = LoadingSpinner({ text: 'Loading reward...' });
 
   var milestone = null;
+  var accountEmail = '';
+  var accountPhone = '';
   try {
-    // One rung, not the whole ladder.
-    var payload = await api.getFirstReward(rewardId);
+    // One rung, not the whole ladder. The profile rides along so the fields can
+    // default to the address and number on the account — getUserProfile rather
+    // than fetchCurrentUser because the embed's /auth/me payload carries no
+    // phone number. A failure there is not worth blocking the screen for, so it
+    // resolves to null instead of throwing.
+    var loaded = await Promise.all([
+      api.getFirstReward(rewardId),
+      api.getUserProfile().catch(function () {
+        return null;
+      }),
+    ]);
+    var payload = loaded[0];
+    var currentUser = loaded[1];
+    accountEmail = String((currentUser && currentUser.email) || '').trim();
+    // Stored unformatted; shown in the same (555) 555-5555 shape the profile
+    // screen uses, which is also what this field formats as you type.
+    accountPhone = formatPhoneNumber(
+      String(
+        (currentUser && (currentUser.phone_number || currentUser.phoneNumber)) || ''
+      ).trim()
+    );
     milestone = normalizeMilestones([payload.milestone])[0] || null;
   } catch (_e) {
     container.innerHTML = buildUnavailableHtml(
@@ -220,7 +241,7 @@ export async function renderFirstRewardRedemption(container, rewardId, options) 
 
   container.innerHTML = buildHtml(milestone);
   bindViewport(container);
-  bindForm(container, milestone, returnTo);
+  bindForm(container, milestone, returnTo, accountEmail, accountPhone);
 }
 
 function bindBack(container, returnTo) {
@@ -232,12 +253,18 @@ function bindBack(container, returnTo) {
   }
 }
 
-function bindForm(container, milestone, returnTo) {
+function bindForm(container, milestone, returnTo, accountEmail, accountPhone) {
   var input = container.querySelector('#hc-fr-redeem-input');
   var errorEl = container.querySelector('#hc-fr-redeem-error');
   var redeemBtn = container.querySelector('[data-fr-redeem]');
   var method = METHOD_SMS;
   var submitting = false;
+
+  // The screen opens on SMS, so seed that field here too — the switch handler
+  // below only runs when the student changes method.
+  if (input && !input.value && accountPhone) {
+    input.value = accountPhone;
+  }
 
   bindBack(container, returnTo);
 
@@ -247,10 +274,17 @@ function bindForm(container, milestone, returnTo) {
     errorEl.hidden = !message;
   }
 
+  // What the student last had in each field, so switching between them restores
+  // their own entry instead of resetting to the account default.
+  var emailValue = '';
+  var smsValue = '';
+
   container.querySelectorAll('[data-method]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var next = btn.getAttribute('data-method');
       if (next === method) return;
+      if (method === METHOD_EMAIL) emailValue = (input.value || '').trim();
+      else smsValue = (input.value || '').trim();
       method = next;
       showError('');
 
@@ -262,7 +296,13 @@ function bindForm(container, milestone, returnTo) {
 
       // A phone number is never a valid email and vice versa, so carrying the
       // old value across a switch only ever leaves something to delete.
-      input.value = '';
+      //
+      // Each side then seeds from the account, but only into an empty field: a
+      // value the student typed themselves survives switching away and back,
+      // rather than being overwritten by the default.
+      var typed = method === METHOD_EMAIL ? emailValue : smsValue;
+      var fallback = method === METHOD_EMAIL ? accountEmail : accountPhone;
+      input.value = typed || fallback || '';
 
       if (method === METHOD_EMAIL) {
         input.type = 'email';

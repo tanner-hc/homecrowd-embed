@@ -853,6 +853,15 @@ export async function recordDailyVisit() {
  * a repeat call is a normal 200 with already_drawn: true rather than an error.
  * @returns {Promise<{success:boolean, already_drawn:boolean, points_awarded:number, new_balance:number}>}
  */
+/**
+ * Today's card-draw state without drawing. Lets the screen open already settled
+ * when the day's card has been taken.
+ * @returns {Promise<{already_drawn:boolean, disabled:boolean, points_awarded:number}>}
+ */
+export async function getCardDrawStatus() {
+  return request('/api/rewards/card-draw/');
+}
+
 export async function drawCard() {
   return request('/api/rewards/card-draw/', {
     method: 'POST',

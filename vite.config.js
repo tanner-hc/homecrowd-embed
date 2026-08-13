@@ -64,8 +64,14 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['maplibre-gl'],
   },
-  plugins: [
-    basicSsl(),
+    plugins: [
+    // HTTPS only when asked for: `HTTPS=1 npm run dev`.
+    //
+    // http://localhost is already a secure context per spec, so geolocation and
+    // workers work over plain http on this machine. TLS is only needed to reach
+    // the dev server from another device over the LAN (server.host below), where
+    // the origin is an IP and no longer counts as trustworthy.
+    ...(process.env.HTTPS ? [basicSsl()] : []),
     oauthCallbackPlugin(),
     mapLibreWorkerPlugin(),
     {

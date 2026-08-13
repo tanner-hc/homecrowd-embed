@@ -14693,8 +14693,9 @@ button.hc-shop-detail-cats--expandable {
 }
 
 .hc-marketplace-scroll {
-  /* The sticky app header contributes 8px of the design's 24px gap. */
-  padding-top: 16px;
+  /* The sticky app header contributes 8px of its own, so this is 16px from the
+     header row to the "Earn as you shop" card. */
+  padding-top: 8px;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -14832,17 +14833,28 @@ button.hc-shop-detail-cats--expandable {
   color: #888;
 }
 
-/* Shop online as a 4-across block instead of a scroller — Figma 1421:9172.
-   12px between columns, 18px between the two rows. */
+/* Shop online: two rows of ten that scroll sideways.
+   grid-auto-flow: column fills top-to-bottom then rightwards, so each column is
+   a pair and scrolling right reveals the next pair — the usual shape for a
+   two-row carousel. Columns are sized to the 70px tile rather than 1fr, so the
+   10px gap is the actual space between tiles. */
 .hc-featured-stores-row--grid {
   display: grid;
-  /* minmax(0,…) not 1fr: the captions are `white-space: nowrap`, so with the
-     default `auto` minimum each column would grow to fit the longest store
-     name and the tiles would blow past the page width. */
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px 12px;
-  overflow: visible;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, auto);
+  grid-auto-columns: 70px;
+  /* Scaled to 70/83.5 = ~84% of the size the tiles were, so the proportions
+     hold: the design's 18/12 gaps become 15/10. */
+  gap: 15px 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
   padding: 0 16px;
+}
+
+.hc-featured-stores-row--grid::-webkit-scrollbar {
+  display: none;
 }
 
 /* The scroller sizes each tile at a fixed 72px; in the grid the column does it. */
@@ -14852,15 +14864,21 @@ button.hc-shop-detail-cats--expandable {
   flex-shrink: 1;
 }
 
+/* Fixed 60px rather than filling the grid column: at four across the column is
+   ~83px on a phone and grows to ~133px at the 600px content cap, so the tiles
+   scaled with the window. The item centres them (align-items on
+   .hc-featured-store), so the column stays 1fr and the row spacing is unchanged. */
 .hc-featured-stores-row--grid .hc-featured-store-tile {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 1;
+  width: 70px;
+  height: 70px;
+  aspect-ratio: auto;
 }
 
-/* Regular 14 rather than the scroller's Medium 13 (Figma I1421:9174;3531:17834). */
+/* Regular rather than the scroller's Medium, at the same ~84% scale as the tile:
+   14px becomes 12px and the 8px gap above it becomes 7px. */
 .hc-featured-stores-row--grid .hc-featured-store-name {
-  font-size: 14px;
+  margin-top: 7px;
+  font-size: 12px;
   line-height: normal;
   font-family: 'Baikal-Regular', var(--hc-font);
   font-weight: 400;
@@ -15087,7 +15105,10 @@ button.hc-shop-detail-cats--expandable {
   align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 16px 24px;
+  /* No top padding: the section's own 42px margin is the gap to whatever sits
+     above, and 8px here stacked on top of it made the space 50px. The 24px
+     below is the design's header-to-content gap. */
+  padding: 0 16px 24px;
 }
 
 .hc-pp-title {
@@ -17513,6 +17534,76 @@ body:has(.hc-fr-success) {
   line-clamp: 2;
 }
 
+/* Daily Card Draw — Figma 1423:10334. Closes out the Rewards page: a Gray 1
+   panel holding the card art beside its blurb, with the draw button under both. */
+.hc-daily-draw {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: 18px;
+  background: #f8f8f8;
+  overflow: hidden;
+}
+
+.hc-daily-draw-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+/* 78x105 card back. The artwork is already the card, edge to edge and at the
+   same 0.743 aspect, so `contain` shows it whole with nothing cropped and the
+   rounded corners in the PNG do the rounding. */
+.hc-daily-draw-art {
+  flex-shrink: 0;
+  width: 78px;
+  height: 105px;
+  object-fit: contain;
+  display: block;
+}
+
+.hc-daily-draw-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.hc-daily-draw-title {
+  font-size: 16px;
+  line-height: normal;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+}
+
+.hc-daily-draw-sub {
+  font-size: 14px;
+  line-height: normal;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-weight: 400;
+  color: #888;
+}
+
+.hc-daily-draw-cta {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 100px;
+  background: var(--hc-app-primary, #00c8ff);
+  font-size: 16px;
+  line-height: normal;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000;
+  text-align: center;
+  cursor: pointer;
+}
+
 /* Catalogue reward rows. Figma 973:6212 — 117px artwork at a 12px radius, 13px
    from the text column, which pads 18px vertically so the block centres against
    the square. Gray 2 #EBEBEB chip with Grey 4 #888888 label. */
@@ -18807,6 +18898,7 @@ img.hc-img-ph--none {
 /* Stage owns the perspective so the flip has depth; the card itself is the
    rotating element and the two faces are stacked back-to-back inside it. */
 .hc-card-draw-stage {
+  position: relative;
   flex: 1 1 auto;
   display: flex;
   align-items: center;
@@ -18819,6 +18911,53 @@ img.hc-img-ph--none {
 /* Height-driven so a short screen shrinks the card instead of squeezing the
    copy or pushing the buttons off. max-width still caps it on wide/short
    viewports, and aspect-ratio keeps the proportion whichever constraint binds. */
+/* Confetti, burst from the centre of the stage as the card lands. Each piece
+   carries its own --hc-cf-* offsets, set in card-draw.js, so one keyframe drives
+   every direction. Removed from the DOM once it has played. */
+.hc-card-draw-confetti {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hc-card-draw-confetti-piece {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: hc-card-draw-confetti-fly 1100ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+@keyframes hc-card-draw-confetti-fly {
+  0% {
+    transform: translate3d(-50%, -50%, 0) rotate(0deg) scale(0.6);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(
+        calc(-50% + var(--hc-cf-dx, 0px)),
+        calc(-50% + var(--hc-cf-dy, 0px)),
+        0
+      )
+      rotate(var(--hc-cf-rot, 180deg)) scale(1);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-card-draw-confetti {
+    display: none;
+  }
+}
+
 .hc-card-draw-card {
   position: relative;
   height: 100%;
@@ -18902,16 +19041,18 @@ img.hc-img-ph--none {
 .hc-card-draw-prize-value {
   font-family: 'Baikal-ExtraCondensedBold', var(--hc-font);
   font-weight: 700;
-  font-size: 64px;
+  /* The prize is the point of the screen — sized to fill the card face. Extra
+     Condensed keeps even a four-figure award inside the 286px card. */
+  font-size: 96px;
   line-height: 0.9;
   color: #ffffff;
 }
 
 .hc-card-draw-prize-unit {
-  padding-bottom: 6px;
+  padding-bottom: 10px;
   font-family: 'Baikal-Condensed', var(--hc-font);
   font-weight: 700;
-  font-size: 20px;
+  font-size: 28px;
   line-height: 1.1;
   color: #ffffff;
 }
