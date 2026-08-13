@@ -33,7 +33,7 @@ export function buildDashboardHalfCircleGaugeHtml(o) {
   var bottomLeftText = o.bottomLeftText != null ? String(o.bottomLeftText) : 'Progress to Next Prize';
   var bottomRightText = o.bottomRightText != null ? String(o.bottomRightText) : '';
   var strokeWidth = o.strokeWidth != null ? Number(o.strokeWidth) : 9;
-  var progressColor = o.progressColor || '#00C8FF';
+  var progressColor = o.progressColor || 'var(--hc-app-primary, #00C8FF)';
   var trackColor = o.trackColor || '#D2D2D2';
   var rightOpacity = o.rightOpacity != null ? o.rightOpacity : 0.35;
   var arcTopPadding = o.arcTopPadding != null ? Number(o.arcTopPadding) : 6;

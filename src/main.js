@@ -10,7 +10,6 @@ import {
   applyBrandConfig,
   clearBrandConfig,
   getEmbedSchoolId,
-  hasCustomHeaderLogo,
   renderBrandLockup,
   setEmbedSchoolId,
 } from './brand.js';
@@ -193,26 +192,30 @@ async function applySchoolConfig(nextSchoolId) {
 }
 
 /**
- * Brand config normally arrives with the host-supplied schoolId. A session
- * opened without one (direct link, local dev) leaves it empty, so school embed
- * appearance never applies even though the user's school has one. Backfill it
- * from the authenticated user. Deliberately does not touch the module-level
- * `schoolId`, which drives the partner/login flows.
+ * Brand config normally arrives with the host-supplied schoolId. After login,
+ * appearance follows the authenticated user's active school, not the URL
+ * schoolId. Deliberately does not touch the module-level `schoolId`, which
+ * drives the partner/login flows.
  *
- * @returns {Promise<boolean>} whether a school logo became available
+ * @returns {Promise<boolean>} whether brand config was applied from the user
  */
 async function ensureBrandConfigForUser(currentUser) {
-  if (hasCustomHeaderLogo() || getEmbedSchoolId()) return false;
-  var school = currentUser && (currentUser.active_school || currentUser.activeSchool);
-  var activeSchoolId = school && school.id;
+  var school = getActiveSchool(currentUser);
+  var activeSchoolId = '';
+  if (school && typeof school === 'object') {
+    activeSchoolId = normalizeSchoolId(
+      school.id != null ? school.id : school.schoolId != null ? school.schoolId : school.school_id,
+    );
+  }
   if (!activeSchoolId) return false;
+  if (normalizeSchoolId(getEmbedSchoolId()) === activeSchoolId) return false;
   try {
     var config = await api.fetchSchoolConfig(activeSchoolId);
     applyBrandConfig(config, activeSchoolId);
   } catch (_e) {
     return false;
   }
-  return hasCustomHeaderLogo();
+  return true;
 }
 
 function readPendingPasswordLink() {
@@ -773,13 +776,16 @@ async function init() {
       api.setEmbedContext({ wildfireAppId: wildfireAppId });
     }
   }
-  await applySchoolConfig(schoolId);
   if (partnerToken) {
+    await applySchoolConfig(schoolId);
     await resolveSchoolPartnerFlow(partnerToken, initialView, schoolId);
   } else if (api.isAuthenticated()) {
     try {
       user = await api.fetchCurrentUser();
-      await ensureBrandConfigForUser(user);
+      var appliedUserBrand = await ensureBrandConfigForUser(user);
+      if (!appliedUserBrand) {
+        await applySchoolConfig(schoolId);
+      }
       postToNative('homecrowd:login', { user: user });
       preloadMapForEmbed();
       scheduleDailyVisitCheck();
@@ -787,7 +793,10 @@ async function init() {
     } catch (e) {
       api.clearTokens();
       user = null;
+      await applySchoolConfig(schoolId);
     }
+  } else {
+    await applySchoolConfig(schoolId);
   }
 
   if (postLoginStripeThanksId) {

@@ -25,6 +25,7 @@ function getInputFontSize(text, availableWidth) {
  */
 export function mountSignupFieldLayout(container, options) {
   options = options || {};
+  var extraClass = options.className ? ' ' + String(options.className).trim() : '';
   var backTo = options.backTo || '/create-account';
   var secureTextEntry = !!options.secureTextEntry;
   var showPasswordToggle = !!options.showPasswordToggle;
@@ -35,7 +36,9 @@ export function mountSignupFieldLayout(container, options) {
   var value = options.value != null ? String(options.value) : '';
 
   container.innerHTML =
-    '<div class="hc-signup-field">' +
+    '<div class="hc-signup-field' +
+    extraClass +
+    '">' +
     '<div class="hc-signup-field-nav">' +
     '<button type="button" class="hc-signup-field-back" id="hc-signup-field-back" aria-label="Back">' +
     chevronLeftSvg +

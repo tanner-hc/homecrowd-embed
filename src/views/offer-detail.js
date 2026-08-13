@@ -1,8 +1,7 @@
 import * as api from '../api.js';
 import { openDirectionsPicker } from '../mapDirections.js';
 import * as analytics from '../analytics.js';
-import { hasNativeBridge, postToNative } from '../bridge.js';
-import { showWebviewOverlay } from '../webview-overlay.js';
+import { openMerchantUrl } from '../open-merchant-url.js';
 import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import { buildAppHeaderHtml, attachAppHeader } from '../base-components/AppHeader.js';
@@ -625,25 +624,7 @@ function openExternalUrl(url, title) {
     console.warn('[HC shop-now] openExternalUrl aborted: empty url');
     return;
   }
-  if (url.indexOf('http') !== 0) url = 'https://' + url;
-
-  if (hasNativeBridge()) {
-    console.log('[HC shop-now] notify native bridge', url);
-    try {
-      postToNative('homecrowd:open-url', { url: url, title: title || '' });
-    } catch (e1) {
-      console.warn('[HC shop-now] open-url post failed', e1);
-    }
-    try {
-      postToNative('homecrowd:open-merchant-webview', { url: url, title: title || '' });
-    } catch (e2) {
-      console.warn('[HC shop-now] open-merchant-webview post failed', e2);
-    }
-  }
-
-  console.log('[HC shop-now] top-level navigate', url);
-  showFullscreenSpinner();
-  window.location.href = url;
+  openMerchantUrl(url, title, { showSpinner: showFullscreenSpinner });
 }
 
 var fullscreenSpinnerEl = null;
@@ -659,6 +640,20 @@ function hideFullscreenSpinner() {
     fullscreenSpinnerEl.remove();
     fullscreenSpinnerEl = null;
   }
+  var stale = document.querySelectorAll('.hc-route-spinner-overlay');
+  for (var i = 0; i < stale.length; i++) stale[i].remove();
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pageshow', function () {
+    hideFullscreenSpinner();
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') hideFullscreenSpinner();
+  });
+  window.addEventListener('focus', function () {
+    hideFullscreenSpinner();
+  });
 }
 
 function pickShopWebsite(offer) {

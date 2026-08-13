@@ -10,6 +10,7 @@ import { resolveCardLinkStatus } from '../cardLinkStatus.js';
 import { mountBrowserExtensionInline } from './browser-extension.js';
 import { ensureMapLibreLoaded, OPENFREEMAP_STYLE_URL } from '../openfreemap.js';
 import { hasNativeBridge, postToNative } from '../bridge.js';
+import { openMerchantUrl } from '../open-merchant-url.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import ScreenTitle from '../base-components/ScreenTitle.js';
@@ -3671,14 +3672,15 @@ async function handleOffersMarketplaceCardClick(card) {
     if (onlineMerchantId) {
       var wildfireRedirectUrl = api.buildWildfireRedirectUrl(onlineMerchantId);
       if (wildfireRedirectUrl) {
-        showFullscreenSpinner();
         analytics.trackEmbedOfferLinkClick({
           entry_point: 'embed_marketplace',
           flow: 'wildfire_tracking',
           merchant_id: onlineMerchantId,
           offer_source: 'wildfire',
         });
-        window.location.href = wildfireRedirectUrl;
+        openMerchantUrl(wildfireRedirectUrl, merchantTitle, {
+          showSpinner: showFullscreenSpinner,
+        });
         return;
       }
       // No redirect URL - user may be logged out
@@ -3720,14 +3722,15 @@ async function handleOffersMarketplaceCardClick(card) {
   if (merchantId) {
     var redirectUrl = api.buildWildfireRedirectUrl(merchantId);
     if (redirectUrl) {
-      showFullscreenSpinner();
       analytics.trackEmbedOfferLinkClick({
         entry_point: 'embed_marketplace',
         flow: 'wildfire_tracking',
         merchant_id: merchantId,
         offer_source: 'wildfire',
       });
-      window.location.href = redirectUrl;
+      openMerchantUrl(redirectUrl, merchantTitle, {
+        showSpinner: showFullscreenSpinner,
+      });
       return;
     }
     // No redirect URL available - user may be logged out or session expired
@@ -3766,19 +3769,16 @@ function openExternalUrl(url, title) {
         showWebviewOverlay(url, {
           title: title,
           onFallback: function () {
-            showFullscreenSpinner();
-            window.location.href = url;
+            openMerchantUrl(url, title, { showSpinner: showFullscreenSpinner });
           },
         });
         return;
       }
-      // Headers say no — go top-level. Spinner stays up until the WebView
-      // navigates away.
-      window.location.href = url;
+      openMerchantUrl(url, title, { showSpinner: showFullscreenSpinner });
     })
     .catch(function (err) {
       console.warn('checkEmbeddable failed, falling back to top-level nav:', err && err.message);
-      window.location.href = url;
+      openMerchantUrl(url, title, { showSpinner: showFullscreenSpinner });
     });
 }
 
@@ -3809,6 +3809,12 @@ function hideFullscreenSpinner() {
 // staring at a stale loading overlay.
 if (typeof window !== 'undefined') {
   window.addEventListener('pageshow', function () {
+    hideFullscreenSpinner();
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') hideFullscreenSpinner();
+  });
+  window.addEventListener('focus', function () {
     hideFullscreenSpinner();
   });
 }

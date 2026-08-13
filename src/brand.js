@@ -45,6 +45,16 @@ var LOGIN_VARS = [
   '--hc-header-logo-height',
 ];
 
+var APP_VARS = [
+  '--hc-app-primary',
+  '--hc-app-primary-dark',
+  '--hc-app-primary-light',
+  '--hc-app-accent',
+  '--hc-primary',
+  '--hc-primary-dark',
+  '--hc-primary-light',
+];
+
 var LOGO_SIZE_LEGACY_MAP = {
   small: 60,
   medium: 100,
@@ -290,6 +300,7 @@ export function applyBrandConfig(config, activeSchoolId) {
       : 0,
   );
   applyHeaderLogoSize(brandConfig);
+  applyInAppColors(brandConfig);
 
   if (document && document.documentElement) {
     document.documentElement.classList.add('hc-has-email-selection-bg');
@@ -301,6 +312,7 @@ export function clearBrandConfig() {
   embedSchoolId = '';
   clearVars(PREVIEW_VARS);
   clearVars(LOGIN_VARS);
+  clearVars(APP_VARS);
   setVar('--hc-preview-bg', 'transparent');
   setVar('--hc-login-card-bg', 'transparent');
   setNoSchoolBrandState(true);
@@ -314,6 +326,19 @@ export function getHeaderLogoUrl() {
     return brandConfig.headerLogoUrl;
   }
   return defaultHeaderLogoUrl;
+}
+
+export function getSchoolMarkUrl() {
+  if (!brandConfig) return '';
+  return String(
+    brandConfig.schoolLogoUrl ||
+      brandConfig.schoolImageUrl ||
+      brandConfig.schoolImage ||
+      brandConfig.logoUrl ||
+      brandConfig.image ||
+      brandConfig.headerLogoUrl ||
+      '',
+  ).trim();
 }
 
 export function hasCustomHeaderLogo() {
@@ -361,6 +386,24 @@ export function getSchoolColor() {
   );
 }
 
+export function getInAppColor() {
+  if (!brandConfig) return '#00C8FF';
+  return (
+    normalizeHexInput(
+      brandConfig.inApp || brandConfig.inAppColor || '',
+    ) || '#00C8FF'
+  );
+}
+
+export function getInAppAccentColor() {
+  if (!brandConfig) return '#000000';
+  return (
+    normalizeHexInput(
+      brandConfig.inAppAccent || brandConfig.inAppAccentColor || '',
+    ) || '#000000'
+  );
+}
+
 /**
  * The rewards program's own name — "Utah Rewards", "Bearcat Rewards" — as
  * distinct from the school (getSchoolName returns the abbreviation). Empty when
@@ -394,6 +437,52 @@ export function darkenHex(hex, amount) {
     return (n < 16 ? '0' : '') + n.toString(16).toUpperCase();
   }
   return '#' + toHex(r) + toHex(g) + toHex(b);
+}
+
+function mixWithWhite(hex, amount) {
+  var normalized = normalizeHexInput(hex);
+  if (!normalized) return '';
+  var t = Math.min(1, Math.max(0, Number(amount) || 0));
+  var r = parseInt(normalized.slice(1, 3), 16);
+  var g = parseInt(normalized.slice(3, 5), 16);
+  var b = parseInt(normalized.slice(5, 7), 16);
+  function toHex(n) {
+    return (n < 16 ? '0' : '') + n.toString(16).toUpperCase();
+  }
+  return (
+    '#' +
+    toHex(Math.round(r + (255 - r) * t)) +
+    toHex(Math.round(g + (255 - g) * t)) +
+    toHex(Math.round(b + (255 - b) * t))
+  );
+}
+
+function applyInAppColors(config) {
+  var inApp =
+    normalizeHexInput(
+      config && (config.inApp || config.inAppColor),
+    ) || '#00C8FF';
+  var inAppAccent =
+    normalizeHexInput(
+      config && (config.inAppAccent || config.inAppAccentColor),
+    ) || '#000000';
+  var inAppCss = readCssColor(config, 'inApp', 'inAppOpacity', inApp, 100);
+  var inAppAccentCss = readCssColor(
+    config,
+    'inAppAccent',
+    'inAppAccentOpacity',
+    inAppAccent,
+    100,
+  );
+  var dark = darkenHex(inApp, 0.16) || '#00A8D6';
+  var light = mixWithWhite(inApp, 0.34) || '#57C6FA';
+  setVar('--hc-app-primary', inAppCss || inApp);
+  setVar('--hc-app-primary-dark', dark);
+  setVar('--hc-app-primary-light', light);
+  setVar('--hc-app-accent', inAppAccentCss || inAppAccent);
+  setVar('--hc-primary', inAppCss || inApp);
+  setVar('--hc-primary-dark', dark);
+  setVar('--hc-primary-light', light);
 }
 
 export function renderPoweredByLockup(className) {

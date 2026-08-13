@@ -2,6 +2,7 @@ import * as api from '../api.js';
 import { navigate } from '../router.js';
 import { showError, showSuccess } from '../base-components/toastApi.js';
 import { formatNumber } from '../formatNumber.js';
+import { getInAppColor } from '../brand.js';
 import cardArtUrl from '../assets/card-draw-card.png';
 import { escapeAttr } from '../base-components/html.js';
 
@@ -71,7 +72,7 @@ export function renderCardDraw(container) {
    * itself afterwards so nothing is left animating on the page. Skipped
    * entirely under reduced motion.
    */
-  var CONFETTI_COLORS = ['#00c8ff', '#ffd54a', '#ff7bac', '#7ae582', '#ffffff'];
+  var CONFETTI_COLORS = [getInAppColor(), '#ffd54a', '#ff7bac', '#7ae582', '#ffffff'];
   var CONFETTI_PIECES = 28;
   var CONFETTI_MS = 1100;
 

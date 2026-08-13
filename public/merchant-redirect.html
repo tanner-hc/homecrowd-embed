@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Opening…</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: #fff;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #111;
+      }
+    </style>
+  </head>
+  <body>
+    <p>Opening store…</p>
+    <script>
+      (function () {
+        var url = '';
+        try {
+          url = sessionStorage.getItem('hc_merchant_open_url') || '';
+          sessionStorage.removeItem('hc_merchant_open_url');
+        } catch (e) {}
+        if (!/^https?:\/\//i.test(url)) {
+          window.history.back();
+          return;
+        }
+        var canReturn = false;
+        function returnToEmbed() {
+          if (document.visibilityState !== 'visible' || !canReturn) return;
+          window.history.back();
+        }
+        document.addEventListener('visibilitychange', returnToEmbed);
+        window.addEventListener('pageshow', function (e) {
+          if (e.persisted) returnToEmbed();
+        });
+        window.addEventListener('pagehide', function () {
+          canReturn = true;
+        });
+        window.setTimeout(function () {
+          canReturn = true;
+        }, 1500);
+        window.location.replace(url);
+      })();
+    </script>
+  </body>
+</html>
