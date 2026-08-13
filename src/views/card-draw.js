@@ -199,7 +199,7 @@ export function renderCardDraw(container) {
         revealPoints(points);
         subEl.textContent = 'Added to your balance.';
         settle('Come back tomorrow');
-        showSuccess('You earned ' + formatNumber(points) + ' points');
+        showSuccess('You earned ' + formatNumber(points) + ' points!');
       } catch (err) {
         // Leave the button usable so a network blip can be retried.
         submitting = false;
