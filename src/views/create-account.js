@@ -1,10 +1,16 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
 import { showError } from '../base-components/toastApi.js';
-import { escapeAttr } from '../base-components/html.js';
+import { escapeAttr, escapeHtml } from '../base-components/html.js';
 import { getPendingSignupSchool } from './find-your-school.js';
-import { getEmbedSchoolId, hasSchoolBrand } from '../brand.js';
-import headerUrl from '../assets/header.png';
+import {
+  getEmbedSchoolId,
+  getHeaderLogoUrl,
+  getSchoolName,
+  hasCustomHeaderLogo,
+  hasSchoolBrand,
+} from '../brand.js';
+import { getPrivacyUrl, getTermsUrl } from '../legal-urls.js';
 import googleIconUrl from '../assets/providers/googleIcon.png';
 import appleIconUrl from '../assets/providers/apple_icon_dark.png';
 import chevronLeftSvg from '../assets/icons/chevron-left.svg?raw';
@@ -61,6 +67,16 @@ export function renderCreateAccount(container, onSocialSuccess) {
   var checkingEmail = false;
   var emailExists = false;
   var socialBusy = false;
+  var customHeader = hasCustomHeaderLogo();
+  var schoolImage = school.image ? String(school.image).trim() : '';
+  var hasProgramLogo = !!(customHeader || schoolImage);
+  var logoUrl = customHeader ? getHeaderLogoUrl() : schoolImage || getHeaderLogoUrl();
+  var logoAlt = hasProgramLogo
+    ? getSchoolName() || school.name || 'School brand'
+    : 'Homecrowd';
+  var logoClass = hasProgramLogo
+    ? 'hc-create-account-logo hc-create-account-logo--brand'
+    : 'hc-create-account-logo';
 
   container.innerHTML =
     '<div class="hc-create-account">' +
@@ -68,9 +84,15 @@ export function renderCreateAccount(container, onSocialSuccess) {
     '<button type="button" id="hc-create-account-back" class="hc-create-account-back" aria-label="Back">' +
     chevronLeftSvg +
     '</button>' +
-    '<img data-hc-ph="none" src="' +
-    escapeAttr(headerUrl) +
-    '" alt="Homecrowd" class="hc-create-account-logo" />' +
+    '<img data-hc-ph="' +
+    (hasProgramLogo ? 'school' : 'none') +
+    '" src="' +
+    escapeAttr(logoUrl) +
+    '" alt="' +
+    escapeAttr(logoAlt) +
+    '" class="' +
+    logoClass +
+    '" />' +
     '<span class="hc-create-account-nav-spacer" aria-hidden="true"></span>' +
     '</div>' +
     '<div class="hc-create-account-scroll">' +
@@ -104,6 +126,15 @@ export function renderCreateAccount(container, onSocialSuccess) {
     '</div>' +
     '</div>' +
     '<div class="hc-create-account-actions">' +
+    '<p class="hc-create-account-legal">By creating an account, you agree to our ' +
+    '<a href="' +
+    escapeHtml(getTermsUrl()) +
+    '" target="_blank" rel="noopener noreferrer">Terms and Conditions</a>' +
+    ' &amp; ' +
+    '<a href="' +
+    escapeHtml(getPrivacyUrl()) +
+    '" target="_blank" rel="noopener noreferrer">Privacy Policy</a>' +
+    '</p>' +
     '<button type="button" id="hc-create-email-submit" class="hc-create-account-btn">' +
     '<span class="hc-create-account-btn-label">Sign up with email</span>' +
     '<span class="hc-create-account-btn-spinner" style="display:none" aria-hidden="true"></span>' +

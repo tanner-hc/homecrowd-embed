@@ -13330,6 +13330,13 @@ button.hc-shop-detail-cats--expandable {
   flex-shrink: 0;
 }
 
+.hc-create-account-logo--brand {
+  width: auto;
+  max-width: min(180px, 55vw);
+  height: 36px;
+  max-height: 36px;
+}
+
 .hc-create-account-nav-spacer {
   width: 36px;
   height: 36px;
@@ -13493,6 +13500,21 @@ button.hc-shop-detail-cats--expandable {
 .hc-create-account-actions {
   flex: 0 0 auto;
   padding: 0 16px max(12px, env(safe-area-inset-bottom, 0px));
+}
+
+.hc-create-account-legal {
+  margin: 0 8px 16px;
+  color: #9a9a9a;
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.hc-create-account-legal a {
+  color: #000;
+  font-family: 'Baikal-Medium', 'Baikal', sans-serif;
+  text-decoration: underline;
 }
 
 .hc-create-account-btn {
