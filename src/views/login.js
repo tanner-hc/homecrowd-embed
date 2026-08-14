@@ -17,9 +17,9 @@ import appleIconUrl from '../assets/providers/appleIcon.png';
 import {
   authenticateWithApple,
   authenticateWithGoogle,
+  consumePendingSocialLogin,
   isSocialAuthCancelled,
   shouldShowAppleSignIn,
-  takePendingGoogleOAuth,
 } from '../social-auth.js';
 
 function isSchoolMode(optionsSchoolId) {
@@ -619,23 +619,18 @@ export function renderLogin(container, onLoginSuccess, options) {
 
   applyMode('signin');
 
-  var pendingGoogle = takePendingGoogleOAuth();
-  if (pendingGoogle && pendingGoogle.id_token) {
+  var pendingSocial = consumePendingSocialLogin(schoolId);
+  if (pendingSocial) {
     setSocialBusy(true);
-    api
-      .googleLogin(pendingGoogle.id_token, schoolId)
+    pendingSocial
       .then(function (result) {
-        result = result || {};
-        result.source = 'google_sign_in';
         return finishSocial(result);
       })
       .catch(function (err) {
         setSocialBusy(false);
+        if (isSocialAuthCancelled(err)) return;
         errorEl.textContent = (err && err.message) || 'Unable to sign in';
         errorEl.style.display = 'block';
       });
-  } else if (pendingGoogle && pendingGoogle.error && pendingGoogle.error !== 'access_denied') {
-    errorEl.textContent = pendingGoogle.error_description || pendingGoogle.error || 'Google Sign-In failed';
-    errorEl.style.display = 'block';
   }
 }

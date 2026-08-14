@@ -12,9 +12,9 @@ import { isValidEmail } from '../contact-validation.js';
 import {
   authenticateWithApple,
   authenticateWithGoogle,
+  consumePendingSocialLogin,
   isSocialAuthCancelled,
   shouldShowAppleSignIn,
-  takePendingGoogleOAuth,
 } from '../social-auth.js';
 
 function isSchoolMode() {
@@ -249,19 +249,17 @@ export function renderCreateAccount(container, onSocialSuccess) {
     }, 200);
   }
 
-  var pendingGoogle = takePendingGoogleOAuth();
-  if (pendingGoogle && pendingGoogle.id_token) {
+  var pendingSocial = consumePendingSocialLogin(schoolId);
+  if (pendingSocial) {
     setSocialBusy(true);
-    api
-      .googleLogin(pendingGoogle.id_token, schoolId)
+    pendingSocial
       .then(function (result) {
         return finishSocial(result);
       })
       .catch(function (err) {
         setSocialBusy(false);
+        if (isSocialAuthCancelled(err)) return;
         showError((err && err.message) || 'Unable to sign in');
       });
-  } else if (pendingGoogle && pendingGoogle.error && pendingGoogle.error !== 'access_denied') {
-    showError(pendingGoogle.error_description || pendingGoogle.error || 'Google Sign-In failed');
   }
 }
