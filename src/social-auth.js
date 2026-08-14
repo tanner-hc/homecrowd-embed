@@ -51,15 +51,15 @@ function redirectForOAuth(url) {
 }
 
 function appleAuthUrl(state, nonce) {
-  var params = new URLSearchParams();
-  params.set('client_id', appleClientId());
-  params.set('redirect_uri', appleRedirectUrl());
-  params.set('response_type', 'id_token');
-  params.set('response_mode', 'fragment');
-  params.set('scope', 'name email');
-  params.set('nonce', nonce);
-  params.set('state', state);
-  return 'https://appleid.apple.com/auth/authorize?' + params.toString();
+  var params = [
+    'client_id=' + encodeURIComponent(appleClientId()),
+    'redirect_uri=' + encodeURIComponent(appleRedirectUrl()),
+    'response_type=' + encodeURIComponent('code id_token'),
+    'response_mode=fragment',
+    'nonce=' + encodeURIComponent(nonce),
+    'state=' + encodeURIComponent(state),
+  ];
+  return 'https://appleid.apple.com/auth/authorize?' + params.join('&');
 }
 
 function randomString() {
