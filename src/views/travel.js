@@ -22,7 +22,7 @@ function clearTravelResizeObserver() {
 
 function syncTravelIframeSize(bodyEl, iframeEl) {
   if (!bodyEl || !iframeEl) return;
-  var height = Math.max(Math.floor(bodyEl.getBoundingClientRect().height), 320);
+  var height = Math.max(bodyEl.clientHeight, 320);
   iframeEl.style.height = height + 'px';
   iframeEl.style.width = '100%';
 }

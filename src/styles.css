@@ -12176,15 +12176,11 @@ button.hc-shop-detail-cats--expandable {
   padding: 0;
 }
 
-/* The tab bar is a flex sibling of .hc-content, so in normal flow it would cut
-   the frame short. Lifting it out of flow lets the iframe run the full height
-   and show through the shell's 32px top corners. */
 .hc-content--travel ~ .hc-tab-bar-shell {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: relative;
   max-width: none;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }
 
 .hc-content.hc-content--travel.hc-content--with-tab-bar {
