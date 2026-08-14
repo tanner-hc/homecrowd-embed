@@ -11,13 +11,8 @@
         var hash = String(window.location.hash || '').replace(/^#/, '');
         var params = new URLSearchParams(hash);
         var search = new URLSearchParams(window.location.search);
-        var provider = 'google';
-        try {
-          provider = sessionStorage.getItem('hc_oauth_provider') || 'google';
-        } catch (e) {}
         var payload = {
           type: 'hc-google-oauth',
-          provider: provider,
           id_token: params.get('id_token') || search.get('id_token') || '',
           error: params.get('error') || search.get('error') || '',
           error_description:

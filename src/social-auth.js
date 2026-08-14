@@ -6,7 +6,6 @@ export { shouldShowAppleSignIn };
 var APPLE_SCRIPT = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
 var OAUTH_RESULT_KEY = 'hc_google_oauth_result';
 var OAUTH_RETURN_KEY = 'hc_oauth_return';
-var OAUTH_PROVIDER_KEY = 'hc_oauth_provider';
 var OAUTH_STATE_KEY = 'hc_oauth_state';
 var OAUTH_NONCE_KEY = 'hc_oauth_nonce';
 
@@ -39,27 +38,9 @@ function shouldUseOAuthPopup() {
   return !isIOS() && !isAndroid();
 }
 
-function storeOAuthProvider(provider) {
-  try {
-    sessionStorage.setItem(OAUTH_PROVIDER_KEY, provider);
-  } catch (_e) { }
-}
-
 function redirectForOAuth(url) {
   window.location.assign(url);
   return new Promise(function () { });
-}
-
-function appleAuthUrl(state, nonce) {
-  var params = [
-    'client_id=' + encodeURIComponent(appleClientId()),
-    'redirect_uri=' + encodeURIComponent(appleRedirectUrl()),
-    'response_type=' + encodeURIComponent('code id_token'),
-    'response_mode=fragment',
-    'nonce=' + encodeURIComponent(nonce),
-    'state=' + encodeURIComponent(state),
-  ];
-  return 'https://appleid.apple.com/auth/authorize?' + params.join('&');
 }
 
 function randomString() {
@@ -193,35 +174,6 @@ export function takePendingGoogleOAuth() {
   return takeSessionJson(OAUTH_RESULT_KEY);
 }
 
-export function consumePendingSocialLogin(schoolId) {
-  var pending = takePendingGoogleOAuth();
-  if (!pending) return null;
-  var provider = pending.provider === 'apple' ? 'apple' : 'google';
-  if (pending.id_token) {
-    var run = provider === 'apple'
-      ? api.appleLogin(pending.id_token, null, schoolId)
-      : api.googleLogin(pending.id_token, schoolId);
-    return run.then(function (result) {
-      result = result || {};
-      result.source = provider === 'apple' ? 'apple_sign_in' : 'google_sign_in';
-      return result;
-    });
-  }
-  if (pending.error === 'access_denied') {
-    return Promise.reject(new Error('cancelled'));
-  }
-  if (pending.error) {
-    return Promise.reject(
-      new Error(
-        pending.error_description ||
-          pending.error ||
-          (provider === 'apple' ? 'Sign in with Apple failed' : 'Google Sign-In failed'),
-      ),
-    );
-  }
-  return null;
-}
-
 function storeOAuthReturn() {
   try {
     sessionStorage.setItem(OAUTH_RETURN_KEY, window.location.href);
@@ -303,7 +255,6 @@ export function signInWithGoogle() {
     sessionStorage.setItem(OAUTH_STATE_KEY, state);
     sessionStorage.setItem(OAUTH_NONCE_KEY, nonce);
   } catch (_e) { }
-  storeOAuthProvider('google');
   storeOAuthReturn();
 
   var url = googleAuthUrl(state, nonce);
@@ -330,18 +281,6 @@ export function signInWithGoogle() {
 export function signInWithApple() {
   if (!shouldShowAppleSignIn()) {
     return Promise.reject(new Error('Sign in with Apple is not available on this device'));
-  }
-
-  if (!shouldUseOAuthPopup()) {
-    var state = randomString();
-    var nonce = randomString();
-    try {
-      sessionStorage.setItem(OAUTH_STATE_KEY, state);
-      sessionStorage.setItem(OAUTH_NONCE_KEY, nonce);
-    } catch (_e) { }
-    storeOAuthProvider('apple');
-    storeOAuthReturn();
-    return redirectForOAuth(appleAuthUrl(state, nonce));
   }
 
   return loadScript(APPLE_SCRIPT).then(function () {
