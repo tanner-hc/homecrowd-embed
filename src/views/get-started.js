@@ -13,10 +13,11 @@ import {
   getHeaderLogoUrl,
   getInAppAccentColor,
   getInAppColor,
-  getSchoolMarkUrl,
+  getSchoolImageUrl,
   getSchoolName,
   hasCustomHeaderLogo,
   hasSchoolBrand,
+  renderPoweredByLockup,
 } from '../brand.js';
 
 var IPHONE_STATUS_ICONS =
@@ -182,9 +183,12 @@ export function renderGetStarted(container) {
   var logoUrl = hasProgramLogo ? getHeaderLogoUrl() : headerUrl;
   var logoAlt = hasProgramLogo ? schoolName || 'School brand' : 'Homecrowd';
   var logoClass = hasProgramLogo
-    ? 'hc-get-started-logo hc-get-started-logo--brand'
-    : 'hc-get-started-logo';
-  var markUrl = getSchoolMarkUrl() || (hasProgramLogo ? getHeaderLogoUrl() : '');
+    ? 'hc-program-lockup-mark hc-program-lockup-mark--brand'
+    : 'hc-program-lockup-mark';
+  // The school's crest, not the program lockup — the header above already
+  // shows the program mark, and repeating it inside the mockup made the two
+  // read as the same brand twice.
+  var markUrl = getSchoolImageUrl();
   var inAppColor = getInAppColor();
   var inAppAccent = getInAppAccentColor();
   var rootClass = schoolMode ? 'hc-get-started hc-get-started--school' : 'hc-get-started';
@@ -200,6 +204,10 @@ export function renderGetStarted(container) {
     inAppStyle +
     '>' +
     '<div class="hc-get-started-top">' +
+    // Figma 1311:9105 — back control left, mark centred, an equal-width spacer
+    // right so the mark sits on the true centre rather than being pushed over.
+    '<div class="hc-get-started-header">' +
+    '<div class="hc-program-lockup">' +
     '<img data-hc-ph="school" src="' +
     escapeAttr(logoUrl) +
     '" alt="' +
@@ -207,8 +215,15 @@ export function renderGetStarted(container) {
     '" class="' +
     logoClass +
     '" />' +
-    '<h1 class="hc-get-started-headline">Turn everyday spending<br />into team support</h1>' +
-    '<p class="hc-get-started-subtitle">No extra cost. No donations. Just the purchases<br />you already make.</p>' +
+    // Only under a partner mark — beneath the Homecrowd wordmark itself it would
+    // just say Homecrowd twice.
+    (hasProgramLogo ? renderPoweredByLockup() : '') +
+    '</div>' +
+    '</div>' +
+    // No <br />: the design sets a fixed measure and lets the copy wrap, so it
+    // reflows correctly at narrow widths instead of breaking in a fixed place.
+    '<h1 class="hc-get-started-headline">Turn everyday spending into team support</h1>' +
+    '<p class="hc-get-started-subtitle">No extra cost. No donations. Just the purchases you already make.</p>' +
     '</div>' +
     (schoolMode ? '' : CurvedLogoCarouselHtml()) +
     '<div class="hc-get-started-hero">' +
@@ -227,9 +242,12 @@ export function renderGetStarted(container) {
     '</div>' +
     buildGetStartedHomePreviewHtml(markUrl) +
     '</div>' +
+    '</div>' +
+    '</div>' +
+    // Page-level, not inside the phone: Figma 1311:9100/9101 wash the whole width
+    // (365.8 against a 230.6 phone) from transparent into solid white, so the
+    // mockup is gone well before the buttons rather than running behind them.
     '<div class="hc-get-started-hero-fade" aria-hidden="true"></div>' +
-    '</div>' +
-    '</div>' +
     '<div class="hc-get-started-actions">' +
     '<button type="button" id="hc-get-started-primary" class="hc-get-started-btn hc-get-started-btn--primary">Get Started</button>' +
     '<button type="button" id="hc-get-started-login" class="hc-get-started-btn hc-get-started-btn--secondary">Log in</button>' +

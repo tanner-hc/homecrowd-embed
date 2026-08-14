@@ -9,6 +9,7 @@ import {
   getSchoolName,
   hasCustomHeaderLogo,
   hasSchoolBrand,
+  renderPoweredByLockup,
 } from '../brand.js';
 import { getPrivacyUrl, getTermsUrl } from '../legal-urls.js';
 import googleIconUrl from '../assets/providers/googleIcon.png';
@@ -74,9 +75,10 @@ export function renderCreateAccount(container, onSocialSuccess) {
   var logoAlt = hasProgramLogo
     ? getSchoolName() || school.name || 'School brand'
     : 'Homecrowd';
+  // Same lockup the pre-login screen uses — see .hc-program-lockup.
   var logoClass = hasProgramLogo
-    ? 'hc-create-account-logo hc-create-account-logo--brand'
-    : 'hc-create-account-logo';
+    ? 'hc-program-lockup-mark hc-program-lockup-mark--brand'
+    : 'hc-program-lockup-mark';
 
   container.innerHTML =
     '<div class="hc-create-account">' +
@@ -84,6 +86,7 @@ export function renderCreateAccount(container, onSocialSuccess) {
     '<button type="button" id="hc-create-account-back" class="hc-create-account-back" aria-label="Back">' +
     chevronLeftSvg +
     '</button>' +
+    '<div class="hc-program-lockup">' +
     '<img data-hc-ph="' +
     (hasProgramLogo ? 'school' : 'none') +
     '" src="' +
@@ -93,6 +96,10 @@ export function renderCreateAccount(container, onSocialSuccess) {
     '" class="' +
     logoClass +
     '" />' +
+    // Only under a partner mark — beneath the Homecrowd wordmark it would just
+    // say Homecrowd twice.
+    (hasProgramLogo ? renderPoweredByLockup() : '') +
+    '</div>' +
     '<span class="hc-create-account-nav-spacer" aria-hidden="true"></span>' +
     '</div>' +
     '<div class="hc-create-account-scroll">' +

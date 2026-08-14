@@ -12,6 +12,7 @@ import {
 import Input from '../base-components/Input.js';
 import { escapeAttr, escapeHtml } from '../base-components/html.js';
 import { getPrivacyUrl, getTermsUrl } from '../legal-urls.js';
+import chevronLeftSvg from '../assets/icons/chevron-left.svg?raw';
 import googleIconUrl from '../assets/providers/googleIcon.png';
 import appleIconUrl from '../assets/providers/appleIcon.png';
 import {
@@ -92,8 +93,12 @@ export function renderLogin(container, onLoginSuccess, options) {
   var shellStyle = schoolColor
     ? ' style="--hc-welcome-card-bg: ' + escapeAttr(schoolColor) + ';"'
     : '';
+  // The powered-by line is rendered separately, immediately above the card
+  // (Figma 1497:9606), not stacked under the mark.
   var logoBlock = hasCustomHeaderLogo() || schoolMode
-    ? '<div class="hc-login-logo hc-login-logo--brand">' + renderBrandLockup() + '</div>'
+    ? '<div class="hc-login-logo hc-login-logo--brand">' +
+      renderBrandLockup({ poweredBy: false }) +
+      '</div>'
     : '<div class="hc-login-logo"><img data-hc-ph="none" src="' +
       escapeAttr(getHeaderLogoUrl()) +
       '" alt="Homecrowd" class="hc-login-logo-img" /></div>';
@@ -167,7 +172,13 @@ export function renderLogin(container, onLoginSuccess, options) {
     '<div class="hc-login-bg"></div>' +
     '<div class="hc-login-overlay">' +
     '<div class="hc-login-container">' +
+    // Same control as /create-account. Positioned rather than in a nav row so the
+    // brand lockup keeps its existing centring in this container.
+    '<button type="button" id="hc-login-back" class="hc-login-back" aria-label="Back">' +
+    chevronLeftSvg +
+    '</button>' +
     logoBlock +
+    (hasCustomHeaderLogo() ? renderPoweredByLockup('hc-login-powered') : '') +
     '<div class="hc-login-card">' +
     '<div class="hc-login-heading">' +
     '<button type="button" id="hc-signup-back-btn" class="hc-signup-back-btn" style="display:none" aria-label="Back to login">' +
@@ -263,6 +274,15 @@ export function renderLogin(container, onLoginSuccess, options) {
   var signupTermsWrap = document.getElementById('hc-signup-terms-wrap');
   var forgotPasswordWrap = document.getElementById('hc-forgot-password-wrap');
   var signupPrompt = document.getElementById('hc-login-signup-prompt');
+  var loginBackBtn = document.getElementById('hc-login-back');
+  if (loginBackBtn) {
+    loginBackBtn.addEventListener('click', function () {
+      // Mirrors /create-account's back: the pre-login screen is where both of
+      // these flows start from.
+      navigate(schoolMode ? '/get-started' : '/youre-in');
+    });
+  }
+
   var signupPromptBtn = document.getElementById('hc-login-signup-link');
   var signupBackBtn = document.getElementById('hc-signup-back-btn');
   var firstNameInput = document.getElementById('hc-first-name');

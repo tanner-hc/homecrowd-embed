@@ -184,10 +184,12 @@ function getPoweredByTextVars(backgroundHex, opacityPercent, fallbackHex) {
   }
   var hex = normalizeHexInput(backgroundHex) || fallbackHex || '#000000';
   if (getRelativeLuminanceFromHex(hex) > 0.179) {
+    // The reference lockup's own colours, so a light background renders exactly
+    // what the login screen does rather than a near-miss.
     return {
       '--hc-powered-by-text': '#111111',
-      '--hc-powered-by-text-label': 'rgba(17, 17, 17, 0.62)',
-      '--hc-powered-by-text-name': 'rgba(17, 17, 17, 0.92)',
+      '--hc-powered-by-text-label': '#696969',
+      '--hc-powered-by-text-name': '#111111',
     };
   }
   return {
@@ -326,6 +328,17 @@ export function getHeaderLogoUrl() {
     return brandConfig.headerLogoUrl;
   }
   return defaultHeaderLogoUrl;
+}
+
+/**
+ * The school's own mark, and only that — no fallback to the program header logo.
+ * getSchoolMarkUrl below deliberately falls through to headerLogoUrl, which makes
+ * it useless when the point is to show the school crest *instead of* the program
+ * lockup (the phone mockup on /get-started).
+ */
+export function getSchoolImageUrl() {
+  if (!brandConfig) return '';
+  return String(brandConfig.schoolImageUrl || brandConfig.schoolImage || '').trim();
 }
 
 export function getSchoolMarkUrl() {
@@ -497,9 +510,15 @@ export function renderPoweredByLockup(className) {
   );
 }
 
-export function renderBrandLockup() {
+/**
+ * @param {{ poweredBy?: boolean }} [opts] — pass `{ poweredBy: false }` to emit the
+ * mark alone. The login screen (Figma 1497:9606) sits the powered-by line directly
+ * above its card rather than under the mark, so it renders the two separately.
+ */
+export function renderBrandLockup(opts) {
   var src = getHeaderLogoUrl();
   var alt = hasCustomHeaderLogo() ? 'School brand' : 'Homecrowd';
+  var withPoweredBy = !(opts && opts.poweredBy === false);
   if (!hasCustomHeaderLogo()) {
     return '<div class="hc-header"><img data-hc-ph="none" src="' + escapeHtml(src) + '" alt="' + escapeHtml(alt) + '" class="hc-header-logo" /></div>';
   }
@@ -510,7 +529,7 @@ export function renderBrandLockup() {
     '" alt="' +
     escapeHtml(alt) +
     '" class="hc-header-logo hc-header-logo--brand" />' +
-    renderPoweredByLockup() +
+    (withPoweredBy ? renderPoweredByLockup() : '') +
     '</div>'
   );
 }
