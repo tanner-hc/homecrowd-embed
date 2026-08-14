@@ -1,3 +1,4 @@
+import * as api from '../api.js';
 import { navigate } from '../router.js';
 import { showError } from '../base-components/toastApi.js';
 import { mountSignupFieldLayout } from '../base-components/SignupFieldLayout.js';
@@ -26,11 +27,33 @@ export function clearPendingSignupFullName() {
   } catch (_e) { }
 }
 
-export function renderEnterFullName(container) {
-  var email = getPendingSignupEmail();
-  if (!email) {
-    navigate('/create-account');
-    return function () {};
+function splitFullName(fullName) {
+  var parts = String(fullName || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) {
+    return { first_name: '', last_name: '' };
+  }
+  if (parts.length === 1) {
+    return { first_name: parts[0], last_name: parts[0] };
+  }
+  return {
+    first_name: parts[0],
+    last_name: parts.slice(1).join(' '),
+  };
+}
+
+export function renderEnterFullName(container, options) {
+  options = options || {};
+  var completeProfile = !!options.completeProfile;
+  var saving = false;
+  if (!completeProfile) {
+    var email = getPendingSignupEmail();
+    if (!email) {
+      navigate('/create-account');
+      return function () {};
+    }
   }
 
   var layout = mountSignupFieldLayout(container, {
@@ -38,18 +61,50 @@ export function renderEnterFullName(container) {
     title: 'Enter your full name',
     subtitle: 'This will be shown on your profile',
     placeholder: 'Full Name',
-    backTo: '/create-account',
+    backTo: completeProfile ? '/account-created' : '/create-account',
     autoCapitalize: 'words',
     autoComplete: 'name',
     continueDisabled: true,
     onContinue: function (value) {
+      if (saving) return;
       var result = validateFullName(value);
       if (!result.ok) {
         showError(result.message || 'Please enter your full name');
         return;
       }
-      setPendingSignupFullName(result.data);
-      navigate('/enter-password');
+      if (!completeProfile) {
+        setPendingSignupFullName(result.data);
+        navigate('/enter-password');
+        return;
+      }
+      var names = splitFullName(result.data);
+      if (!names.first_name || !names.last_name) {
+        showError('Please enter first and last name separated by a space');
+        return;
+      }
+      saving = true;
+      if (layout) layout.setContinueDisabled(true);
+      api
+        .updateUserProfile({
+          first_name: names.first_name,
+          last_name: names.last_name,
+        })
+        .then(function () {
+          return api.fetchCurrentUser();
+        })
+        .then(function (user) {
+          if (typeof options.onComplete === 'function') {
+            return options.onComplete(user);
+          }
+          navigate('/account-created');
+        })
+        .catch(function (err) {
+          saving = false;
+          showError((err && err.message) || 'Failed to save your name. Please try again.');
+          if (layout) {
+            layout.setContinueDisabled(!String(layout.getValue() || '').trim());
+          }
+        });
     },
   });
 

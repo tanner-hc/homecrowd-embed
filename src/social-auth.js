@@ -48,6 +48,74 @@ function randomString() {
   return out;
 }
 
+function parseJsonIfNeeded(value) {
+  if (typeof value !== 'string') return value;
+  var trimmed = value.trim();
+  if (!trimmed) return value;
+  var first = trimmed.charAt(0);
+  if (first !== '{' && first !== '[') return value;
+  try {
+    return JSON.parse(trimmed);
+  } catch (_e) {
+    return value;
+  }
+}
+
+function pickNamePart(source, keys) {
+  if (!source || typeof source !== 'object') return '';
+  for (var i = 0; i < keys.length; i++) {
+    var raw = source[keys[i]];
+    if (raw == null) continue;
+    var value = String(raw).trim();
+    if (value) return value;
+  }
+  return '';
+}
+
+function nameFromAppleResponse(response) {
+  if (!response || typeof response !== 'object') return null;
+  var authorization = response.authorization && typeof response.authorization === 'object'
+    ? response.authorization
+    : {};
+  var rawUser = response.user || response.userinfo || authorization.user || null;
+  var user = parseJsonIfNeeded(rawUser);
+  if (!user || typeof user !== 'object') return null;
+
+  var name = parseJsonIfNeeded(user.name || user.fullName || user.full_name || null);
+  var firstName = '';
+  var lastName = '';
+
+  if (name && typeof name === 'object') {
+    firstName = pickNamePart(name, [
+      'firstName',
+      'first_name',
+      'givenName',
+      'given_name',
+      'nickname',
+    ]);
+    lastName = pickNamePart(name, [
+      'lastName',
+      'last_name',
+      'familyName',
+      'family_name',
+    ]);
+  } else if (typeof name === 'string' && name.trim()) {
+    var parts = name.trim().split(/\s+/).filter(Boolean);
+    firstName = parts[0] || '';
+    lastName = parts.slice(1).join(' ');
+  }
+
+  if (!firstName) {
+    firstName = pickNamePart(user, ['firstName', 'first_name', 'givenName', 'given_name']);
+  }
+  if (!lastName) {
+    lastName = pickNamePart(user, ['lastName', 'last_name', 'familyName', 'family_name']);
+  }
+
+  if (!firstName && !lastName) return null;
+  return { first_name: firstName, last_name: lastName };
+}
+
 function loadScript(src) {
   return new Promise(function (resolve, reject) {
     if (window.AppleID && window.AppleID.auth) {
@@ -208,6 +276,14 @@ export function signInWithApple() {
     if (!window.AppleID || !window.AppleID.auth) {
       throw new Error('Sign in with Apple is not available');
     }
+    var eventUser = null;
+    function onAppleSuccess(event) {
+      var detail = event && event.detail;
+      if (detail && (detail.user || detail.userinfo)) {
+        eventUser = detail.user || detail.userinfo;
+      }
+    }
+    document.addEventListener('AppleIDSignInOnSuccess', onAppleSuccess);
     window.AppleID.auth.init({
       clientId: appleClientId(),
       scope: 'name email',
@@ -216,23 +292,26 @@ export function signInWithApple() {
       state: randomString(),
       nonce: randomString(),
     });
-    return window.AppleID.auth.signIn();
+    return window.AppleID.auth.signIn().then(
+      function (response) {
+        document.removeEventListener('AppleIDSignInOnSuccess', onAppleSuccess);
+        if (response && !response.user && eventUser) {
+          response = Object.assign({}, response, { user: eventUser });
+        }
+        return response;
+      },
+      function (err) {
+        document.removeEventListener('AppleIDSignInOnSuccess', onAppleSuccess);
+        throw err;
+      },
+    );
   }).then(function (response) {
     var authorization = response && response.authorization ? response.authorization : {};
     var identityToken = authorization.id_token;
     if (!identityToken) {
       throw new Error('Sign in with Apple failed: missing identity token');
     }
-    var name = null;
-    var user = response && response.user;
-    if (user && user.name) {
-      var firstName = user.name.firstName || user.name.givenName || '';
-      var lastName = user.name.lastName || user.name.familyName || '';
-      if (firstName || lastName) {
-        name = { first_name: firstName, last_name: lastName };
-      }
-    }
-    return { identity_token: identityToken, name: name };
+    return { identity_token: identityToken, name: nameFromAppleResponse(response) };
   }).catch(function (err) {
     var code = err && (err.error || err.code || err.message);
     if (

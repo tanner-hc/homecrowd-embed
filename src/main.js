@@ -297,13 +297,25 @@ function completeLoginState(nextUser, tokenUsed) {
   });
 }
 
+function userHasFullName(currentUser) {
+  if (!currentUser || typeof currentUser !== 'object') return false;
+  var first = String(currentUser.first_name || currentUser.firstName || '').trim();
+  var last = String(currentUser.last_name || currentUser.lastName || '').trim();
+  return !!(first && last);
+}
+
 async function finishEmbedSocialLogin(result) {
   var nextUser = result && result.user ? result.user : null;
   var isNewUser = !!(result && result.isNewUser);
   if (!nextUser) {
     nextUser = await api.fetchCurrentUser();
   }
+  nextUser = await assignLockedEmbedSchoolIfNeeded(nextUser);
   completeLoginState(nextUser);
+  if (isNewUser && !userHasFullName(nextUser)) {
+    navigate('/enter-full-name');
+    return;
+  }
   if (isNewUser) {
     navigate('/account-created');
     return;
@@ -896,7 +908,7 @@ function isPublicAuthPath(pathOnly) {
 }
 
 function isSignupOnboardingPath(pathOnly) {
-  return pathOnly === '/account-created';
+  return pathOnly === '/account-created' || pathOnly === '/enter-full-name';
 }
 
 function getActiveSchool(currentUser) {
@@ -918,6 +930,25 @@ function getLockedEmbedSchoolId() {
     normalizeSchoolId(getEmbedSchoolId()) ||
     getSchoolIdFromUrl()
   );
+}
+
+async function assignLockedEmbedSchoolIfNeeded(currentUser) {
+  var lockedId = getLockedEmbedSchoolId();
+  if (!lockedId || hasActiveSchool(currentUser)) {
+    return currentUser;
+  }
+  try {
+    var assignResult = await api.assignSchool(lockedId);
+    if (assignResult && assignResult.auto_raffle_entries > 0) {
+      pendingAutoRaffleModal = {
+        count: assignResult.auto_raffle_entries,
+        titles: assignResult.raffle_titles,
+      };
+    }
+    return (await api.fetchCurrentUser()) || currentUser;
+  } catch (_e) {
+    return currentUser;
+  }
 }
 
 function routeAfterAuth(currentUser) {
@@ -1288,13 +1319,20 @@ function render(route) {
 
   if (pathOnly === '/enter-full-name') {
     appEl.innerHTML = '';
-    renderEnterFullName(appEl);
+    renderEnterFullName(appEl, {
+      completeProfile: !!user,
+      onComplete: function (updatedUser) {
+        if (updatedUser) completeLoginState(updatedUser);
+        navigate('/account-created');
+      },
+    });
     return;
   }
 
   if (pathOnly === '/enter-password') {
     appEl.innerHTML = '';
     renderEnterPassword(appEl, async function (u) {
+      u = await assignLockedEmbedSchoolIfNeeded(u);
       completeLoginState(u);
       navigate('/account-created');
     });

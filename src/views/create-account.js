@@ -51,7 +51,13 @@ export function clearPendingSignupEmail() {
 
 export function renderCreateAccount(container, onSocialSuccess) {
   var school = getPendingSignupSchool() || {};
-  var schoolId = school.id || getEmbedSchoolId() || '';
+  var params = new URLSearchParams(window.location.search);
+  var urlSchoolId = String(
+    params.get('schoolId') || params.get('schoolID') || params.get('school_id') || '',
+  )
+    .trim()
+    .replace(/^\/+|\/+$/g, '');
+  var schoolId = school.id || getEmbedSchoolId() || urlSchoolId || '';
   var checkingEmail = false;
   var emailExists = false;
   var socialBusy = false;

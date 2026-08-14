@@ -386,8 +386,14 @@ export async function appleLogin(identityToken, nameFromApple, schoolId) {
     client_context: embedClientContext(),
   };
   if (nameFromApple && typeof nameFromApple === 'object') {
-    payload.first_name = nameFromApple.first_name || '';
-    payload.last_name = nameFromApple.last_name || '';
+    var firstName = String(
+      nameFromApple.first_name || nameFromApple.firstName || nameFromApple.givenName || '',
+    ).trim();
+    var lastName = String(
+      nameFromApple.last_name || nameFromApple.lastName || nameFromApple.familyName || '',
+    ).trim();
+    if (firstName) payload.first_name = firstName;
+    if (lastName) payload.last_name = lastName;
   }
   if (schoolId) {
     payload.school_id = schoolId;

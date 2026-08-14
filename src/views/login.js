@@ -79,6 +79,9 @@ function setFieldErrorState(el, hasError) {
 
 export function renderLogin(container, onLoginSuccess, options) {
   var schoolId = options && options.schoolId ? String(options.schoolId).trim() : '';
+  if (!schoolId) {
+    schoolId = String(getEmbedSchoolId() || '').trim();
+  }
   var initialEmail = options && options.initialEmail ? String(options.initialEmail).trim() : '';
   var lockEmail = !!(options && options.lockEmail);
   var initialNotice = options && options.notice ? String(options.notice) : '';
@@ -588,7 +591,7 @@ export function renderLogin(container, onLoginSuccess, options) {
     if (socialBusy) return;
     setSocialBusy(true);
     errorEl.style.display = 'none';
-    var run = provider === 'apple' ? authenticateWithApple() : authenticateWithGoogle();
+    var run = provider === 'apple' ? authenticateWithApple(schoolId) : authenticateWithGoogle(schoolId);
     run
       .then(function (result) {
         result = result || {};
@@ -620,7 +623,7 @@ export function renderLogin(container, onLoginSuccess, options) {
   if (pendingGoogle && pendingGoogle.id_token) {
     setSocialBusy(true);
     api
-      .googleLogin(pendingGoogle.id_token)
+      .googleLogin(pendingGoogle.id_token, schoolId)
       .then(function (result) {
         result = result || {};
         result.source = 'google_sign_in';
