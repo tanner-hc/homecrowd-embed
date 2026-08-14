@@ -1,4 +1,5 @@
 import { hasNativeBridge, postToNative } from './bridge.js';
+import { isAndroid, isIOS } from './platform.js';
 
 function merchantRedirectPageUrl() {
   var base = '/';
@@ -15,6 +16,12 @@ export function openMerchantUrl(url, title, options) {
   options = options || {};
   if (!url) return;
   if (url.indexOf('http') !== 0) url = 'https://' + url;
+
+  if (isIOS() || isAndroid()) {
+    if (typeof options.showSpinner === 'function') options.showSpinner();
+    window.location.assign(url);
+    return;
+  }
 
   if (hasNativeBridge()) {
     try {

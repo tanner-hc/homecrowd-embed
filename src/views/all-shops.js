@@ -5,8 +5,7 @@ import { buildAppHeaderHtml, attachAppHeader } from '../base-components/AppHeade
 import SearchBar from '../base-components/SearchBar.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { getPointMultiplierValue } from '../pointMultiplier.js';
-import { showWebviewOverlay } from '../webview-overlay.js';
-import { hasNativeBridge, postToNative } from '../bridge.js';
+import { openMerchantUrl } from '../open-merchant-url.js';
 import storeSvg from '../assets/icons/store.svg?raw';
 import bagSvg from '../assets/icons/bag.svg?raw';
 import locationSvg from '../assets/icon-location.svg?raw';
@@ -308,11 +307,7 @@ function openShop(shop) {
     var merchantId = shop.wildfireMerchantId || shop.id;
     var url = api.buildWildfireRedirectUrl(merchantId);
     if (url) {
-      if (hasNativeBridge()) {
-        postToNative('homecrowd:open-url', { url: url, title: shop.name || '' });
-      } else {
-        showWebviewOverlay(url, { title: shop.name || 'Offer' });
-      }
+      openMerchantUrl(url, shop.name || '');
     }
   }
 }

@@ -672,7 +672,7 @@ function openFeaturedClickStore(store) {
   if (merchantId && (store.offer_type === 'click' || !store.offer_id)) {
     var url = api.buildWildfireRedirectUrl(merchantId);
     if (url) {
-      showWebviewOverlay(url, { title: store.name || 'Offer' });
+      openMerchantUrl(url, store.name || 'Offer');
       return;
     }
   }
