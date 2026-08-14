@@ -5434,16 +5434,24 @@ button.hc-shop-detail-cats--expandable {
   line-height: 1.1;
 }
 
-.hc-shop-detail-card-banner {
+/* Linked-card notice — Figma 1427:14539. One definition shared by the offer detail
+   page and the store map; see base-components/LinkedCardNotice.js. */
+.hc-linked-card-notice {
   position: relative;
-  margin-bottom: 12px;
   padding: 20px;
   border-radius: 12px;
   background: #f0f9ff;
   box-sizing: border-box;
 }
 
-.hc-shop-detail-card-banner-main {
+/* Floating over the map rather than sitting in page flow, so it carries the
+   design's shadow and leaves room for the corner dismiss. */
+.hc-linked-card-notice--dismissible {
+  padding: 12px 16px;
+  box-shadow: 0 0 22.8px 0 rgba(0, 0, 0, 0.1);
+}
+
+.hc-linked-card-notice-main {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
@@ -5451,7 +5459,12 @@ button.hc-shop-detail-cats--expandable {
   min-width: 0;
 }
 
-.hc-shop-detail-card-icon {
+.hc-linked-card-notice--dismissible .hc-linked-card-notice-main {
+  /* Clear of the 44px dismiss target in the corner. */
+  padding-right: 28px;
+}
+
+.hc-linked-card-notice-icon {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
@@ -5461,21 +5474,21 @@ button.hc-shop-detail-cats--expandable {
   color: #000;
 }
 
-/* Figma draws this as a 21x15 glyph inside a 24px box, shown at 20px — so the
-   leaf is 17.5x12.5 in the 20px slot above. card-filled.svg is the bare glyph
-   (viewBox 0 0 21 15), hence both dimensions set rather than a square size. */
-.hc-shop-detail-card-icon svg {
+/* Figma draws this as a 21x15 glyph inside a 24px box, shown at 20px — so the leaf
+   is 17.5x12.5 in the 20px slot. card-filled.svg is the bare glyph (viewBox
+   0 0 21 15), hence both dimensions set rather than a square size. */
+.hc-linked-card-notice-icon svg {
   width: 17.5px;
   height: 12.5px;
   display: block;
 }
 
-.hc-shop-detail-card-copy {
+.hc-linked-card-notice-copy {
   flex: 1;
   min-width: 0;
 }
 
-.hc-shop-detail-card-title {
+.hc-linked-card-notice-title {
   font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 16px;
   font-weight: 500;
@@ -5483,7 +5496,7 @@ button.hc-shop-detail-cats--expandable {
   color: #000;
 }
 
-.hc-shop-detail-card-cta {
+.hc-linked-card-notice-cta {
   flex-shrink: 0;
   border: none;
   cursor: pointer;
@@ -5498,8 +5511,30 @@ button.hc-shop-detail-cats--expandable {
   -webkit-tap-highlight-color: transparent;
 }
 
-.hc-shop-detail-card-cta:active {
+.hc-linked-card-notice-cta:active {
   opacity: 0.85;
+}
+
+.hc-linked-card-notice-dismiss {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-linked-card-notice-dismiss svg {
+  width: 11px;
+  height: 11px;
+  display: block;
 }
 
 .hc-shop-detail-tips {
@@ -5625,12 +5660,9 @@ button.hc-shop-detail-cats--expandable {
   font-family: 'Baikal-Regular', var(--hc-font);
 }
 
+/* Spacing only — the notice itself is styled by .hc-linked-card-notice. */
 .hc-shop-detail-card-slot {
   margin-bottom: 12px;
-}
-
-.hc-shop-detail-card-slot .hc-shop-detail-card-banner {
-  margin-bottom: 0;
 }
 
 .hc-offer-logo-wrap {
@@ -6852,6 +6884,40 @@ button.hc-shop-detail-cats--expandable {
   min-height: 44px;
   border: 0.5px solid rgba(0, 0, 0, 0.5);
   align-self: stretch;
+}
+
+/* Figma 1000:10548 — grey capsule, no border, larger icon and type than the
+   default bordered field. */
+.hc-bc-search-bar--pill {
+  background: #f8f8f8;
+  border: none;
+  border-radius: 53px;
+  height: 48px;
+  min-height: 48px;
+  padding: 10px 18px;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+.hc-bc-search-bar--pill .hc-bc-search-bar-icon {
+  width: 24px;
+  height: 24px;
+  color: #888;
+}
+
+.hc-bc-search-bar--pill .hc-bc-search-bar-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.hc-bc-search-bar--pill .hc-bc-search-bar-input {
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-size: 16px;
+  line-height: normal;
+}
+
+.hc-bc-search-bar--pill .hc-bc-search-bar-input::placeholder {
+  color: #888;
 }
 
 .hc-bc-search-bar--error {
@@ -10554,126 +10620,30 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-al-sticky-block {
   background: #ffffff;
-  padding-top: 2px;
-  padding-bottom: 10px;
+  padding-top: 18px;
+  /* No padding here: .hc-tx-row already opens with 14px of its own, which is the
+     whole gap down to the first row. Anything more and the search floats between
+     the header and the list instead of sitting with it. */
+  padding-bottom: 0;
 }
 
 .hc-al-search-wrap {
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 
-.hc-al-search {
+/* The bar is .hc-bc-search-bar--pill now; this only has to make it fill the row,
+   since the shared component sets itself to align-self: stretch inside a flex
+   parent and this wrapper is a plain block. */
+.hc-al-search-wrap .hc-bc-search-bar {
   width: 100%;
   box-sizing: border-box;
-  font-family: 'Baikal-Regular', var(--hc-font);
 }
 
+/* Holds .hc-tx-row items, same as the home list — those carry their own
+   padding and spacing, so this only needs to stack them. */
 .hc-al-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.hc-al-row {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--hc-bg-secondary);
-  padding: 20px;
-  border-radius: 12px;
-  gap: 12px;
-}
-
-.hc-al-row-left {
-  flex: 1;
-  min-width: 0;
-}
-
-.hc-al-row-title {
-  font-size: 15px;
-  font-weight: 300;
-  color: #000;
-  margin-bottom: 6px;
-  line-height: 15px;
-  letter-spacing: -0.15px;
-  font-family: 'Baikal-Book', var(--hc-font);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.hc-al-row-sub {
-  font-size: 12px;
-  color: #9ca3af;
-  font-family: 'Baikal-Book', var(--hc-font);
-  font-weight: 300;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.hc-al-row-right {
-  flex-shrink: 0;
-  text-align: right;
-  max-width: 42%;
-}
-
-.hc-al-pts {
-  font-size: 15px;
-  font-weight: 400;
-  letter-spacing: -0.15px;
-  margin-bottom: 4px;
-  font-family: 'Baikal-Book', var(--hc-font);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.hc-al-pts--earned {
-  color: #16a34a;
-}
-
-.hc-al-pts--spent {
-  color: #dc2626;
-}
-
-.hc-al-pts--adjustment {
-  color: #ca8a04;
-}
-
-.hc-al-pts--expired {
-  color: #6b7280;
-}
-
-.hc-al-pts--refund {
-  color: #2563eb;
-}
-
-.hc-al-pts--stripe {
-  color: #2563eb;
-}
-
-.hc-al-pts--default {
-  color: #000;
-}
-
-.hc-al-balance {
-  font-size: 12px;
-  color: #000;
-  font-family: 'Baikal-Book', var(--hc-font);
-  font-weight: 300;
-  letter-spacing: -0.12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.hc-al-raffle {
-  font-size: 15px;
-  font-weight: 300;
-  color: #9ca3af;
-  letter-spacing: -0.15px;
 }
 
 .hc-al-empty {
@@ -14693,6 +14663,28 @@ button.hc-shop-detail-cats--expandable {
   background: #f2f2f2;
 }
 
+/* Access Travel sends a property name but no artwork, so the row gets a bare
+   plane glyph — no tile, no fill, same treatment as the brand mark above. */
+.hc-tx-avatar--travel {
+  background: transparent;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.hc-tx-travel-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+}
+
+/* Native aspect is 17x19; both set so the glyph scales rather than stretches. */
+.hc-tx-travel-icon svg {
+  width: 21.5px;
+  height: 24px;
+  display: block;
+}
+
 /* Sizing and fit come from img[data-hc-square]. */
 .hc-tx-avatar-img {
   display: block;
@@ -15592,6 +15584,8 @@ button.hc-shop-detail-cats--expandable {
   height: 100%;
   overflow: hidden;
   background: #f0f0f0;
+  /* Positioning context for .hc-stores-map-overlay, which floats over the map. */
+  position: relative;
 }
 
 .hc-stores-map-page > .hc-app-header {
@@ -15599,6 +15593,129 @@ button.hc-shop-detail-cats--expandable {
   background: #fff;
   z-index: 40;
 }
+
+/* Figma 1209:7647 — search row and linked-card notice float over the map rather
+   than sitting in a header band, so the map runs to the top of the screen.
+   pointer-events are handed back per child so the map stays draggable in the gaps
+   between them. */
+.hc-stores-map-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 8px 16px 0;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.hc-stores-map-overlay > * {
+  pointer-events: auto;
+}
+
+.hc-stores-map-top-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.hc-stores-map-back {
+  width: 41px;
+  height: 41px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 20.5px;
+  background: #f8f8f8;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.08));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #000;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-stores-map-back svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+/* Pill variant of the shared search bar: one rounded field with the magnifier
+   inside it, no separate submit chip and no location pin. */
+.hc-offers-map-location-search--pill {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hc-offers-map-location-search--pill .hc-offers-map-location-search-row {
+  height: 44px;
+  gap: 8px;
+  padding: 10px 18px;
+  /* The base row is a bordered white rectangle with a blue submit chip pinned to
+     its right edge; the pill is a soft grey capsule with the icon inline, so the
+     border, radius and the submit's absolute positioning all have to be undone. */
+  border: none;
+  border-radius: 53px;
+  align-items: center;
+  background: #f8f8f8;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.08));
+  box-sizing: border-box;
+}
+
+.hc-offers-map-location-search--pill .hc-offers-map-search-submit {
+  position: static;
+  order: -1;
+  width: 24px;
+  height: 24px;
+  min-width: 0;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #000;
+}
+
+.hc-offers-map-location-search--pill .hc-offers-map-search-submit svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.hc-offers-map-location-search--pill .hc-offers-map-location-field {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: auto;
+  /* Base reserves 50px on the right for the pinned submit chip; the pill's icon is
+     inline on the left, so that reservation has to go or the text sits short. */
+  min-height: 0;
+  padding: 0;
+  padding-right: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hc-offers-map-location-search--pill .hc-offers-map-location-input {
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-size: 16px;
+  color: #000;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.hc-offers-map-location-search--pill .hc-offers-map-location-input::placeholder {
+  color: #888;
+}
+
 
 .hc-stores-map-body {
   flex: 1 1 auto;
@@ -15656,9 +15773,13 @@ button.hc-shop-detail-cats--expandable {
   bottom: 0;
 }
 
+/* Centred rather than pinned to the top: these are transient status cards, and the
+   search row and card notice now float over the top of this page. `auto` on the
+   block axis keeps them clear of both without hard-coding the overlay's height,
+   which varies with whether the linked-card notice is showing. */
 .hc-stores-map-body .hc-offers-location-card,
 .hc-stores-map-body .hc-offers-no-stores-card {
-  margin: 16px;
+  margin: auto 16px;
 }
 
 .hc-content.hc-content--stores-map.hc-content--with-tab-bar {

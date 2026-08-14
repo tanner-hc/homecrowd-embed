@@ -1,7 +1,6 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
-import ScreenTitle from '../base-components/ScreenTitle.js';
 import SecondaryButton from '../base-components/SecondaryButton.js';
 import MainButton from '../base-components/MainButton.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
@@ -176,9 +175,6 @@ async function loadProfile(container) {
   var html = '';
   html += '<div id="hc-profile-root" class="hc-profile-view">';
   html += '<div class="hc-profile-sticky-head">';
-  html += '<div class="hc-screen-title hc-profile-title-wrap">';
-  html += ScreenTitle({ title: 'Profile' });
-  html += '</div>';
   html += profileCardHtml(cardUser);
   html += '</div>';
   html += '<div class="hc-profile-scroll">';

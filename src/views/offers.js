@@ -5,6 +5,8 @@ import shopIconUrl from '../assets/icons/store.svg';
 import cardIconSvg from '../assets/icons/card-filled.svg?raw';
 import bagIconSvg from '../assets/icons/bag.svg?raw';
 import chevronDownSvg from '../assets/icons/chevron-down-sm.svg?raw';
+import chevronLeftSvg from '../assets/icons/chevron-left.svg?raw';
+import LinkedCardNotice from '../base-components/LinkedCardNotice.js';
 import rowChevronSvg from '../assets/icons/chevron-right-sm.svg?raw';
 import { resolveCardLinkStatus } from '../cardLinkStatus.js';
 import { mountBrowserExtensionInline } from './browser-extension.js';
@@ -287,21 +289,93 @@ export function renderOffers(container) {
     });
 }
 
+// Deliberately in memory rather than local/sessionStorage: dismissing should quiet
+// the notice for the rest of this visit — including navigating off the map and
+// back — but a reload starts clean and shows it again.
+var mapCardBannerDismissedThisLoad = false;
+
+function mapCardBannerDismissed() {
+  return mapCardBannerDismissedThisLoad;
+}
+
+function dismissMapCardBanner() {
+  mapCardBannerDismissedThisLoad = true;
+}
+
+/**
+ * The linked-card notice floating above the map — the same LinkedCardNotice the
+ * offer detail page uses (Figma 1427:14539), plus a dismiss because here it sits
+ * over the map rather than in the page flow.
+ *
+ * The pill's job follows what the member has: Manage when a card is linked, Link
+ * when not. The copy is identical either way, so the notice is worth showing in
+ * both states. Once dismissed it stays dismissed across visits.
+ */
+function mountMapCardBanner(container) {
+  var slot = container.querySelector('#hc-stores-map-card-slot');
+  if (!slot || mapCardBannerDismissed()) return;
+
+  api
+    .getCards()
+    .then(function (raw) {
+      if (!container.isConnected) return;
+      var cards = (raw && raw.results) || (Array.isArray(raw) ? raw : []) || [];
+      var linked = cards.some(function (c) {
+        return c && c.last4 && String(c.status || 'active').toLowerCase() === 'active';
+      });
+
+      slot.innerHTML = LinkedCardNotice({
+        dismissible: true,
+        actionLabel: linked ? 'Manage' : 'Link',
+        actionAttr: 'data-map-card-action',
+      });
+
+      var actionBtn = slot.querySelector('[data-map-card-action]');
+      if (actionBtn) {
+        actionBtn.addEventListener('click', function () {
+          navigate(linked ? '/cards' : '/cards/link-intro');
+        });
+      }
+      var dismissBtn = slot.querySelector('[data-linked-card-dismiss]');
+      if (dismissBtn) {
+        dismissBtn.addEventListener('click', function () {
+          dismissMapCardBanner();
+          slot.innerHTML = '';
+        });
+      }
+    })
+    .catch(function () {
+      // A card lookup failure just means no notice; the map is the page.
+    });
+}
+
 export function renderStoresMap(container) {
+  // Figma 1209:7647 — no app header here. The back button lives in the search row
+  // and both it and the linked-card notice float over a full-bleed map.
   container.innerHTML =
     '<div class="hc-stores-map-page">' +
-    buildAppHeaderHtml({ showBack: true }) +
+    '<div class="hc-stores-map-overlay">' +
+    '<div class="hc-stores-map-top-row">' +
+    '<button type="button" class="hc-stores-map-back" id="hc-stores-map-back" aria-label="Back">' +
+    chevronLeftSvg +
+    '</button>' +
+    MapLocationSearchBar({ variant: 'pill' }) +
+    '</div>' +
+    '<div id="hc-stores-map-card-slot"></div>' +
+    '</div>' +
     '<div class="hc-stores-map-body">' +
     renderLocationMapSection({ includeSearch: false }) +
     '</div>' +
     '</div>';
 
-  attachAppHeader(container, {
-    showBack: true,
-    onBackPress: function () {
+  var backBtn = container.querySelector('#hc-stores-map-back');
+  if (backBtn) {
+    backBtn.addEventListener('click', function () {
       navigate('/offers');
-    },
-  });
+    });
+  }
+
+  mountMapCardBanner(container);
 
   container._hcPendingMapSelect = consumePendingMapMerchantSelection();
 

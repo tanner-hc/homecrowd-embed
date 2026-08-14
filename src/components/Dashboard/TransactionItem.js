@@ -1,6 +1,7 @@
 import { escapeAttr, escapeHtml } from '../../base-components/html.js';
 import { getHeaderLogoUrl, getProgramName, hasCustomHeaderLogo } from '../../brand.js';
 import hcIconUrl from '../../assets/logos/icon.png';
+import planeSvg from '../../assets/icons/plane-filled.svg?raw';
 
 /**
  * Who issued a points row — the school's rewards program ("Utah Rewards") on a
@@ -46,8 +47,23 @@ function buildFallbackAvatarHtml(schoolLogoUrl) {
 }
 
 /**
+ * Avatar for travel bookings. Access Travel's report carries no supplier image —
+ * only a property name — so the row gets the plane glyph the Travel tab uses
+ * rather than the brand fallback, which would make a booking read as a bonus.
+ */
+function buildTravelAvatarHtml() {
+  return (
+    '<div class="hc-tx-avatar hc-tx-avatar--travel">' +
+    '<span class="hc-tx-travel-icon" aria-hidden="true">' +
+    planeSvg +
+    '</span>' +
+    '</div>'
+  );
+}
+
+/**
  * Where a purchase came from: 'olive' (in-person, card-linked), 'wildfire'
- * (online), or '' for anything else.
+ * (online), 'travel' (Access Travel booking), or '' for anything else.
  *
  * The backend sends `source` outright; the id fields are the fallback so the
  * embed still behaves against a backend that predates that field. The merchant
@@ -57,9 +73,10 @@ function buildFallbackAvatarHtml(schoolLogoUrl) {
 function transactionSource(transaction) {
   if (!transaction) return '';
   var declared = String(transaction.source || '').trim().toLowerCase();
-  if (declared === 'olive' || declared === 'wildfire') return declared;
+  if (declared === 'olive' || declared === 'wildfire' || declared === 'travel') return declared;
   if (transaction.wildfire_merchant_id) return 'wildfire';
   if (String(transaction.olive_merchant_id || '').trim()) return 'olive';
+  if (String(transaction.travel_merchant_name || '').trim()) return 'travel';
   return '';
 }
 
@@ -70,6 +87,7 @@ function transactionMerchantDisplayName(transaction) {
     (m && m.name) ||
     transaction.merchant_name ||
     transaction.wildfire_merchant_name ||
+    transaction.travel_merchant_name ||
     transaction.description ||
     '';
   return String(raw || 'Purchase').trim();
@@ -152,11 +170,19 @@ export function buildTransactionItemHtml(transaction, helpers) {
   // online, and Safari-extension purchases, which are Wildfire rows too (same
   // ingest, only the application id differs). Nothing here is cropped.
   var source = transactionSource(transaction);
-  var avatarHtml = logoUrl && (source === 'olive' || source === 'wildfire')
-    ? '<div class="hc-tx-avatar hc-tx-avatar--merchant"><img data-hc-ph="store" data-hc-square src="' +
+  var avatarHtml;
+  if (logoUrl && (source === 'olive' || source === 'wildfire')) {
+    avatarHtml =
+      '<div class="hc-tx-avatar hc-tx-avatar--merchant"><img data-hc-ph="store" data-hc-square src="' +
       escapeAttr(logoUrl) +
-      '" alt="" class="hc-tx-avatar-img" /></div>'
-    : buildFallbackAvatarHtml(schoolLogoUrl);
+      '" alt="" class="hc-tx-avatar-img" /></div>';
+  } else if (source === 'travel') {
+    // Access Travel sends no supplier artwork, so the product line gets a glyph
+    // rather than the school mark — otherwise every booking looks like a bonus.
+    avatarHtml = buildTravelAvatarHtml();
+  } else {
+    avatarHtml = buildFallbackAvatarHtml(schoolLogoUrl);
+  }
 
   var rightHtml = '';
   if (transaction.isStripeRewardPurchase) {
@@ -168,14 +194,21 @@ export function buildTransactionItemHtml(transaction, helpers) {
       '</div>';
   } else {
     var pts = Number(transaction.points_earned) || 0;
+    // Ledger-backed rows (the activity log) carry points but no dollar amount, so
+    // the money line is omitted rather than rendered as a misleading $0.00. An
+    // explicit 0 still prints — only a missing amount drops the line.
+    var amtHtml =
+      transaction.amount == null
+        ? ''
+        : '<div class="hc-tx-amt">$' +
+          escapeHtml(parseFloat(transaction.amount).toFixed(2)) +
+          '</div>';
     rightHtml =
       '<div class="hc-tx-right">' +
       '<div class="hc-tx-pts">' +
       escapeHtml(pts > 0 ? '+' + pts + ' pts' : pts + ' pts') +
       '</div>' +
-      '<div class="hc-tx-amt">$' +
-      escapeHtml(transaction.amount ? parseFloat(transaction.amount).toFixed(2) : '0.00') +
-      '</div>' +
+      amtHtml +
       '</div>';
   }
 

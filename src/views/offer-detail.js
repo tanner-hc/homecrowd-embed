@@ -6,7 +6,7 @@ import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import { buildAppHeaderHtml, attachAppHeader } from '../base-components/AppHeader.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
-import cardFilledSvg from '../assets/icons/card-filled.svg?raw';
+import LinkedCardNotice from '../base-components/LinkedCardNotice.js';
 import storeFilledSvg from '../assets/icons/store-filled.svg?raw';
 import locationSvg from '../assets/icon-location.svg?raw';
 import crossIconUrl from '../assets/icons/cross.png';
@@ -171,25 +171,18 @@ function pickOliveOfferId(offer) {
   return offer.offer_id || offer.offerId || offer.id || '';
 }
 
-// One line of copy plus a pill on the right, per the design — the linked/unlinked
-// states differ only in what the pill does, so the copy stays card-agnostic.
+// The linked/unlinked states differ only in what the pill does, so the copy stays
+// card-agnostic. Shared with the store map via LinkedCardNotice.
 function buildLinkedCardHtml(card) {
   var linked = !!(card && card.last4);
   return (
     '<div class="hc-shop-detail-card-slot" data-shop-card-slot>' +
-    '<div class="hc-shop-detail-card-banner">' +
-    '<div class="hc-shop-detail-card-banner-main">' +
-    '<span class="hc-shop-detail-card-icon" aria-hidden="true">' +
-    cardFilledSvg +
-    '</span>' +
-    '<div class="hc-shop-detail-card-copy">' +
-    '<div class="hc-shop-detail-card-title">Pay with a linked card to earn points</div>' +
-    '</div>' +
-    (linked
-      ? '<button type="button" class="hc-shop-detail-card-cta" data-shop-manage-card>Manage</button>'
-      : '<button type="button" class="hc-shop-detail-card-cta" data-shop-link-card>Link</button>') +
-    '</div>' +
-    '</div></div>'
+    LinkedCardNotice(
+      linked
+        ? { actionLabel: 'Manage', actionAttr: 'data-shop-manage-card' }
+        : { actionLabel: 'Link', actionAttr: 'data-shop-link-card' }
+    ) +
+    '</div>'
   );
 }
 

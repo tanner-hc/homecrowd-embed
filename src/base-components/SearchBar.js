@@ -7,6 +7,15 @@ function withCurrentColorStroke(svg) {
     .replace(/stroke='#000(?:000)?'/gi, 'stroke="currentColor"');
 }
 
+/**
+ * @param {{
+ *   value?: string, placeholder?: string, id?: string, disabled?: boolean,
+ *   error?: boolean, className?: string, variant?: 'default' | 'pill',
+ * }} [props]
+ *
+ * `pill` is the grey capsule from Figma 1000:10548 — 48px tall, no border, 24px
+ * icon. The default remains the bordered white field.
+ */
 export default function SearchBar(props) {
   props = props || {};
   var value = props.value != null ? String(props.value) : '';
@@ -18,6 +27,7 @@ export default function SearchBar(props) {
 
   var wrapClass = joinClasses(
     'hc-bc-search-bar',
+    props.variant === 'pill' ? 'hc-bc-search-bar--pill' : '',
     err ? 'hc-bc-search-bar--error' : '',
     disabled ? 'hc-bc-search-bar--disabled' : '',
     extra,

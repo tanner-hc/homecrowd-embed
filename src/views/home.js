@@ -182,6 +182,9 @@ function formatTransactionDateHome(dateString) {
 
 function getPaymentMethodHome(transaction) {
   if (transaction.wildfire_merchant_id || transaction.wildfire_merchant_name) return 'Online';
+  // Travel bookings are paid through Access, not a linked card, so there is no
+  // card nickname or last4 to show here.
+  if (transaction.source === 'travel' || transaction.travel_merchant_name) return 'Travel';
   if (transaction.card_nickname) return transaction.card_nickname;
   var scheme = transaction.card_scheme;
   if (scheme) {
