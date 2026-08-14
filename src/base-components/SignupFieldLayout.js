@@ -77,6 +77,7 @@ export function mountSignupFieldLayout(container, options) {
     '</div>' +
     '</div>' +
     '<div class="hc-signup-field-actions">' +
+    (options.footerHtml ? String(options.footerHtml) : '') +
     '<button type="button" id="hc-signup-field-continue" class="hc-signup-field-btn' +
     (options.continueDisabled ? ' hc-signup-field-btn--disabled' : '') +
     '"' +

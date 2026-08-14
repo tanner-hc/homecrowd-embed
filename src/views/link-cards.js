@@ -15,6 +15,7 @@ function successLogoUrl() {
 }
 import { showError } from '../base-components/toastApi.js';
 import { showWebviewOverlay } from '../webview-overlay.js';
+import { getPrivacyUrl, getTermsUrl } from '../legal-urls.js';
 import { openBottomSheet } from '../base-components/BottomSheetModal.js';
 import { showPointsEarnedToast } from '../base-components/PointsEarnedToast.js';
 import { claimSetupTaskReward } from '../setup-rewards.js';
@@ -25,9 +26,6 @@ import cardIconUrl from '../assets/icons/card.png';
 import cameraIconUrl from '../assets/icons/pinhead_camera.png';
 import hcIconUrl from '../assets/logos/icon.png';
 import confettiAnimation from '../assets/Confetti_small2.json';
-
-var TERMS_URL = 'https://app.gethomecrowd.com/terms-and-conditions/';
-var PRIVACY_URL = 'https://app.gethomecrowd.com/privacy-policy/';
 
 var LOGO_DURATION_MS = 900;
 var LOGO_SCALE_FROM = 0.72;
@@ -403,8 +401,12 @@ export function renderLinkCards(container) {
       '</form>' +
       '<p class="hc-add-card-legal">' +
       'By clicking Link Card below you authorize the payment card network to monitor your payment card and share data about all your purchases as required to participate in the Program per the ' +
-      '<button type="button" class="hc-add-card-legal-link" id="hc-ac-terms">Program Terms</button> and ' +
-      '<button type="button" class="hc-add-card-legal-link" id="hc-ac-privacy">Privacy Policy</button>' +
+      '<a class="hc-add-card-legal-link" id="hc-ac-terms" href="' +
+      escapeAttr(getTermsUrl()) +
+      '" target="_blank" rel="noopener noreferrer">Program Terms</a> and ' +
+      '<a class="hc-add-card-legal-link" id="hc-ac-privacy" href="' +
+      escapeAttr(getPrivacyUrl()) +
+      '" target="_blank" rel="noopener noreferrer">Privacy Policy</a>' +
       '. Your purchase data (date/time, purchase amount, merchant category) will be shared with the Program provider Olive, and with HomeCrowd in order to enable card linked offers and to provide notifications about reward status, additional data for qualifying transactions (merchant name and location) will be shared with Olive, with HomeCrowd, and with merchant partners funding the rewards. Data will be accessible until such a time when you revoke authorization via Program settings.' +
       '<br><br>1) Link your card<br>2) Make qualifying purchases at participating merchants<br>3) Cashback rewards are sent to your selected school' +
       '</p>' +
@@ -547,14 +549,25 @@ export function renderLinkCards(container) {
 
     var termsBtn = container.querySelector('#hc-ac-terms');
     var privacyBtn = container.querySelector('#hc-ac-privacy');
+    function openLegalPage(url) {
+      var next = String(url || '').trim();
+      if (!next) return;
+      showWebviewOverlay(next, {
+        onFallback: function () {
+          window.open(next, '_blank', 'noopener,noreferrer');
+        },
+      });
+    }
     if (termsBtn) {
-      termsBtn.addEventListener('click', function () {
-        showWebviewOverlay(TERMS_URL);
+      termsBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        openLegalPage(getTermsUrl());
       });
     }
     if (privacyBtn) {
-      privacyBtn.addEventListener('click', function () {
-        showWebviewOverlay(PRIVACY_URL);
+      privacyBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        openLegalPage(getPrivacyUrl());
       });
     }
 

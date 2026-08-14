@@ -7,6 +7,8 @@ import { getPendingSignupEmail } from './create-account.js';
 import { getPendingSignupFullName } from './enter-full-name.js';
 import { getPendingSignupSchool } from './find-your-school.js';
 import { getEmbedSchoolId } from '../brand.js';
+import { escapeHtml } from '../base-components/html.js';
+import { getPrivacyUrl, getTermsUrl } from '../legal-urls.js';
 
 function splitFullName(fullName) {
   var parts = String(fullName || '')
@@ -76,6 +78,16 @@ export function renderEnterPassword(container, onSuccess) {
     showPasswordToggle: true,
     autoCapitalize: 'none',
     autoComplete: 'new-password',
+    footerHtml:
+      '<p class="hc-signup-field-legal">By creating an account, you agree to our ' +
+      '<a href="' +
+      escapeHtml(getTermsUrl()) +
+      '" target="_blank" rel="noopener noreferrer">Terms and Conditions</a>' +
+      ' &amp; ' +
+      '<a href="' +
+      escapeHtml(getPrivacyUrl()) +
+      '" target="_blank" rel="noopener noreferrer">Privacy Policy</a>' +
+      '</p>',
     continueDisabled: true,
     onContinue: function (value) {
       if (loading) return;

@@ -1328,27 +1328,25 @@ html.hc-embed--no-school-brand .hc-login-card {
 
 .hc-login-shell--school .hc-login-logo,
 .hc-login-shell--school .hc-login-logo--brand {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
   min-height: min-content;
-  /* 18px here + 4px on .hc-header-powered = the 22px Figma leaves between the
-     "powered by" lockup and the top of the red card. */
-  margin-bottom: 8px;
+  margin-bottom: 16px;
   width: 100%;
 }
 
 .hc-login-shell--school .hc-login-logo--brand .hc-header--brand {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   align-self: stretch;
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between !important;
-  gap: 0;
+  justify-content: flex-start;
+  gap: 8px;
   padding: 0;
   min-height: min-content;
 }
@@ -1365,7 +1363,7 @@ html.hc-embed--no-school-brand .hc-login-card {
 
 .hc-login-shell--school .hc-login-logo--brand .hc-header-powered {
   flex-shrink: 0;
-  margin-top: auto;
+  margin-top: 0;
   margin-bottom: 0;
   color: #111111;
   align-items: baseline;
@@ -1390,9 +1388,10 @@ html.hc-embed--no-school-brand .hc-login-card {
 .hc-login-shell--school .hc-login-card {
   flex-shrink: 0;
   max-width: none;
+  margin-top: auto;
   border: none;
   border-radius: 12px;
-  padding: 16px;
+  padding: 20px 16px 16px;
   background: var(--hc-welcome-card-bg, #e00122);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -1495,18 +1494,37 @@ html.hc-embed--no-school-brand .hc-login-card {
   color: #ffffff;
 }
 
+.hc-login-shell--school .hc-login-social-wrap {
+  margin: 0 0 8px;
+}
+
+.hc-login-shell--school .hc-login-social {
+  margin-bottom: 10px;
+}
+
+.hc-login-shell--school .hc-login-social:last-of-type {
+  margin-bottom: 0;
+}
+
+.hc-login-shell--school .hc-login-social-divider {
+  margin: 14px 0 12px;
+}
+
+.hc-login-shell--school .hc-login-social-divider-text {
+  font-size: 12px;
+}
+
 .hc-login-shell--school .hc-login-container .hc-login-submit-btn.hc-btn-primary {
   flex-shrink: 0;
   margin-top: 16px;
   max-width: none;
-  /* Figma: 16px padding all round, natural line box — no fixed height. */
   min-height: 0;
   padding: 16px;
   line-height: normal;
   border-radius: 999px;
   border: none;
-  background: var(--hc-app-primary, #00c8ff);
-  color: var(--hc-app-accent, #000000);
+  background: var(--hc-welcome-card-bg, #e00122);
+  color: #ffffff;
   font-family: 'Baikal-Medium', var(--hc-font);
   font-size: 16px;
   opacity: 1;
@@ -1514,7 +1532,8 @@ html.hc-embed--no-school-brand .hc-login-card {
 }
 
 .hc-login-shell--school .hc-login-container .hc-login-submit-btn.hc-btn-primary:hover {
-  background: var(--hc-app-primary, #00c8ff);
+  background: var(--hc-welcome-card-bg, #e00122);
+  color: #ffffff;
   opacity: 0.92;
   box-shadow: none;
 }
@@ -13705,6 +13724,21 @@ button.hc-shop-detail-cats--expandable {
   padding: 0 16px max(12px, env(safe-area-inset-bottom, 0px));
 }
 
+.hc-signup-field-legal {
+  margin: 0 8px 16px;
+  color: #9a9a9a;
+  font-family: 'Baikal-Regular', 'Baikal', sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.hc-signup-field-legal a {
+  color: #000;
+  font-family: 'Baikal-Medium', 'Baikal', sans-serif;
+  text-decoration: underline;
+}
+
 .hc-signup-field-btn {
   display: flex;
   align-items: center;
@@ -16646,6 +16680,7 @@ button.hc-shop-detail-cats--expandable {
   color: var(--hc-app-primary, #00c8ff);
   text-decoration: underline;
   cursor: pointer;
+  display: inline;
 }
 
 .hc-add-card-footer {

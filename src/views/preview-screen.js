@@ -1,5 +1,5 @@
 import { escapeHtml } from '../base-components/html.js';
-import { PRIVACY_URL, TERMS_URL } from '../legal-urls.js';
+import { getPrivacyUrl, getTermsUrl } from '../legal-urls.js';
 import { getSchoolColor, hasSchoolBrand } from '../brand.js';
 
 function envelopeIcon() {
@@ -19,8 +19,8 @@ function envelopeIcon() {
 export function renderPreviewScreen(container, options) {
   var opts = options || {};
   var signedEmail = String(opts.schoolEmail || '').trim() || 'school email';
-  var termsUrl = String(opts.termsUrl || TERMS_URL).trim();
-  var privacyUrl = String(opts.privacyUrl || PRIVACY_URL).trim();
+  var termsUrl = String(opts.termsUrl || getTermsUrl()).trim();
+  var privacyUrl = String(opts.privacyUrl || getPrivacyUrl()).trim();
   var schoolMode = hasSchoolBrand();
   var schoolColor = schoolMode ? getSchoolColor() : '';
   var screenClass = schoolMode ? 'hc-preview-screen hc-preview-screen--school' : 'hc-preview-screen';

@@ -11,7 +11,7 @@ import {
 } from '../brand.js';
 import Input from '../base-components/Input.js';
 import { escapeAttr, escapeHtml } from '../base-components/html.js';
-import { PRIVACY_URL, TERMS_URL } from '../legal-urls.js';
+import { getPrivacyUrl, getTermsUrl } from '../legal-urls.js';
 import googleIconUrl from '../assets/providers/googleIcon.png';
 import appleIconUrl from '../assets/providers/appleIcon.png';
 import {
@@ -107,27 +107,53 @@ export function renderLogin(container, onLoginSuccess, options) {
     '<button type="button" id="hc-login-signup-link" class="hc-login-signup-link">Sign Up</button>' +
     '</p>';
   var showApple = shouldShowAppleSignIn();
-  var socialHtml =
-    '<div id="hc-login-social" class="hc-login-social-wrap">' +
-    '<div class="hc-login-social-divider">' +
-    '<span class="hc-login-social-divider-line"></span>' +
-    '<span class="hc-login-social-divider-text">or</span>' +
-    '<span class="hc-login-social-divider-line"></span>' +
-    '</div>' +
-    (showApple
-      ? '<button type="button" id="hc-login-apple" class="hc-login-social">' +
-        '<img data-hc-ph="none" src="' +
-        escapeAttr(appleIconUrl) +
-        '" alt="" class="hc-login-social-icon" />' +
-        '<span>Continue with Apple</span>' +
-        '</button>'
-      : '') +
+  var googleBtnHtml =
     '<button type="button" id="hc-login-google" class="hc-login-social">' +
     '<img data-hc-ph="none" src="' +
     escapeAttr(googleIconUrl) +
     '" alt="" class="hc-login-social-icon" />' +
     '<span>Continue with Google</span>' +
-    '</button>' +
+    '</button>';
+  var appleBtnHtml = showApple
+    ? '<button type="button" id="hc-login-apple" class="hc-login-social">' +
+      '<img data-hc-ph="none" src="' +
+      escapeAttr(appleIconUrl) +
+      '" alt="" class="hc-login-social-icon" />' +
+      '<span>Continue with Apple</span>' +
+      '</button>'
+    : '';
+  var socialDividerHtml =
+    '<div class="hc-login-social-divider">' +
+    '<span class="hc-login-social-divider-line"></span>' +
+    '<span class="hc-login-social-divider-text">' +
+    (schoolMode ? 'or sign up with email' : 'or') +
+    '</span>' +
+    '<span class="hc-login-social-divider-line"></span>' +
+    '</div>';
+  var socialHtml =
+    '<div id="hc-login-social" class="hc-login-social-wrap">' +
+    (schoolMode
+      ? googleBtnHtml + appleBtnHtml + socialDividerHtml
+      : socialDividerHtml + appleBtnHtml + googleBtnHtml) +
+    '</div>';
+  var emailFieldHtml = Input({
+    id: 'hc-email',
+    name: 'email',
+    type: 'email',
+    label: schoolMode ? 'Email address' : 'Email',
+    placeholder: 'Email',
+    autocomplete: 'email',
+    value: '',
+  });
+  var passwordFieldHtml =
+    '<div class="hc-form-group" id="hc-password-wrap"' +
+    (schoolMode ? ' style="display:none"' : '') +
+    '>' +
+    '<label class="hc-label" id="hc-password-label" for="hc-password">Password</label>' +
+    '<div style="position:relative">' +
+    '<input id="hc-password" class="hc-input" type="password" placeholder="Password" autocomplete="current-password" />' +
+    '<button type="button" id="hc-toggle-pw" class="hc-toggle-pw">Show</button>' +
+    '</div>' +
     '</div>';
   container.innerHTML =
     '<div class="' +
@@ -187,24 +213,9 @@ export function renderLogin(container, onLoginSuccess, options) {
     '<option value="">Select your school</option>' +
     '</select>' +
     '</div>' +
-    Input({
-      id: 'hc-email',
-      name: 'email',
-      type: 'email',
-      label: schoolMode ? '' : 'Email',
-      placeholder: 'Email',
-      autocomplete: 'email',
-      value: '',
-    }) +
-    '<div class="hc-form-group" id="hc-password-wrap">' +
-    (schoolMode
-      ? ''
-      : '<label class="hc-label" id="hc-password-label" for="hc-password">Password</label>') +
-    '<div style="position:relative">' +
-    '<input id="hc-password" class="hc-input" type="password" placeholder="Password" autocomplete="current-password" />' +
-    '<button type="button" id="hc-toggle-pw" class="hc-toggle-pw">Show</button>' +
-    '</div>' +
-    '</div>' +
+    (schoolMode ? socialHtml : '') +
+    emailFieldHtml +
+    passwordFieldHtml +
     '<div id="hc-signup-password-confirm-wrap" class="hc-form-group" style="display:none">' +
     '<label class="hc-label" for="hc-password-confirm">Confirm password</label>' +
     '<div style="position:relative">' +
@@ -213,14 +224,14 @@ export function renderLogin(container, onLoginSuccess, options) {
     '</div>' +
     '</div>' +
     (schoolMode ? signupPromptHtml + forgotHtml : forgotHtml + signupPromptHtml) +
-    socialHtml +
+    (schoolMode ? '' : socialHtml) +
     '<div id="hc-signup-terms-wrap" class="hc-form-group hc-login-terms" style="display:none">' +
     '<label class="hc-login-checkbox-label">' +
     '<input id="hc-accept-terms" type="checkbox" />' +
     '<span>I agree to <a href="' +
-    escapeHtml(TERMS_URL) +
+    escapeHtml(getTermsUrl()) +
     '" target="_blank" rel="noopener noreferrer">Terms and Conditions</a> and <a href="' +
-    escapeHtml(PRIVACY_URL) +
+    escapeHtml(getPrivacyUrl()) +
     '" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
     '</label>' +
     '</div>' +
@@ -237,6 +248,7 @@ export function renderLogin(container, onLoginSuccess, options) {
   var form = document.getElementById('hc-login-form');
   var emailInput = document.getElementById('hc-email');
   var passwordInput = document.getElementById('hc-password');
+  var passwordWrap = document.getElementById('hc-password-wrap');
   var errorEl = document.getElementById('hc-login-error');
   var submitBtn = document.getElementById('hc-login-btn');
   var toggleBtn = document.getElementById('hc-toggle-pw');
@@ -508,6 +520,12 @@ export function renderLogin(container, onLoginSuccess, options) {
       }
     } else if (!email || !password) {
       clearSignupFieldErrors();
+      if (schoolMode && email && !password) {
+        if (passwordWrap) passwordWrap.style.display = '';
+        setFieldErrorState(passwordInput, true);
+        passwordInput.focus();
+        return;
+      }
       if (!email) setFieldErrorState(emailInput, true);
       if (!password) setFieldErrorState(passwordInput, true);
       errorEl.textContent = 'Please enter email and password';
