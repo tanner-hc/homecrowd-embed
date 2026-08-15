@@ -40,9 +40,9 @@ var IPHONE_STATUS_ICONS =
 
 var PREVIEW_POINTS = 1000;
 var PREVIEW_MILESTONES = [
-  { label: '1,500', at: 22 },
-  { label: '5,000', at: 56 },
-  { label: '10,000', at: 100 },
+  { label: '800', at: 20 },
+  { label: '2,000', at: 50 },
+  { label: '4,000', at: 100 },
 ];
 
 function readSchoolIdFromUrl() {
@@ -113,7 +113,7 @@ function buildGetStartedHomePreviewHtml(logoUrl) {
     '</div>' +
     '<div class="hc-milestones-progress">' +
     '<div class="hc-milestones-track">' +
-    '<div class="hc-milestones-fill" style="width:calc((100% - 16px) * 0.22 + 8px)"></div>' +
+    '<div class="hc-milestones-fill" style="width:calc((100% - 16px) * 0.25 + 8px)"></div>' +
     '<div class="hc-milestones-markers">' +
     markers +
     '</div>' +

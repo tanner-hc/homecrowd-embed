@@ -276,13 +276,14 @@ function buildProgressHtml(milestones, earned) {
       escapeHtml(scaleLabelText(m.pointsCost)) +
       '</span>';
   }
+  var fillRatio = Math.max(0, Math.min(100, Number(pct) || 0)) / 100;
 
   return (
     '<div class="hc-milestones-progress">' +
     '<div class="hc-milestones-track">' +
-    '<div class="hc-milestones-fill" style="width:' +
-    pct +
-    '%"></div>' +
+    '<div class="hc-milestones-fill" style="width:calc((100% - 16px) * ' +
+    fillRatio.toFixed(4) +
+    ' + 8px)"></div>' +
     '<div class="hc-milestones-markers">' +
     markers +
     '</div>' +
