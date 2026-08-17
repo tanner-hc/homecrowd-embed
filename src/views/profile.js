@@ -3,8 +3,7 @@ import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import SecondaryButton from '../base-components/SecondaryButton.js';
 import MainButton from '../base-components/MainButton.js';
-import { escapeHtml, escapeAttr } from '../base-components/html.js';
-import iconTransparentUrl from '../assets/icon-transparent.png';
+import { escapeHtml } from '../base-components/html.js';
 import settingsIconSvg from '../assets/icons/settings.svg?raw';
 import cardIconSvg from '../assets/icons/card.svg?raw';
 import phoneIconSvg from '../assets/icons/phone.svg?raw';
@@ -81,45 +80,41 @@ function schoolEarlyRelease(school) {
   return false;
 }
 
-function profileCardHtml(user) {
+function profileStatHtml(label, value, isBold) {
+  return (
+    '<div class="hc-profile-headline-stat">' +
+    '<span class="hc-profile-headline-label">' +
+    escapeHtml(label) +
+    '</span>' +
+    '<span class="hc-profile-headline-value' +
+    (isBold ? ' hc-profile-headline-value--bold' : '') +
+    '">' +
+    escapeHtml(value) +
+    '</span>' +
+    '</div>'
+  );
+}
+
+// The same details the fan card carried, set plainly at the top of the page —
+// no turquoise panel, tagline or watermark.
+function profileHeadlineHtml(user) {
   var first = (user && (user.firstName || user.first_name)) || '';
   var last = (user && (user.lastName || user.last_name)) || '';
   var name = (first + ' ' + last).trim() || 'Member';
-  var fanId = pickFanId(user);
   var memberSince = formatMemberSince(pickDateJoined(user));
-  var memberBlock = '';
+
+  var stats = profileStatHtml('FAN ID', formatFanId(pickFanId(user)), true);
   if (memberSince) {
-    memberBlock =
-      '<div class="hc-profile-card-member">' +
-      '<span class="hc-profile-card-stat-label">MEMBER SINCE</span>' +
-      '<span class="hc-profile-card-stat-value">' +
-      escapeHtml(memberSince) +
-      '</span>' +
-      '</div>';
+    stats += profileStatHtml('MEMBER SINCE', memberSince, false);
   }
+
   return (
-    '<div class="hc-profile-card">' +
-    '<div class="hc-profile-card-inner">' +
-    '<div class="hc-profile-card-tagline">Shop Smarter, Cheer Louder</div>' +
-    '<div class="hc-profile-card-body">' +
-    '<div class="hc-profile-card-user">' +
-    '<div class="hc-profile-card-name">' +
+    '<div class="hc-profile-headline">' +
+    '<div class="hc-profile-headline-name">' +
     escapeHtml(name) +
     '</div>' +
-    '<div class="hc-profile-card-stat">' +
-    '<span class="hc-profile-card-stat-label">FAN ID</span>' +
-    '<span class="hc-profile-card-stat-value hc-profile-card-stat-value--bold">' +
-    escapeHtml(formatFanId(fanId)) +
-    '</span>' +
-    '</div>' +
-    '</div>' +
-    '</div>' +
-    '<div class="hc-profile-card-logo-wrap">' +
-    '<img data-hc-ph="none" src="' +
-    escapeAttr(iconTransparentUrl) +
-    '" alt="" class="hc-profile-card-logo" />' +
-    '</div>' +
-    memberBlock +
+    '<div class="hc-profile-headline-stats">' +
+    stats +
     '</div>' +
     '</div>'
   );
@@ -175,7 +170,7 @@ async function loadProfile(container) {
   var html = '';
   html += '<div id="hc-profile-root" class="hc-profile-view">';
   html += '<div class="hc-profile-sticky-head">';
-  html += profileCardHtml(cardUser);
+  html += profileHeadlineHtml(cardUser);
   html += '</div>';
   html += '<div class="hc-profile-scroll">';
   html += '<div class="hc-profile-menu">';
@@ -251,9 +246,6 @@ async function loadProfile(container) {
     loadingText: 'Logging out...',
     className: 'hc-profile-logout-btn',
   });
-  html += '</div>';
-  html += '<div class="hc-profile-version-section">';
-  html += '<span class="hc-profile-version-text">Homecrowd v1.1.0</span>';
   html += '</div>';
   html += '</div>';
   html += '</div>';

@@ -6236,66 +6236,6 @@ button.hc-shop-detail-cats--expandable {
 
 /* ========== PROFILE SCREEN ========== */
 
-/* Profile card (matches ProfileCard component — gradient with watermark) */
-.hc-profile-card {
-  position: relative;
-  background: linear-gradient(135deg, var(--hc-app-primary-light, #57C6FA), var(--hc-primary));
-  border-radius: var(--hc-radius);
-  padding: var(--hc-spacing-lg);
-  margin: 0 var(--hc-spacing-lg) var(--hc-spacing-lg);
-  color: #fff;
-  overflow: hidden;
-  min-height: 140px;
-}
-
-.hc-profile-card-top {
-  text-align: right;
-  margin-bottom: var(--hc-spacing-md);
-}
-
-.hc-profile-card-tagline {
-  font-size: 11px;
-  font-weight: 300;
-  color: rgba(255, 255, 255, 0.7);
-  line-height: 1.3;
-}
-
-.hc-profile-card-body {
-  position: relative;
-  z-index: 1;
-}
-
-.hc-profile-card-name {
-  font-family: var(--hc-font-bold);
-  font-size: 20px;
-  font-weight: normal;
-  color: #fff;
-  margin-bottom: var(--hc-spacing-xs);
-}
-
-.hc-profile-card-label {
-  font-size: 11px;
-  font-weight: 400;
-  color: rgba(255, 255, 255, 0.7);
-  letter-spacing: 0.5px;
-  margin-top: 2px;
-}
-
-.hc-profile-card-bold {
-  font-weight: 700;
-  color: #fff;
-}
-
-.hc-profile-card-watermark {
-  position: absolute;
-  bottom: 12px;
-  right: 16px;
-  height: 50px;
-  width: auto;
-  opacity: 0.15;
-  filter: brightness(0) invert(1);
-}
-
 /* Profile menu (matches SecondaryButton component) */
 .hc-profile-menu {
   padding: 0 var(--hc-spacing-lg);
@@ -6359,16 +6299,6 @@ button.hc-shop-detail-cats--expandable {
   padding: var(--hc-spacing-lg);
 }
 
-/* Profile version */
-.hc-profile-version {
-  text-align: center;
-  font-family: var(--hc-font-regular);
-  font-size: 14px;
-  font-weight: normal;
-  color: var(--hc-text-muted);
-  padding: var(--hc-spacing-base) 0;
-}
-
 /* Responsive */
 @media (max-width: 480px) {
   :root {
@@ -6387,11 +6317,6 @@ button.hc-shop-detail-cats--expandable {
 
   .hc-content.hc-content--flush-top {
     padding-top: 0;
-  }
-
-  .hc-profile-view .hc-profile-card {
-    margin-left: calc(-1 * max(var(--hc-spacing-sm), env(safe-area-inset-left, 0px)));
-    margin-right: calc(-1 * max(var(--hc-spacing-sm), env(safe-area-inset-right, 0px)));
   }
 
   .hc-profile-view .hc-profile-menu {
@@ -10795,187 +10720,59 @@ button.hc-shop-detail-cats--expandable {
   padding-bottom: 0;
 }
 
-.hc-profile-card {
-  background: transparent;
-  padding: 0 var(--hc-spacing-lg);
-  margin: 0 0 12px;
-  min-height: 0;
-  height: auto;
-  border-radius: 8px;
-  box-shadow: none;
-  overflow: visible;
+.hc-profile-headline {
+  /* Top padding separates the name from the partner logo in the brand bar above;
+     the sticky head only contributes 4px of its own. */
+  padding: 24px var(--hc-spacing-lg) 16px;
+  /* Centred to sit on the same axis as the brand lockup above it. */
+  text-align: center;
 }
 
-
-.hc-profile-card-inner {
-  position: relative;
-  /* Homecrowd turquoise, deliberately a literal and not --hc-app-primary-light:
-     brand.js overwrites all three --hc-app-primary* vars from the school's admin
-     colours (see applyInAppColors), which repainted the fan card per partner. This
-     card is Homecrowd's own, so it stays Homecrowd's colour. */
-  background: #00c8ff;
-  padding: 15px 24px 24px;
-  width: 100%;
-  min-height: 220px;
-  border-radius: 8px;
-  overflow: hidden;
-  box-sizing: border-box;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.hc-profile-headline-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111111;
+  font-family: 'Baikal-Bold', var(--hc-font);
+  line-height: 1.2;
+  word-break: break-word;
 }
 
-.hc-profile-card-tagline {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  font-size: 8px;
-  font-weight: 400;
-  color: #000;
-  font-family: 'Baikal-Regular', var(--hc-font);
-  max-width: 58%;
-  text-align: right;
-  line-height: 1.25;
-}
-
-.hc-profile-card-body {
+.hc-profile-headline-stats {
   display: flex;
   flex-direction: row;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding-top: 0;
-  position: relative;
-  z-index: 1;
-  min-height: 0;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 10px;
 }
 
-.hc-profile-card-user {
-  flex: 1;
-  min-width: 0;
-  max-width: calc(100% - 110px);
-  padding-right: 8px;
-}
-
-.hc-profile-card-name {
-  font-size: 20px;
-  font-weight: 700;
-  color: #000;
-  font-family: 'Baikal-Bold', var(--hc-font);
-  margin-bottom: 24px;
-  line-height: 1.2;
-}
-
-.hc-profile-card-stat {
+.hc-profile-headline-stat {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 2px;
+  min-width: 0;
 }
 
-.hc-profile-card-stat-label {
+.hc-profile-headline-label {
   font-size: 8px;
   font-weight: 300;
-  color: #000;
+  color: #696969;
   letter-spacing: 0.5px;
   font-family: 'Baikal-Book', var(--hc-font);
 }
 
-.hc-profile-card-stat-value {
+.hc-profile-headline-value {
   font-size: 12px;
   font-weight: 300;
-  color: #000;
+  color: #111111;
   font-family: 'Baikal-Book', var(--hc-font);
+  word-break: break-all;
 }
 
-.hc-profile-card-stat-value--bold {
+.hc-profile-headline-value--bold {
   font-weight: 700;
   font-family: 'Baikal-Bold', var(--hc-font);
-}
-
-.hc-profile-card-logo-wrap {
-  position: absolute;
-  right: -40px;
-  bottom: -40px;
-  width: 200px;
-  height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.8;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.hc-profile-card-logo {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  filter: brightness(0);
-}
-
-.hc-profile-card-member {
-  position: absolute;
-  bottom: 16px;
-  left: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  z-index: 2;
-}
-
-@media (max-width: 400px) {
-  .hc-profile-card {
-    margin-top: 0;
-    margin-bottom: 12px;
-    min-height: 0;
-  }
-
-  .hc-profile-card-inner {
-    padding: 15px 24px 24px;
-    min-height: 220px;
-  }
-
-  .hc-profile-card-tagline {
-    top: 16px;
-    right: 16px;
-    max-width: 58%;
-    font-size: 8px;
-  }
-
-  .hc-profile-card-body {
-    padding-top: 0;
-    min-height: 0;
-  }
-
-  .hc-profile-card-user {
-    max-width: calc(100% - 110px);
-    padding-right: 8px;
-  }
-
-  .hc-profile-card-stat-value {
-    font-size: 11px;
-    word-break: break-all;
-  }
-}
-
-@media (max-width: 360px) {
-  .hc-profile-card {
-    min-height: 0;
-  }
-
-  .hc-profile-card-inner {
-    min-height: 220px;
-    padding: 15px 24px 24px;
-  }
-
-  .hc-profile-card-logo-wrap {
-    width: 200px;
-    height: 200px;
-    right: -40px;
-    bottom: -40px;
-  }
-
-  .hc-profile-card-name {
-    font-size: 20px;
-    margin-bottom: 24px;
-  }
 }
 
 .hc-profile-menu {
@@ -11016,18 +10813,6 @@ button.hc-shop-detail-cats--expandable {
 .hc-profile-logout-section .hc-btn.hc-profile-logout-btn:hover {
   background: #e53935;
   color: #fff;
-}
-
-.hc-profile-version-section {
-  text-align: center;
-  padding: 20px;
-}
-
-.hc-profile-version-text {
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--hc-text-secondary);
-  font-family: var(--hc-font);
 }
 
 .hc-weekly-reward-home-tile {
@@ -18512,6 +18297,13 @@ body:has(.hc-fr-success) {
   width: 17px;
   height: 17px;
   display: block;
+}
+
+/* The asset ships a hard-coded fill="black", so the ticket ignored the chip's
+   colour. CSS outranks a presentation attribute, so this hands it back to the
+   in-app accent that the label beside it already uses. */
+.hc-prize-detail-badge-icon svg path {
+  fill: currentColor;
 }
 
 .hc-prize-detail-title {
