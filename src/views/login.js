@@ -444,12 +444,19 @@ export function renderLogin(container, onLoginSuccess, options) {
     if (!isSignup) clearSignupFieldErrors();
   }
 
+  function revealPasswordField() {
+    if (passwordWrap) passwordWrap.style.display = '';
+  }
+
   bindClearOnInput(firstNameInput);
   bindClearOnInput(lastNameInput);
   bindClearOnInput(signupSchoolSelect);
   bindClearOnInput(emailInput);
   bindClearOnInput(passwordInput);
   bindClearOnInput(passwordConfirmInput);
+  if (schoolMode && emailInput) {
+    emailInput.addEventListener('focus', revealPasswordField);
+  }
   if (acceptTermsInput) {
     acceptTermsInput.addEventListener('change', function () {
       if (signupTermsWrap) signupTermsWrap.classList.remove('hc-login-field-error');
@@ -544,7 +551,7 @@ export function renderLogin(container, onLoginSuccess, options) {
     } else if (!email || !password) {
       clearSignupFieldErrors();
       if (schoolMode && email && !password) {
-        if (passwordWrap) passwordWrap.style.display = '';
+        revealPasswordField();
         setFieldErrorState(passwordInput, true);
         passwordInput.focus();
         return;
