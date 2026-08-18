@@ -266,6 +266,12 @@ export function renderRedemptionConfirmation(container, rewardId) {
     rt === 'raffle' && !useRaffleTicket ? ptsCost * initialQty : ptsCost;
   var hasInsufficientPoints =
     !payWithStripe && !useRaffleTicket && pointsSummaryPts < totalPointsCost;
+  // Raffles are a game of chance, so entry is gated on the entrant confirming they
+  // are 18+. Other reward types are unaffected.
+  var requiresAgeConfirm = rt === 'raffle';
+  var ageConfirmed = false;
+  // Unticked does NOT disable Confirm — pressing it explains what's missing, which
+  // is clearer than a dead button whose reason is scrolled out of view.
   var confirmDisabled =
     hasInsufficientPoints || (!payWithStripe && rt === 'raffle' && raffleDrawingDatePassed);
   var confirmBtnLabel = hasInsufficientPoints
@@ -313,6 +319,12 @@ export function renderRedemptionConfirmation(container, rewardId) {
     '</span></div>' +
     remainingRowHtml +
     '</div>' +
+    (requiresAgeConfirm
+      ? '<label class="hc-rc-age" for="hc-rc-age-check">' +
+        '<input type="checkbox" class="hc-rc-age-input" id="hc-rc-age-check" />' +
+        '<span class="hc-rc-age-text">I confirm that I am at least 18 years old.</span>' +
+        '</label>'
+      : '') +
     '<div class="hc-rc-confirm-box">' +
     '<span class="hc-rc-confirm-icon" aria-hidden="true">' +
     infoSvg +
@@ -322,6 +334,11 @@ export function renderRedemptionConfirmation(container, rewardId) {
     '</p></div>' +
     '</div>' +
     '<div class="hc-rc-actions">' +
+    (requiresAgeConfirm
+      ? '<div class="hc-rc-notice" id="hc-rc-notice" role="status" aria-live="polite" hidden>' +
+        '<span class="hc-rc-notice-text">Please confirm you are at least 18 years old.</span>' +
+        '</div>'
+      : '') +
     '<button type="button" class="hc-rc-confirm' +
     (confirmDisabled ? ' hc-rc-confirm--disabled' : '') +
     '" id="hc-rc-submit"' +
@@ -437,12 +454,74 @@ export function renderRedemptionConfirmation(container, rewardId) {
   if (backdropEl) backdropEl.addEventListener('click', goBack);
 
   var submitBtn = document.getElementById('hc-rc-submit');
+
+  var ageRow = container.querySelector('.hc-rc-age');
+
+  var noticeEl = document.getElementById('hc-rc-notice');
+  var noticeTimer = null;
+
+  // A soft brand pill rather than the red error toast: this is a nudge about a
+  // missing tick, not a failure. Matches the points-earned banner's treatment.
+  function showAgeNotice() {
+    if (!noticeEl) return;
+    if (noticeTimer) window.clearTimeout(noticeTimer);
+    noticeEl.hidden = false;
+    // Next frame, so the transition runs instead of the element just appearing.
+    window.requestAnimationFrame(function () {
+      noticeEl.classList.add('hc-rc-notice--visible');
+    });
+    noticeTimer = window.setTimeout(function () {
+      noticeEl.classList.remove('hc-rc-notice--visible');
+      noticeTimer = window.setTimeout(function () {
+        noticeEl.hidden = true;
+      }, 260);
+    }, 4000);
+  }
+
+  function hideAgeNotice() {
+    if (!noticeEl) return;
+    if (noticeTimer) window.clearTimeout(noticeTimer);
+    noticeEl.classList.remove('hc-rc-notice--visible');
+    noticeEl.hidden = true;
+  }
+
+  // Scrolls the attestation into view and flashes it, so a rejected press points
+  // at the thing that blocked it.
+  function revealAgeCheck() {
+    if (!ageRow) return;
+    try {
+      ageRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (_e) {
+      ageRow.scrollIntoView();
+    }
+    ageRow.classList.add('hc-rc-age--flash');
+    setTimeout(function () {
+      ageRow.classList.remove('hc-rc-age--flash');
+    }, 1200);
+  }
+
+
+  var ageCheck = document.getElementById('hc-rc-age-check');
+  if (ageCheck) {
+    ageCheck.addEventListener('change', function () {
+      ageConfirmed = !!ageCheck.checked;
+      if (ageConfirmed) hideAgeNotice();
+      // syncQuantityUi owns the button's enabled state, so route through it rather
+      // than toggling `disabled` here and letting the two drift apart.
+      syncQuantityUi();
+    });
+  }
   var loadingEl = document.getElementById('hc-rc-loading');
 
   syncQuantityUi();
 
   submitBtn.addEventListener('click', async function () {
     if (submitBtn.disabled) return;
+    if (requiresAgeConfirm && !ageConfirmed) {
+      showAgeNotice();
+      revealAgeCheck();
+      return;
+    }
     submitBtn.disabled = true;
     loadingEl.style.display = 'flex';
     try {
@@ -497,6 +576,7 @@ export function renderRedemptionConfirmation(container, rewardId) {
             reward: product.id,
             points_spent: 0,
             use_raffle_ticket: true,
+            age_confirmed: ageConfirmed,
           });
         }
       } else if (rt === 'raffle') {
@@ -506,6 +586,7 @@ export function renderRedemptionConfirmation(container, rewardId) {
             reward: product.id,
             points_spent: ptsCost,
             use_raffle_ticket: false,
+            age_confirmed: ageConfirmed,
           });
         }
       } else {

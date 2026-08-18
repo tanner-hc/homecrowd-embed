@@ -7593,6 +7593,81 @@ button.hc-shop-detail-cats--expandable {
   color: #888;
 }
 
+/* 18+ gate for raffle entries. Sits between the note and the actions, so it is
+   read before the Confirm button it unlocks. */
+.hc-rc-age {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 4px 2px;
+  cursor: pointer;
+  /* A tap anywhere on the row toggles it — the box alone is a small target. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-rc-age-input {
+  flex-shrink: 0;
+  margin: 0;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--hc-app-primary, #00c8ff);
+}
+
+/* Same treatment as .hc-rc-confirm-text so the sheet reads as one voice. */
+.hc-rc-age-text {
+  font-size: 14px;
+  line-height: normal;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-weight: 400;
+  color: #888;
+  text-align: center;
+}
+
+/* Brief highlight after a rejected Confirm, so the row is findable at a glance. */
+.hc-rc-age--flash {
+  border-radius: 10px;
+  background: #fff6d6;
+  transition: background 0.25s ease;
+}
+
+/* Nudge shown when Confirm is pressed with the 18+ box unticked. Built in the
+   same idiom as .hc-points-earned-toast — a soft tinted pill with an icon that
+   fades up — rather than the red error toast, which overstates a missing tick. */
+.hc-rc-notice {
+  display: inline-flex;
+  align-self: center;
+  flex-direction: row;
+  align-items: center;
+  max-width: 100%;
+  margin-bottom: 4px;
+  padding: 10px 16px;
+  border-radius: 100px;
+  background: #e6f6fb;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 240ms ease, transform 240ms ease;
+}
+
+.hc-rc-notice[hidden] {
+  display: none;
+}
+
+.hc-rc-notice--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hc-rc-notice-text {
+  font-size: 14px;
+  line-height: normal;
+  font-family: 'Baikal-Regular', var(--hc-font);
+  font-weight: 400;
+  color: #0b6f8f;
+}
+
 /* Stacked full-width buttons, Confirm above Cancel. */
 .hc-rc-actions {
   position: relative;
