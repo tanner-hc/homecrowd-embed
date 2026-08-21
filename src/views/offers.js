@@ -349,6 +349,204 @@ function mountMapCardBanner(container) {
     });
 }
 
+function getStoresMapListAnchor(container) {
+  var loc = container && container._hcMapUserLoc;
+  if (loc && Number.isFinite(loc.lat) && Number.isFinite(loc.lng)) {
+    return { lat: loc.lat, lng: loc.lng };
+  }
+  var active = getActiveOfferLocation();
+  if (active) {
+    var aLat = Number(active.latitude);
+    var aLng = Number(active.longitude);
+    if (Number.isFinite(aLat) && Number.isFinite(aLng)) {
+      return { lat: aLat, lng: aLng };
+    }
+  }
+  var stored = getStoredOfferLocation();
+  if (stored) {
+    var sLat = Number(stored.latitude);
+    var sLng = Number(stored.longitude);
+    if (Number.isFinite(sLat) && Number.isFinite(sLng)) {
+      return { lat: sLat, lng: sLng };
+    }
+  }
+  return null;
+}
+
+function getStoresMapListMerchants(container) {
+  var anchor = getStoresMapListAnchor(container);
+  var stores = [];
+  if (Array.isArray(container._hcMapStores) && container._hcMapStores.length) {
+    stores = container._hcMapStores.slice();
+  } else if (Array.isArray(container._hcCardlinkedStores)) {
+    container._hcCardlinkedStores.forEach(function (m) {
+      expandMerchantLocationsForMap(m).forEach(function (row) {
+        stores.push(row);
+      });
+    });
+  }
+
+  return stores
+    .map(function (m) {
+      var distance = anchor
+        ? merchantDistanceMiles(m, anchor.lat, anchor.lng)
+        : m != null && typeof m.distance === 'number'
+          ? m.distance
+          : NaN;
+      return { merchant: m, distance: distance };
+    })
+    .sort(function (a, b) {
+      var da = Number.isFinite(a.distance) ? a.distance : Infinity;
+      var db = Number.isFinite(b.distance) ? b.distance : Infinity;
+      return da - db;
+    })
+    .map(function (row) {
+      if (!Number.isFinite(row.distance)) return row.merchant;
+      var copy = Object.assign({}, row.merchant);
+      copy.distance = row.distance;
+      return copy;
+    });
+}
+
+function isStoresMapListOpen(container) {
+  var root = container && container.querySelector('#hc-stores-map-list-root');
+  return !!(root && !root.hidden);
+}
+
+function syncStoresMapShowListButton(container) {
+  var btn = container && container.querySelector('#hc-stores-map-show-list');
+  if (!btn) return;
+  var mapWrap = container.querySelector('#hc-offers-map-location-wrap');
+  var mapVisible = !!(mapWrap && mapWrap.style.display !== 'none');
+  btn.hidden = !mapVisible || isStoresMapListOpen(container);
+}
+
+function fillStoresMapListSheet(container) {
+  var scroll = container.querySelector('#hc-stores-map-list-scroll');
+  if (!scroll) return;
+  var merchants = getStoresMapListMerchants(container);
+  container._hcMapListMerchants = merchants;
+  if (!merchants.length) {
+    scroll.innerHTML =
+      '<div class="hc-stores-map-list-empty">No restaurants near this location</div>';
+    return;
+  }
+  var html = '<div class="hc-merchant-grid hc-merchant-grid--rows hc-stores-map-list-grid">';
+  merchants.forEach(function (m, index) {
+    html +=
+      '<div class="hc-stores-map-list-row" data-map-list-index="' +
+      String(index) +
+      '">' +
+      renderMerchantCard(m, { layout: 'row' }) +
+      '</div>';
+  });
+  html += '</div>';
+  scroll.innerHTML = html;
+}
+
+function refreshStoresMapListIfOpen(container) {
+  if (!isStoresMapListOpen(container)) return;
+  fillStoresMapListSheet(container);
+}
+
+function closeStoresMapList(container) {
+  var root = container && container.querySelector('#hc-stores-map-list-root');
+  if (!root || root.hidden) {
+    syncStoresMapShowListButton(container);
+    return;
+  }
+  root.classList.remove('hc-stores-map-list-root--open');
+  var sheet = root.querySelector('.hc-stores-map-list-sheet');
+  if (sheet) sheet.style.transform = '';
+  window.setTimeout(function () {
+    if (!container.isConnected) return;
+    root.hidden = true;
+    syncStoresMapShowListButton(container);
+  }, 280);
+  syncStoresMapShowListButton(container);
+}
+
+function openStoresMapList(container) {
+  var root = container && container.querySelector('#hc-stores-map-list-root');
+  if (!root) return;
+  hideSelectedMapMerchant(container);
+  fillStoresMapListSheet(container);
+  root.hidden = false;
+  syncStoresMapShowListButton(container);
+  requestAnimationFrame(function () {
+    root.classList.add('hc-stores-map-list-root--open');
+  });
+}
+
+function wireStoresMapList(container) {
+  var showBtn = container.querySelector('#hc-stores-map-show-list');
+  var root = container.querySelector('#hc-stores-map-list-root');
+  if (!showBtn || !root) return;
+
+  showBtn.addEventListener('click', function () {
+    openStoresMapList(container);
+  });
+
+  root.addEventListener('click', function (e) {
+    if (e.target && e.target.closest && e.target.closest('[data-map-list-dismiss]')) {
+      closeStoresMapList(container);
+      return;
+    }
+    var row = e.target && e.target.closest && e.target.closest('[data-map-list-index]');
+    if (!row || !root.contains(row)) return;
+    var idx = Number(row.getAttribute('data-map-list-index'));
+    var merchant =
+      container._hcMapListMerchants && container._hcMapListMerchants[idx];
+    if (!merchant) return;
+    closeStoresMapList(container);
+    showSelectedMapMerchant(container, merchant);
+  });
+
+  var handleArea = root.querySelector('[data-map-list-handle]');
+  var sheet = root.querySelector('.hc-stores-map-list-sheet');
+  if (!handleArea || !sheet) return;
+
+  var dragStartY = 0;
+  var dragging = false;
+  var currentY = 0;
+
+  function onPointerMove(e) {
+    if (!dragging) return;
+    var y = e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || 0;
+    currentY = Math.max(0, y - dragStartY);
+    sheet.style.transform = 'translateY(' + currentY + 'px)';
+  }
+
+  function onPointerUp() {
+    if (!dragging) return;
+    dragging = false;
+    window.removeEventListener('mousemove', onPointerMove);
+    window.removeEventListener('touchmove', onPointerMove);
+    window.removeEventListener('mouseup', onPointerUp);
+    window.removeEventListener('touchend', onPointerUp);
+    sheet.style.transition = '';
+    if (currentY > 100) {
+      closeStoresMapList(container);
+      return;
+    }
+    sheet.style.transform = '';
+  }
+
+  function onPointerDown(e) {
+    dragging = true;
+    dragStartY = e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || 0;
+    currentY = 0;
+    sheet.style.transition = 'none';
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('touchmove', onPointerMove, { passive: true });
+    window.addEventListener('mouseup', onPointerUp);
+    window.addEventListener('touchend', onPointerUp);
+  }
+
+  handleArea.addEventListener('mousedown', onPointerDown);
+  handleArea.addEventListener('touchstart', onPointerDown, { passive: true });
+}
+
 export function renderStoresMap(container) {
   // Figma 1209:7647 — no app header here. The back button lives in the search row
   // and both it and the linked-card notice float over a full-bleed map.
@@ -366,6 +564,19 @@ export function renderStoresMap(container) {
     '<div class="hc-stores-map-body">' +
     renderLocationMapSection({ includeSearch: false }) +
     '</div>' +
+    '<button type="button" class="hc-stores-map-show-list" id="hc-stores-map-show-list" hidden>' +
+    'Show list' +
+    '</button>' +
+    '<div class="hc-stores-map-list-root" id="hc-stores-map-list-root" hidden>' +
+    '<div class="hc-stores-map-list-backdrop" data-map-list-dismiss="1"></div>' +
+    '<div class="hc-stores-map-list-sheet" role="dialog" aria-modal="true" aria-label="Nearby restaurants">' +
+    '<div class="hc-stores-map-list-handle-area" data-map-list-handle="1">' +
+    '<div class="hc-stores-map-list-handle"></div>' +
+    '</div>' +
+    '<div class="hc-stores-map-list-title">Nearby</div>' +
+    '<div class="hc-stores-map-list-scroll" id="hc-stores-map-list-scroll"></div>' +
+    '</div>' +
+    '</div>' +
     '</div>';
 
   var backBtn = container.querySelector('#hc-stores-map-back');
@@ -375,6 +586,7 @@ export function renderStoresMap(container) {
     });
   }
 
+  wireStoresMapList(container);
   mountMapCardBanner(container);
 
   container._hcPendingMapSelect = consumePendingMapMerchantSelection();
@@ -2831,6 +3043,7 @@ function initOffersMap(container, cardlinked) {
     if (mapLocationWrap) mapLocationWrap.style.display = '';
     if (mapShell) mapShell.style.display = '';
     else mapMount.style.display = '';
+    syncStoresMapShowListButton(container);
   }
 
   function setLocationPromptMessage(message) {
@@ -2850,6 +3063,8 @@ function initOffersMap(container, cardlinked) {
     mapMount.classList.remove('hc-offers-map-loading');
     mapMount.removeAttribute('aria-busy');
     mapMount.innerHTML = '';
+    closeStoresMapList(container);
+    syncStoresMapShowListButton(container);
   }
 
   function showLoadingUI() {
@@ -2858,6 +3073,7 @@ function initOffersMap(container, cardlinked) {
     if (mapLocationWrap) mapLocationWrap.style.display = 'none';
     if (mapShell) mapShell.style.display = 'none';
     else mapMount.style.display = 'none';
+    syncStoresMapShowListButton(container);
   }
 
   function setMapShellLoading(active) {
@@ -2943,6 +3159,7 @@ function initOffersMap(container, cardlinked) {
           showNoStoresIfEmpty(listWithDistances);
           var added = mergeOffersMapStores(container, listWithDistances);
           addMerchantPinsToLiveMap(container, added);
+          refreshStoresMapListIfOpen(container);
         })
         .catch(function (err) {
           console.warn('[HC offers map] region fetch failed', err);
@@ -3160,6 +3377,7 @@ function initOffersMap(container, cardlinked) {
         fillStoresGrid(document.getElementById('hc-stores-grid'), list, container);
         rebindStoresSearchClean(list);
         showNoStoresIfEmpty(list);
+        refreshStoresMapListIfOpen(container);
       })
       .catch(function () {
         if (noStoresEl) noStoresEl.style.display = 'none';
@@ -3169,6 +3387,7 @@ function initOffersMap(container, cardlinked) {
         return new Promise(function (resolve) {
           renderMap(lat, lng, true, function () {
             setMapShellLoading(false);
+            refreshStoresMapListIfOpen(container);
             resolve();
           });
         });
