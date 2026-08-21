@@ -329,9 +329,14 @@ export async function login(email, password) {
 }
 
 export async function register(userData) {
+  var payload =
+    userData && typeof userData === 'object' ? Object.assign({}, userData) : {};
+  if (!payload.client_context) {
+    payload.client_context = embedClientContext();
+  }
   var data = await request('/api/auth/register/', {
     method: 'POST',
-    body: JSON.stringify(userData || {}),
+    body: JSON.stringify(payload),
   });
   if (data && data.tokens) {
     setTokens(data.tokens.access, data.tokens.refresh);
