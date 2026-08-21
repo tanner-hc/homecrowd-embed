@@ -878,7 +878,7 @@ async function init() {
   // Tell the native app we're ready
   postToNative('homecrowd:ready');
 
-  // Load full profile (contains school feature flags like content_active).
+  // Load full profile (contains school feature flags like content_active / travel_active).
   refreshProfileUserForTabs();
 }
 
@@ -986,14 +986,27 @@ function isContentTabEnabled(currentUser) {
   return false;
 }
 
+function isTravelTabEnabled(currentUser) {
+  var sourceUser = profileUserForTabs && typeof profileUserForTabs === 'object'
+    ? profileUserForTabs
+    : currentUser;
+  if (!sourceUser || typeof sourceUser !== 'object') return true;
+  var school = sourceUser.active_school || sourceUser.activeSchool;
+  if (!school || typeof school !== 'object') return true;
+  if (school.travel_active === false) return false;
+  if (school.travelActive === false) return false;
+  return true;
+}
+
 function tabSvgInline(raw) {
   return String(raw).replace(/^<svg\s/i, '<svg class="hc-tab-icon-svg" ');
 }
 
-function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
+function buildBottomTabBarHtml(pathOnly, contentTabEnabled, travelTabEnabled) {
   var homeActive = pathOnly === '/home' ? ' active' : '';
   var rewardsActive = pathOnly === '/rewards' ? ' active' : '';
-  var travelActive = pathOnly === '/travel' ? ' active' : '';
+  var travelActive =
+    travelTabEnabled && pathOnly === '/travel' ? ' active' : '';
   var contentActive =
     contentTabEnabled && pathOnly === '/content' ? ' active' : '';
   var offersActive =
@@ -1031,13 +1044,17 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled) {
   }
 
   // Profile lives in the app header's avatar button, so it is not repeated here.
+  if (travelTabEnabled) {
+    html +=
+      '<a href="#/travel" class="hc-tab-link' +
+      travelActive +
+      '">' +
+      '<span class="hc-tab-icon-wrap">' +
+      tabSvgInline(planeSvg) +
+      '</span><span class="hc-tab-label">Travel</span></a>';
+  }
+
   html +=
-    '<a href="#/travel" class="hc-tab-link' +
-    travelActive +
-    '">' +
-    '<span class="hc-tab-icon-wrap">' +
-    tabSvgInline(planeSvg) +
-    '</span><span class="hc-tab-label">Travel</span></a>' +
     '<a href="#/rewards" class="hc-tab-link' +
     rewardsActive +
     '">' +
@@ -1442,9 +1459,15 @@ function render(route) {
     refreshProfileUserForTabs();
   }
   var contentTabEnabled = isContentTabEnabled(user);
+  var travelTabEnabled = isTravelTabEnabled(user);
 
   if (!contentTabEnabled && (pathOnly === '/content' || /^\/content\/[^/]+$/.test(pathOnly))) {
     navigate('/rewards');
+    return;
+  }
+
+  if (!travelTabEnabled && pathOnly === '/travel') {
+    navigate('/home');
     return;
   }
 
@@ -1634,6 +1657,7 @@ var tabIcons = {
 function renderLayout(route) {
   var pathOnly = routePathOnly(route);
   var contentTabEnabled = isContentTabEnabled(user);
+  var travelTabEnabled = isTravelTabEnabled(user);
   var isRewardDetailPage =
     /^\/rewards\/[^/]+$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/confirm$/.test(pathOnly) ||
@@ -1716,7 +1740,7 @@ function renderLayout(route) {
       ? ' hc-content--flush-top'
       : '';
 
-  var tabBarHtml = hideTabBar ? '' : buildBottomTabBarHtml(pathOnly, contentTabEnabled);
+  var tabBarHtml = hideTabBar ? '' : buildBottomTabBarHtml(pathOnly, contentTabEnabled, travelTabEnabled);
   var embedClassName = 'hc-embed' + (isPreviewPage ? ' hc-embed--email-selection' : '');
   var brandLockupHtml = hideBrandLockup ? '' : renderBrandLockup();
   appEl.innerHTML =
