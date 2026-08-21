@@ -190,9 +190,11 @@ function pickWeekEndsAt(leaderboardRes, prize) {
     if (leaderboardRes.weekEndsAt) return leaderboardRes.weekEndsAt;
   }
   if (prize && typeof prize === 'object') {
-    // week_end_at is a real UTC instant; week_end_date is the school-local
-    // mirror kept for older clients, so it only reads correctly for a viewer in
-    // the school's own timezone. Prefer the instant wherever the row has one.
+    // week_end_at is the real UTC instant a prize closes at - no school timezone
+    // takes part in deciding when that is. week_end_date/_time is a legacy mirror
+    // of that same instant in UTC and carries no offset, so it cannot be shown as
+    // a local wall clock. Prefer the instant: it is what gets offset into the
+    // viewer's own timezone for display.
     return (
       prize.week_end_at || prize.weekEndAt || prize.week_end_date || prize.weekEndDate || null
     );
@@ -351,8 +353,8 @@ function pickOverallRows(leaderboardRes) {
 
 function resolveOverallPeriodTargetMs(leaderboardRes, prize) {
   var raw =
-    // end_at is the real UTC instant; end_date is the school-local mirror, which
-    // only reads correctly for a viewer in the school's own timezone.
+    // end_at is the real UTC instant; end_date is a legacy UTC mirror of it that
+    // carries no offset. Prefer the instant so the viewer sees their own timezone.
     (prize && typeof prize === 'object' &&
       (prize.end_at || prize.endAt || prize.overall_ends_at || prize.end_date || prize.endDate)) ||
     (leaderboardRes && (leaderboardRes.overall_period_ends_at || leaderboardRes.overallPeriodEndsAt)) ||
