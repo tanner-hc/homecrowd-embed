@@ -931,6 +931,21 @@ export async function uploadReceipt(file, notes, context, transactionAmount, tra
   });
 }
 
+export async function getCheckInLocations() {
+  return request('/api/users/check-in/locations/');
+}
+
+export async function createCheckIn(payload) {
+  return request('/api/users/check-in/', {
+    method: 'POST',
+    body: JSON.stringify({
+      location_id: payload && payload.location_id,
+      latitude: payload && payload.latitude,
+      longitude: payload && payload.longitude,
+    }),
+  });
+}
+
 export async function getContent(options) {
   options = options || {};
   var params = [];

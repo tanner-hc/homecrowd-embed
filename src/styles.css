@@ -10464,6 +10464,112 @@ button.hc-shop-detail-cats--expandable {
   display: none;
 }
 
+.hc-check-in-page {
+  background: #fff;
+  min-height: 100%;
+}
+
+.hc-check-in-page .hc-bc-nav-header {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.hc-check-in-scroll {
+  padding: 0 20px 40px;
+}
+
+.hc-check-in-subtitle {
+  margin: 0 0 20px;
+  font-family: 'Baikal Book', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #90a4ae;
+}
+
+.hc-check-in-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: #fff;
+}
+
+.hc-check-in-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.hc-check-in-location-name {
+  flex: 1;
+  font-family: 'Baikal Bold', 'Baikal Book', system-ui, sans-serif;
+  font-size: 18px;
+  color: #333;
+}
+
+.hc-check-in-badge {
+  background: #e8f5ff;
+  border-radius: 100px;
+  padding: 4px 10px;
+  font-family: 'Baikal Book', system-ui, sans-serif;
+  font-size: 12px;
+  color: #0099cc;
+  white-space: nowrap;
+}
+
+.hc-check-in-location-address {
+  font-family: 'Baikal Book', system-ui, sans-serif;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.hc-check-in-location-meta {
+  font-family: 'Baikal Book', system-ui, sans-serif;
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 8px;
+}
+
+.hc-check-in-already {
+  font-family: 'Baikal Book', system-ui, sans-serif;
+  font-size: 13px;
+  color: #677a29;
+  margin-bottom: 12px;
+}
+
+.hc-check-in-btn {
+  margin-top: 4px;
+  width: 100%;
+}
+
+.hc-check-in-btn--done,
+.hc-check-in-btn--done:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.hc-check-in-empty {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.hc-check-in-empty-title {
+  font-family: 'Baikal Bold', 'Baikal Book', system-ui, sans-serif;
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.hc-check-in-empty-text {
+  font-family: 'Baikal Book', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #999;
+}
+
 .hc-content-page {
   background: #fff;
   padding: 0 20px 24px;
