@@ -167,6 +167,10 @@ async function loadProfile(container) {
     prefsUser &&
     (prefsUser.emailVerified === false || prefsUser.email_verified === false)
   );
+  var isSuperuser = !!(
+    prefsUser &&
+    (prefsUser.is_superuser === true || prefsUser.isSuperuser === true)
+  );
   var html = '';
   html += '<div id="hc-profile-root" class="hc-profile-view">';
   html += '<div class="hc-profile-sticky-head">';
@@ -238,6 +242,16 @@ async function loadProfile(container) {
     id: 'hc-profile-upload-receipt',
   });
 
+  if (isSuperuser) {
+    html += SecondaryButton({
+      leftHtml: secondaryIconHtml(activityIconSvg),
+      title: 'Check In',
+      subtitle: 'Confirm you are at a set location',
+      rightHtml: chevronRightHtml(),
+      id: 'hc-profile-check-in',
+    });
+  }
+
   html += '</div>';
   html += '<div class="hc-profile-logout-section">';
   html += MainButton({
@@ -292,6 +306,12 @@ async function loadProfile(container) {
   if (uploadReceiptBtn) {
     uploadReceiptBtn.addEventListener('click', function () {
       navigate('/upload-receipt');
+    });
+  }
+  var checkInBtn = container.querySelector('#hc-profile-check-in');
+  if (checkInBtn) {
+    checkInBtn.addEventListener('click', function () {
+      navigate('/check-in');
     });
   }
 

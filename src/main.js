@@ -55,6 +55,7 @@ import { renderCardDraw } from './views/card-draw.js';
 import { renderBrowserExtension } from './views/browser-extension.js';
 import { renderSupport } from './views/support.js';
 import { renderUploadReceipt } from './views/upload-receipt.js';
+import { renderCheckIn } from './views/check-in.js';
 import { renderTravel } from './views/travel.js';
 import { renderPreviewScreen } from './views/preview-screen.js';
 import { renderForgotPassword } from './views/forgot-password.js';
@@ -1599,6 +1600,8 @@ function render(route) {
     renderSupport(contentEl);
   } else if (pathOnly === '/upload-receipt') {
     renderUploadReceipt(contentEl);
+  } else if (pathOnly === '/check-in') {
+    renderCheckIn(contentEl);
   } else if (pathOnly === '/travel') {
     renderTravel(contentEl);
   } else if (pathOnly === '/preview') {
@@ -1722,6 +1725,7 @@ function renderLayout(route) {
     pathOnly === '/invite-friend' ||
     pathOnly === '/support' ||
     pathOnly === '/upload-receipt' ||
+    pathOnly === '/check-in' ||
     pathOnly === '/cards' ||
     pathOnly === '/cards/link' ||
     pathOnly === '/cards/link-intro' ||
