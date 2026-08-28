@@ -45,6 +45,7 @@ import { renderProfile } from './views/profile.js';
 import { renderContent } from './views/content.js';
 import { renderContentDetail } from './views/content-detail.js';
 import { renderAccountSettings } from './views/account-settings.js';
+import { renderSettings } from './views/settings.js';
 import { renderProfileDetails } from './views/profile-details.js';
 import { renderNotificationSettings } from './views/notification-settings.js';
 import { renderSecuritySettings } from './views/security-settings.js';
@@ -54,6 +55,8 @@ import { renderActivityLog } from './views/activity-log.js';
 import { renderCardDraw } from './views/card-draw.js';
 import { renderBrowserExtension } from './views/browser-extension.js';
 import { renderSupport } from './views/support.js';
+import { renderContactUs } from './views/contact-us.js';
+import { renderSuperuser } from './views/superuser.js';
 import { renderUploadReceipt } from './views/upload-receipt.js';
 import { renderCheckIn } from './views/check-in.js';
 import { renderTravel } from './views/travel.js';
@@ -1578,6 +1581,8 @@ function render(route) {
     renderContent(contentEl);
   } else if (pathOnly === '/profile') {
     renderProfile(contentEl);
+  } else if (pathOnly === '/settings') {
+    renderSettings(contentEl);
   } else if (pathOnly === '/account-settings') {
     renderAccountSettings(contentEl);
   } else if (pathOnly === '/profile-details') {
@@ -1598,6 +1603,10 @@ function render(route) {
     renderBrowserExtension(contentEl);
   } else if (pathOnly === '/support') {
     renderSupport(contentEl);
+  } else if (pathOnly === '/contact-us') {
+    renderContactUs(contentEl);
+  } else if (pathOnly === '/superuser') {
+    renderSuperuser(contentEl);
   } else if (pathOnly === '/upload-receipt') {
     renderUploadReceipt(contentEl);
   } else if (pathOnly === '/check-in') {
@@ -1694,7 +1703,29 @@ function renderLayout(route) {
     /^\/rewards\/[^/]+$/.test(pathOnly) || /^\/rewards\/[^/]+\/confirm$/.test(pathOnly);
   var isActivityLogPage = pathOnly === '/activity-log';
   var isCardDrawPage = pathOnly === '/card-draw';
+  // Profile draws its own lockup beneath the fan card, so the shell must not
+  // also put one above the header. Settings has no lockup at all in the design.
+  var isProfilePage = pathOnly === '/profile';
+  var isSettingsPage = pathOnly === '/settings';
+  var isSupportPage = pathOnly === '/support' || pathOnly === '/contact-us';
+  var isProfileDetailsPage = pathOnly === '/profile-details';
+  var isNotificationSettingsPage = pathOnly === '/notification-settings';
+  var isSuperuserPage = pathOnly === '/superuser';
+  var isUploadReceiptPage = pathOnly === '/upload-receipt';
+  var isCheckInPage = pathOnly === '/check-in';
+  var isSecuritySettingsPage = pathOnly === '/security-settings';
+  var isChangePasswordPage = pathOnly === '/change-password';
   var hideBrandLockup =
+    isSuperuserPage ||
+    isUploadReceiptPage ||
+    isCheckInPage ||
+    isNotificationSettingsPage ||
+    isSecuritySettingsPage ||
+    isChangePasswordPage ||
+    isProfilePage ||
+    isSettingsPage ||
+    isSupportPage ||
+    isProfileDetailsPage ||
     isTravelPage ||
     isHomePage ||
     isOffersPage ||
@@ -1724,6 +1755,7 @@ function renderLayout(route) {
   var flushTopContentClass =
     pathOnly === '/invite-friend' ||
     pathOnly === '/support' ||
+    pathOnly === '/contact-us' ||
     pathOnly === '/upload-receipt' ||
     pathOnly === '/check-in' ||
     pathOnly === '/cards' ||

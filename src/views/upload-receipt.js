@@ -1,6 +1,6 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
-import NavHeader from '../base-components/NavHeader.js';
+import PageHeader from '../base-components/PageHeader.js';
 import MainButton from '../base-components/MainButton.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
 import { getSupportContext } from './support.js';
@@ -123,12 +123,7 @@ export function renderUploadReceipt(container) {
 
   var html = '';
   html += '<div class="hc-upload-receipt-page">';
-  html += '<div class="hc-account-settings-nav">';
-  html += NavHeader({
-    title: 'Upload Receipt',
-    backButtonId: 'hc-upload-receipt-back',
-  });
-  html += '</div>';
+  html += PageHeader({ title: 'Upload receipt', backButtonId: 'hc-upload-receipt-back' });
   html += '<div class="hc-upload-receipt-scroll">';
 
   html += '<div class="hc-upload-receipt-info-card">';
@@ -141,7 +136,7 @@ export function renderUploadReceipt(container) {
   html += '</div>';
 
   html += '<div class="hc-upload-receipt-section">';
-  html += '<div class="hc-upload-receipt-section-label">Receipt photo</div>';
+  html += '<div class="hc-label hc-upload-receipt-section-label">Receipt photo</div>';
   html += '<div class="hc-upload-receipt-photo-area">';
 
   html += '<div id="hc-upload-receipt-picker" class="hc-upload-receipt-upload-zone">';
@@ -185,25 +180,25 @@ export function renderUploadReceipt(container) {
   html += '</div>';
 
   html += '<div class="hc-upload-receipt-section">';
-  html += '<div class="hc-upload-receipt-section-label">Transaction amount</div>';
+  html += '<div class="hc-label hc-upload-receipt-section-label">Transaction amount</div>';
   html +=
-    '<input type="text" id="hc-upload-receipt-amount" class="hc-upload-receipt-input" inputmode="decimal" placeholder="0.00" autocomplete="off" />';
+    '<input type="text" id="hc-upload-receipt-amount" class="hc-input hc-upload-receipt-input" inputmode="decimal" placeholder="0.00" autocomplete="off" />';
   html += '</div>';
 
   html += '<div class="hc-upload-receipt-section">';
-  html += '<div class="hc-upload-receipt-section-label">Transaction date</div>';
+  html += '<div class="hc-label hc-upload-receipt-section-label">Transaction date</div>';
   html +=
-    '<input type="date" id="hc-upload-receipt-date" class="hc-upload-receipt-date-input" max="' +
+    '<input type="date" id="hc-upload-receipt-date" class="hc-input hc-upload-receipt-date-input" max="' +
     new Date().toISOString().split('T')[0] +
     '" />';
   html += '</div>';
 
   html += '<div class="hc-upload-receipt-section">';
-  html += '<div class="hc-upload-receipt-section-label">';
+  html += '<div class="hc-label hc-upload-receipt-section-label">';
   html += 'Additional details <span class="hc-upload-receipt-optional">(optional)</span>';
   html += '</div>';
   html +=
-    '<textarea id="hc-upload-receipt-notes" class="hc-upload-receipt-textarea" placeholder="Store name, purchase date, or other details..." rows="4"></textarea>';
+    '<textarea id="hc-upload-receipt-notes" class="hc-input hc-upload-receipt-textarea" placeholder="Store name, purchase date, or other details..." rows="4"></textarea>';
   html += '</div>';
 
   html += '<div class="hc-upload-receipt-actions">';
@@ -230,7 +225,7 @@ export function renderUploadReceipt(container) {
   var backBtn = document.getElementById('hc-upload-receipt-back');
   if (backBtn) {
     backBtn.addEventListener('click', function () {
-      navigate('/profile');
+      navigate('/support');
     });
   }
 

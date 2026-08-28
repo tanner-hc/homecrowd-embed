@@ -1,7 +1,7 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
-import NavHeader from '../base-components/NavHeader.js';
+import PageHeader from '../base-components/PageHeader.js';
 import MainButton from '../base-components/MainButton.js';
 import { escapeHtml } from '../base-components/html.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
@@ -35,12 +35,7 @@ async function loadChangePassword(container) {
 
   var html = '';
   html += '<div class="hc-profile-details hc-change-password-page">';
-  html += '<div class="hc-account-settings-nav">';
-  html += NavHeader({
-    title: 'Change Password',
-    backButtonId: 'hc-cp-back',
-  });
-  html += '</div>';
+  html += PageHeader({ title: 'Change password', backButtonId: 'hc-cp-back' });
   html += '<div class="hc-pd-form">';
   html +=
     '<p class="hc-cp-intro">' +

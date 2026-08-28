@@ -285,6 +285,26 @@ export function applyBrandConfig(config, activeSchoolId) {
     '#00C8FF';
   setVar('--hc-welcome-card-bg', schoolSolid);
 
+  // Fan card gradient (profile). The design runs #004396 -> #001530, which is
+  // the same hue at 32% brightness, so the dark stop is derived rather than
+  // fixed: darkenHex(base, 0.68) reproduces the design exactly for its own navy
+  // and follows any school's colour.
+  //
+  // The card sets white type, so a school with a light primary would be
+  // unreadable. Deepen the base until it can actually carry white text before
+  // building the ramp.
+  var fanCardBase = schoolSolid;
+  var guard = 0;
+  while (getRelativeLuminanceFromHex(fanCardBase) > 0.16 && guard < 12) {
+    fanCardBase = darkenHex(fanCardBase, 0.12) || fanCardBase;
+    guard += 1;
+  }
+  setVar('--hc-fan-card-from', fanCardBase);
+  setVar('--hc-fan-card-to', darkenHex(fanCardBase, 0.68) || fanCardBase);
+  // A softly lifted edge of the base, standing in for the design's #19396B,
+  // which is a hand-picked token that cannot be reproduced per school.
+  setVar('--hc-fan-card-border', mixWithWhite(darkenHex(fanCardBase, 0.3), 0.08) || fanCardBase);
+
   var loginBgUrl = loginBackground || emailSelectionBackground || defaultBackground;
   setVar('--hc-login-bg-image', 'url("' + loginBgUrl + '")');
   setVar('--hc-login-button', readCssColor(brandConfig, 'loginButton', 'loginButtonOpacity', loginButton, 100));

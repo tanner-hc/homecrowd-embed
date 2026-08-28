@@ -1,13 +1,12 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
-import NavHeader from '../base-components/NavHeader.js';
-import SecondaryButton from '../base-components/SecondaryButton.js';
+import PageHeader from '../base-components/PageHeader.js';
+import SettingsRow from '../base-components/SettingsRow.js';
 import MainButton from '../base-components/MainButton.js';
 import { escapeHtml } from '../base-components/html.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
-import lockIconSvg from '../assets/icons/lock.svg?raw';
-import chevronRightIconSvg from '../assets/icons/chevron-right.svg?raw';
+import lockIconSvg from '../assets/icons/settings/lock.svg?raw';
 import shieldIconSvg from '../assets/icons/shield.svg?raw';
 
 var RESEND_COOLDOWN_SEC = 60;
@@ -15,14 +14,6 @@ var LS_VERIFICATION_SENT = 'hc_embed_verification_resend_at';
 
 function svgAddClass(svgRaw, className) {
   return String(svgRaw).replace(/^<svg\s/i, '<svg class="' + className + '" ');
-}
-
-function secondaryIconHtml(svgRaw) {
-  return svgAddClass(svgRaw, 'hc-profile-secondary-icon');
-}
-
-function chevronRightHtml() {
-  return svgAddClass(chevronRightIconSvg, 'hc-profile-chevron-icon');
 }
 
 function isEmailVerified(user) {
@@ -122,21 +113,14 @@ async function loadSecuritySettings(container) {
 
   var html = '';
   html += '<div class="hc-security-settings">';
-  html += '<div class="hc-account-settings-nav">';
-  html += NavHeader({
-    title: 'Security Settings',
-    backButtonId: 'hc-sec-back',
-  });
-  html += '</div>';
+  html += PageHeader({ title: 'Security', backButtonId: 'hc-sec-back' });
   html += '<div class="hc-sec-body">';
   html += verifyEmailBannerHtml(user);
-  html += '<div class="hc-profile-menu hc-sec-menu">';
-  html += SecondaryButton({
-    leftHtml: secondaryIconHtml(lockIconSvg),
-    title: 'Change Password',
-    subtitle: 'Update your account password',
-    rightHtml: chevronRightHtml(),
+  html += '<div class="hc-settings-list">';
+  html += SettingsRow({
     id: 'hc-sec-change-pw',
+    icon: lockIconSvg,
+    label: 'Change password',
   });
   html += '</div>';
   html += '</div>';
@@ -148,7 +132,7 @@ async function loadSecuritySettings(container) {
   var backBtn = document.getElementById('hc-sec-back');
   if (backBtn) {
     backBtn.addEventListener('click', function () {
-      navigate('/account-settings');
+      navigate('/settings');
     });
   }
 

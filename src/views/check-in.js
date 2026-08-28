@@ -1,6 +1,6 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
-import NavHeader from '../base-components/NavHeader.js';
+import PageHeader from '../base-components/PageHeader.js';
 import MainButton from '../base-components/MainButton.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
@@ -162,14 +162,14 @@ async function loadCheckIn(container) {
   } catch (err) {
     container.innerHTML =
       '<div class="hc-check-in-page">' +
-      NavHeader({ title: 'Check In', backButtonId: 'hc-check-in-back' }) +
+      PageHeader({ title: 'Check in', backButtonId: 'hc-check-in-back' }) +
       '<div class="hc-alert-error">' +
       escapeHtml((err && err.message) || 'Failed to load locations') +
       '</div></div>';
     var backErr = document.getElementById('hc-check-in-back');
     if (backErr) {
       backErr.addEventListener('click', function () {
-        navigate('/profile');
+        navigate('/superuser');
       });
     }
   }
@@ -178,7 +178,7 @@ async function loadCheckIn(container) {
 function renderCheckInContent(container, locations) {
   var html = '';
   html += '<div id="hc-check-in-root" class="hc-check-in-page">';
-  html += NavHeader({ title: 'Check In', backButtonId: 'hc-check-in-back' });
+  html += PageHeader({ title: 'Check in', backButtonId: 'hc-check-in-back' });
   html += '<div class="hc-check-in-scroll">';
   html +=
     '<p class="hc-check-in-subtitle">Confirm you are at a set location. Location access is required.</p>';
@@ -201,7 +201,7 @@ function renderCheckInContent(container, locations) {
   var backBtn = document.getElementById('hc-check-in-back');
   if (backBtn) {
     backBtn.addEventListener('click', function () {
-      navigate('/profile');
+      navigate('/superuser');
     });
   }
 

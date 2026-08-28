@@ -1,7 +1,7 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
-import NavHeader from '../base-components/NavHeader.js';
+import PageHeader from '../base-components/PageHeader.js';
 import SecondaryButtonWithSwitch from '../base-components/SecondaryButtonWithSwitch.js';
 import { escapeHtml } from '../base-components/html.js';
 import bellIconSvg from '../assets/icons/bell.svg?raw';
@@ -67,12 +67,7 @@ async function loadNotificationSettings(container) {
 
   var html = '';
   html += '<div class="hc-notification-settings">';
-  html += '<div class="hc-account-settings-nav">';
-  html += NavHeader({
-    title: 'Notification settings',
-    backButtonId: 'hc-ns-back',
-  });
-  html += '</div>';
+  html += PageHeader({ title: 'Notifications', backButtonId: 'hc-ns-back' });
   html += '<div class="hc-ns-body">';
   html += '<div class="hc-ns-banner">';
   html += '<div class="hc-ns-banner-icon">' + secondaryIconHtml(bellIconSvg) + '</div>';
@@ -86,7 +81,6 @@ async function loadNotificationSettings(container) {
   html += SecondaryButtonWithSwitch({
     leftHtml: secondaryIconHtml(mailIconSvg),
     title: 'Email notifications',
-    subtitle: 'Receive updates via email',
     value: prefs.email,
     switchId: 'hc-ns-email',
   });
@@ -99,7 +93,7 @@ async function loadNotificationSettings(container) {
   var backBtn = document.getElementById('hc-ns-back');
   if (backBtn) {
     backBtn.addEventListener('click', function () {
-      navigate('/account-settings');
+      navigate('/settings');
     });
   }
 

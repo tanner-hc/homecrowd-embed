@@ -1,7 +1,7 @@
 import * as api from '../api.js';
 import { navigate } from '../router.js';
 import LoadingSpinner from '../base-components/LoadingSpinner.js';
-import NavHeader from '../base-components/NavHeader.js';
+import PageHeader from '../base-components/PageHeader.js';
 import MainButton from '../base-components/MainButton.js';
 import { escapeHtml, escapeAttr } from '../base-components/html.js';
 import { showSuccess, showError } from '../base-components/toastApi.js';
@@ -109,12 +109,7 @@ async function loadProfileDetails(container) {
 
   var html = '';
   html += '<div class="hc-profile-details">';
-  html += '<div class="hc-account-settings-nav">';
-  html += NavHeader({
-    title: 'Profile Details',
-    backButtonId: 'hc-pd-back',
-  });
-  html += '</div>';
+  html += PageHeader({ title: 'Profile', backButtonId: 'hc-pd-back' });
   html += '<div class="hc-pd-form">';
   html += '<div class="hc-form-group hc-pd-field">';
   html += '<label class="hc-label" for="hc-pd-first">First Name</label>';
@@ -176,7 +171,7 @@ async function loadProfileDetails(container) {
   var backBtn = document.getElementById('hc-pd-back');
   if (backBtn) {
     backBtn.addEventListener('click', function () {
-      navigate('/account-settings');
+      navigate('/settings');
     });
   }
 
@@ -231,7 +226,7 @@ async function loadProfileDetails(container) {
       try {
         await api.updateUserProfile(payload);
         showSuccess('Profile updated successfully');
-        navigate('/account-settings');
+        navigate('/settings');
       } catch (err) {
         showError(parseApiError(err));
         saveBtn.disabled = false;
