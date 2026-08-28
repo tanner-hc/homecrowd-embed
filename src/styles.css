@@ -24785,7 +24785,7 @@ img.hc-img-ph--none {
 /* The Contact us bar on the profile page: the settings list's own card, on the
    page gutter. Row styling comes from .hc-settings-row below, unchanged. */
 .hc-profile-contact {
-  margin: 18px var(--hc-spacing-lg) 0;
+  margin-top: 32px;
 }
 
 /* ── Settings page (design node 1690:7745) ───────────────────────────────────
@@ -24852,8 +24852,12 @@ img.hc-img-ph--none {
   border-radius: 12px;
   padding: 6px 16px;
   /* Self-gutters: the list is a direct child of the settings page and of the
-     security page, and only the former's container used to supply a margin. */
-  margin: 0 var(--hc-spacing-lg);
+     security page, and only the former's container used to supply a margin.
+     Long-hand deliberately — the shorthand also reset the vertical margins,
+     and this rule sits after .hc-profile-contact at the same specificity, so
+     it was silently zeroing that bar's top margin. */
+  margin-left: var(--hc-spacing-lg);
+  margin-right: var(--hc-spacing-lg);
 }
 
 .hc-settings-row {
