@@ -11153,6 +11153,7 @@ button.hc-shop-detail-cats--expandable {
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   /* Short and decelerating: on release the card drops onto the nearest face
      rather than easing slowly into it. */
   transition: transform 0.26s cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -11163,10 +11164,13 @@ button.hc-shop-detail-cats--expandable {
   inset: 0;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  transform: translateZ(0.5px);
+  -webkit-transform: translateZ(0.5px);
 }
 
 .hc-profile-flip-face--back {
-  transform: rotateY(180deg);
+  transform: rotateY(180deg) translateZ(0.5px);
+  -webkit-transform: rotateY(180deg) translateZ(0.5px);
 }
 
 /* The faces fill the wrapper, which now owns the ratio and the gutter. */
@@ -11174,6 +11178,9 @@ button.hc-shop-detail-cats--expandable {
   height: 100%;
   aspect-ratio: auto;
   min-height: 0;
+  isolation: isolate;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
