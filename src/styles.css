@@ -11291,7 +11291,7 @@ button.hc-shop-detail-cats--expandable {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-right: 14.566px;
+  margin-right: 4.021px;
 }
 
 /* Design: Baikal VAR / Extra Condensed Bold, 36px, weight 700, line-height 0.9,
@@ -11328,6 +11328,12 @@ button.hc-shop-detail-cats--expandable {
   overflow: hidden;
 }
 
+/* Beside the mark the figures must be the part that gives: without this they
+   size to content and push the mark off the card on narrow screens. */
+.hc-profile-card-bottom .hc-profile-card-backstats {
+  flex: 1 1 auto;
+}
+
 .hc-profile-card-bigstat {
   display: flex;
   flex-direction: column;
@@ -11352,12 +11358,11 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-profile-card-bottom {
   display: flex;
-  /* Design node 1690:7386 is items-center, not bottom-aligned. */
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   min-height: 0;
-  margin-right: 4.021px;
+  margin-right: 14.566px;
 }
 
 .hc-profile-card-stats {

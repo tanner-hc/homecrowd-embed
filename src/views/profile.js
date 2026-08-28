@@ -126,13 +126,13 @@ function profileCardHtml(user) {
     '<p class="hc-profile-card-name">' +
     escapeHtml(name) +
     '</p>' +
-    svgAddClass(homecrowdFlagMarkSvg, 'hc-profile-card-mark') +
+    crest +
     '</div>' +
     '<div class="hc-profile-card-bottom">' +
     '<div class="hc-profile-card-stats">' +
     stats +
     '</div>' +
-    crest +
+    svgAddClass(homecrowdFlagMarkSvg, 'hc-profile-card-mark') +
     '</div>' +
     '</div>' +
     '</div>'
@@ -194,13 +194,16 @@ function profileCardBackHtml(user, transactionCount) {
     escapeHtml(name) +
     '<span class="hc-profile-card-name-sub">Fan Stats</span>' +
     '</p>' +
-    svgAddClass(homecrowdFlagMarkSvg, 'hc-profile-card-mark') +
     '</div>' +
     // Only the figures the front does not already carry, so the two faces
-    // are worth swiping between.
+    // are worth swiping between. The mark sits beside them, bottom-right, as
+    // it does on the front.
+    '<div class="hc-profile-card-bottom">' +
     '<div class="hc-profile-card-backstats">' +
     bigStatHtml('Lifetime points', formatPoints(pickLifetimePoints(user))) +
     bigStatHtml('Transactions', formatPoints(transactionCount)) +
+    '</div>' +
+    svgAddClass(homecrowdFlagMarkSvg, 'hc-profile-card-mark') +
     '</div>' +
     '</div>' +
     '</div>'
