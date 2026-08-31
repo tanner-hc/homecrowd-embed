@@ -308,6 +308,18 @@ function userHasFullName(currentUser) {
   return !!(first && last);
 }
 
+function navigateAfterAuth(currentUser, preferredView) {
+  if (!userHasFullName(currentUser)) {
+    navigate('/enter-full-name');
+    return;
+  }
+  if (preferredView) {
+    navigate('/' + preferredView);
+    return;
+  }
+  navigate(routeAfterAuth(currentUser));
+}
+
 async function finishEmbedSocialLogin(result) {
   var nextUser = result && result.user ? result.user : null;
   var isNewUser = !!(result && result.isNewUser);
@@ -316,7 +328,7 @@ async function finishEmbedSocialLogin(result) {
   }
   nextUser = await assignLockedEmbedSchoolIfNeeded(nextUser);
   completeLoginState(nextUser);
-  if (isNewUser && !userHasFullName(nextUser)) {
+  if (!userHasFullName(nextUser)) {
     navigate('/enter-full-name');
     return;
   }
@@ -363,7 +375,7 @@ function startSchoolEmailConfirmationPolling(confirmationId) {
                   ? pendingSchoolAuthContext.token
                   : '',
               );
-              navigate('/' + initialView);
+              navigateAfterAuth(nextUser, initialView);
             });
           });
       })
@@ -403,7 +415,7 @@ async function applyAutologinToken(token, view, nextSchoolId) {
     preloadMapForEmbed();
     scheduleDailyVisitCheck();
     scheduleExtensionStatusSync();
-    navigate('/' + (view || initialView));
+    navigateAfterAuth(user, view || initialView);
     return true;
   } catch (e) {
     api.clearTokens();
@@ -435,7 +447,7 @@ async function resolveSchoolPartnerFlow(token, view, nextSchoolId) {
           schoolId: statusResult.schoolId || nextSchoolId || schoolId || '',
         };
         completeLoginState(authUser, token);
-        navigate('/' + (view || initialView));
+        navigateAfterAuth(authUser, view || initialView);
         return true;
       }
     }
@@ -479,7 +491,7 @@ async function handleAlternateSchoolChoice(selectedEmail) {
   if (result && result.access) {
     var nextUser = await api.fetchCurrentUser();
     completeLoginState(nextUser, pendingSchoolAuthContext.token);
-    navigate('/' + initialView);
+    navigateAfterAuth(nextUser, initialView);
     return;
   }
   throw new Error('Could not sign in with selected email');
@@ -501,7 +513,7 @@ async function handlePreviewPasswordSignIn(email, password) {
   });
   var nextUser = await api.fetchCurrentUser();
   completeLoginState(nextUser, pendingSchoolAuthContext.token);
-  navigate('/' + initialView);
+  navigateAfterAuth(nextUser, initialView);
 }
 
 async function handlePreviewForgotPassword(email) {
@@ -956,6 +968,9 @@ async function assignLockedEmbedSchoolIfNeeded(currentUser) {
 }
 
 function routeAfterAuth(currentUser) {
+  if (!userHasFullName(currentUser)) {
+    return '/enter-full-name';
+  }
   if (hasActiveSchool(currentUser) || getLockedEmbedSchoolId()) {
     return '/' + initialView;
   }
@@ -1292,6 +1307,10 @@ function render(route) {
   }
   if (!user && !isPublicAuthPath(pathOnly)) {
     navigate(partnerToken ? '/preview' : '/get-started');
+    return;
+  }
+  if (user && !userHasFullName(user) && pathOnly !== '/enter-full-name') {
+    navigate('/enter-full-name');
     return;
   }
   if (user && !hasActiveSchool(user) && !isSignupOnboardingPath(pathOnly)) {
@@ -1637,7 +1656,7 @@ function render(route) {
         }
         var nextUser = await api.fetchCurrentUser();
         completeLoginState(nextUser, previewCtx.token);
-        navigate('/' + initialView);
+        navigateAfterAuth(nextUser, initialView);
       },
       onSecondaryChoice: function () {
         if (!previewCtx.token) {
