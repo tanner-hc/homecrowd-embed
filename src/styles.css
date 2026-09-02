@@ -21815,6 +21815,11 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-add-card-page--success {
   min-height: 100%;
+  height: 100%;
+}
+
+.hc-content.hc-content--game-checkin .hc-add-card-page--success {
+  min-height: 100%;
 }
 
 .hc-add-card-nav {
@@ -22022,6 +22027,12 @@ button.hc-shop-detail-cats--expandable {
 
 .hc-add-card-cta:active {
   opacity: 0.85;
+}
+
+.hc-add-card-cta--secondary {
+  margin-top: 10px;
+  background: #ededed;
+  color: #000000;
 }
 
 .hc-add-card-cta--disabled,
@@ -24956,4 +24967,752 @@ img.hc-img-ph--none {
 .hc-settings-logout:disabled {
   opacity: 0.7;
   cursor: default;
+}
+
+.hc-games {
+  min-height: 100%;
+  background: #ffffff;
+}
+
+.hc-games-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: #ffffff;
+  padding: 8px 16px 0;
+}
+
+.hc-games-top {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 41px;
+}
+
+.hc-games-plus {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.hc-games-segments {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  margin: 16px 0 12px;
+  padding: 3px;
+  border-radius: 12px;
+  background: #f2f2f2;
+}
+
+.hc-games-seg {
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #8e8e93;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-games-seg--on {
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.hc-games-body {
+  padding: 4px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hc-games-card {
+  background: #f2f2f2;
+  border-radius: 18px;
+  padding: 16px;
+}
+
+.hc-games-card-match {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hc-games-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 76px;
+  flex: none;
+  min-width: 0;
+  gap: 6px;
+}
+
+.hc-games-team-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  object-position: center;
+  background: transparent;
+  border-radius: 0;
+  display: block;
+}
+
+.hc-games-team-logo--empty {
+  background: transparent;
+}
+
+.hc-games-team-logo.hc-img-ph,
+img.hc-games-team-logo.hc-img-ph {
+  background-color: transparent;
+  border-radius: 0;
+}
+
+.hc-games-team-name {
+  width: 100%;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: 0;
+  color: #000000;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-games-card-time {
+  flex: 1;
+  min-width: 0;
+  padding-top: 17px;
+  font-family: 'Baikal-CondensedBold', var(--hc-font);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0;
+  color: #000000;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.hc-games-card-rule {
+  height: 1px;
+  background: #e4e4e4;
+  margin: 12px 0 10px;
+}
+
+.hc-games-card-meta {
+  display: grid;
+  grid-template-columns: 76px 1fr 76px;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-weight: 340;
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #a0a0a0;
+  text-align: center;
+}
+
+.hc-games-card-meta > span:first-child,
+.hc-games-card-meta > span:nth-child(2) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-games-card-checkin {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.hc-games-lock {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  display: block;
+  color: #a0a0a0;
+}
+
+.hc-games-lock path {
+  fill: currentColor;
+}
+
+.hc-games-check {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  display: block;
+}
+
+.hc-games-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.hc-games-card-actions--single {
+  grid-template-columns: 1fr;
+}
+
+.hc-games-btn {
+  height: 46px;
+  border: none;
+  border-radius: 100px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-games-btn--ghost {
+  background: #ededed;
+  color: #000000;
+}
+
+.hc-games-btn--primary {
+  background: var(--hc-app-primary, #00c8ff);
+  color: var(--hc-app-accent, #000000);
+}
+
+.hc-games-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.hc-games-empty {
+  padding: 48px 12px;
+  text-align: center;
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-size: 14px;
+  color: #8e8e93;
+}
+
+.hc-content.hc-content--game-checkin {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  max-width: none;
+}
+
+.hc-content.hc-content--game-checkin #hc-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.hc-game-checkin {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  background: #ffffff;
+}
+
+.hc-game-checkin .hc-page-header {
+  flex: none;
+  padding-bottom: 12px;
+}
+
+.hc-game-checkin-map {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.hc-game-checkin-map .maplibregl-map {
+  width: 100%;
+  height: 100%;
+}
+
+.hc-game-checkin-map-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 24px;
+  text-align: center;
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-size: 14px;
+  color: #8e8e93;
+}
+
+.hc-game-checkin-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
+.hc-game-checkin-pin svg {
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.22));
+}
+
+.hc-game-checkin-user {
+  display: block;
+  width: 40px;
+  height: 48px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  pointer-events: none;
+}
+
+.hc-game-checkin-user svg {
+  display: block;
+  width: 40px;
+  height: 48px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.22));
+}
+
+.hc-game-checkin-footer {
+  flex: none;
+  padding: 16px 16px max(16px, env(safe-area-inset-bottom, 0px));
+  background: #ffffff;
+}
+
+.hc-game-checkin-footer .hc-bc-main-btn {
+  width: 100%;
+}
+
+.hc-predict-sheet-root .hc-bs-sheet,
+.hc-bs-sheet.hc-predict-sheet {
+  position: relative;
+  padding: 34px 22px max(16px, env(safe-area-inset-bottom, 0px));
+  align-items: stretch;
+}
+
+.hc-predict-sheet-root .hc-bs-handle-area {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 10px 0 0;
+}
+
+.hc-predict-sheet-root .hc-bs-icon {
+  margin: 0 auto 12px;
+  padding: 0;
+}
+
+.hc-predict-sheet-root .hc-bs-title {
+  margin: 0 0 8px;
+  padding: 0;
+  font-family: 'Baikal-ExtraCondensedBold', 'Baikal', var(--hc-font);
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.hc-predict-sheet-root .hc-bs-subtitle {
+  margin: 0 0 20px;
+  padding: 0;
+  font-family: 'Baikal-Book', 'Baikal', var(--hc-font);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #9a9a9a;
+  text-align: center;
+}
+
+.hc-predict-badge {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 92.5px;
+  height: 20px;
+  gap: 5px;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: var(--hc-app-primary, #00c8ff);
+  color: var(--hc-app-accent, #000000);
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.hc-predict-badge-icon {
+  width: 15px;
+  height: 15px;
+  display: block;
+  color: currentColor;
+  flex: none;
+  align-self: center;
+}
+
+.hc-predict-body-wrap {
+  width: 100%;
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 41px;
+}
+
+.hc-predict-match {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 8px;
+  margin-bottom: 34px;
+}
+
+.hc-predict-match-rule {
+  width: 1px;
+  align-self: stretch;
+  min-height: 140px;
+  background: #e4e4e4;
+}
+
+.hc-predict-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  gap: 0;
+  padding: 0 2px;
+}
+
+.hc-predict-team-logo {
+  width: 43px;
+  height: 40px;
+  max-width: 43px;
+  max-height: 40px;
+  object-fit: contain;
+  object-position: center;
+  background: transparent;
+  display: block;
+}
+
+.hc-predict-team-logo--empty {
+  background: transparent;
+}
+
+.hc-predict-team-logo.hc-img-ph,
+img.hc-predict-team-logo.hc-img-ph {
+  background-color: transparent;
+  border-radius: 0;
+}
+
+.hc-predict-team-name {
+  width: 100%;
+  margin-top: 8px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: 0;
+  color: #000000;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-predict-stepper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 41px;
+}
+
+.hc-predict-step {
+  box-sizing: border-box;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 171px;
+  background: #ededed;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 7px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-predict-step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.hc-predict-step-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+.hc-predict-score {
+  min-width: 56px;
+  font-family: 'Baikal-ExtraCondensedBold', 'Baikal', var(--hc-font);
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: 0;
+  color: #000000;
+  text-align: center;
+}
+
+.hc-predict-info {
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 27px;
+  background: #f8f8f8;
+  border-radius: 16px;
+  padding: 24px 18px;
+}
+
+.hc-predict-info-rule {
+  width: 100%;
+  height: 1px;
+  background: #e4e4e4;
+  flex: none;
+}
+
+.hc-predict-info-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.hc-predict-info-icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  display: block;
+  color: #000000;
+}
+
+.hc-predict-info-icon path {
+  fill: currentColor;
+}
+
+.hc-predict-info-copy {
+  min-width: 0;
+  text-align: left;
+}
+
+.hc-predict-info-title {
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #000000;
+}
+
+.hc-predict-info-text {
+  margin-top: 6px;
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #888888;
+}
+
+.hc-predict-body-wrap--view {
+  max-height: none;
+  margin-bottom: 24px;
+}
+
+.hc-predict-match--view {
+  margin-bottom: 0;
+}
+
+.hc-predict-match--view .hc-predict-match-rule {
+  min-height: 120px;
+}
+
+.hc-predict-score--readonly {
+  margin-top: 41px;
+}
+
+.hc-predict-body-wrap--results {
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 16px;
+}
+
+.hc-predict-lb {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.hc-predict-lb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 8px;
+  border-radius: 12px;
+}
+
+.hc-predict-lb-row--you {
+  padding: 12px 8px;
+  background: #f0f9ff;
+}
+
+.hc-predict-lb-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.hc-predict-lb-medal {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.hc-predict-lb-medal svg {
+  width: 26px;
+  height: 28px;
+  display: block;
+}
+
+.hc-predict-lb-medal-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 2px;
+  font-family: 'Baikal-ExtraCondensedBold', 'Baikal', var(--hc-font);
+  font-size: 18px;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 0.9;
+  letter-spacing: 0;
+  text-align: center;
+  color: #ffffff;
+  pointer-events: none;
+}
+
+.hc-predict-lb-medal--gold {
+  color: #c4a46a;
+}
+
+.hc-predict-lb-medal--silver {
+  color: #c8c8c8;
+}
+
+.hc-predict-lb-medal--bronze {
+  color: #a36a25;
+}
+
+.hc-predict-lb-rank {
+  width: 26px;
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1.1;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #888888;
+  text-align: center;
+}
+
+.hc-predict-lb-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ebebeb;
+}
+
+.hc-predict-lb-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hc-predict-lb-avatar--ph svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  color: #b4b4b4;
+}
+
+.hc-predict-lb-avatar--ph svg path {
+  fill: currentColor;
+}
+
+.hc-predict-lb-name {
+  min-width: 0;
+  font-size: 16px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-predict-lb-score {
+  flex-shrink: 0;
+  font-size: 16px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-weight: 500;
+  color: #000000;
+}
+
+.hc-predict-lb-empty {
+  padding: 24px 8px;
+  text-align: center;
+  font-size: 14px;
+  font-family: 'Baikal-Book', var(--hc-font);
+  color: #888888;
 }
