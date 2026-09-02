@@ -60,6 +60,9 @@ import { renderSuperuser } from './views/superuser.js';
 import { renderUploadReceipt } from './views/upload-receipt.js';
 import { renderCheckIn } from './views/check-in.js';
 import { renderTravel } from './views/travel.js';
+import { renderGames } from './views/games.js';
+import { renderGameCheckIn } from './views/game-check-in.js';
+import { isSuperuser } from './views/superuser.js';
 import { renderPreviewScreen } from './views/preview-screen.js';
 import { renderForgotPassword } from './views/forgot-password.js';
 import { renderResetPassword } from './views/reset-password.js';
@@ -73,6 +76,7 @@ import bagSvg from './assets/icons/bag.svg?raw';
 
 import planeSvg from './assets/icons/plane-filled.svg?raw';
 import playFilledSvg from './assets/icons/play-filled.svg?raw';
+import gamesSvg from './assets/icon-games.svg?raw';
 
 // Registered before the first render so no view can paint a broken image.
 installImageFallback();
@@ -1017,13 +1021,24 @@ function isTravelTabEnabled(currentUser) {
   return true;
 }
 
+function isGamesTabEnabled(currentUser) {
+  var sourceUser = profileUserForTabs && typeof profileUserForTabs === 'object'
+    ? profileUserForTabs
+    : currentUser;
+  return isSuperuser(sourceUser);
+}
+
 function tabSvgInline(raw) {
   return String(raw).replace(/^<svg\s/i, '<svg class="hc-tab-icon-svg" ');
 }
 
-function buildBottomTabBarHtml(pathOnly, contentTabEnabled, travelTabEnabled) {
+function buildBottomTabBarHtml(pathOnly, contentTabEnabled, travelTabEnabled, gamesTabEnabled) {
   var homeActive = pathOnly === '/home' ? ' active' : '';
   var rewardsActive = pathOnly === '/rewards' ? ' active' : '';
+  var gamesActive =
+    gamesTabEnabled && (pathOnly === '/games' || /^\/games\//.test(pathOnly))
+      ? ' active'
+      : '';
   var travelActive =
     travelTabEnabled && pathOnly === '/travel' ? ' active' : '';
   var contentActive =
@@ -1079,8 +1094,19 @@ function buildBottomTabBarHtml(pathOnly, contentTabEnabled, travelTabEnabled) {
     '">' +
     '<span class="hc-tab-icon-wrap">' +
     tabSvgInline(giftFilledSvg) +
-    '</span><span class="hc-tab-label">Rewards</span></a>' +
-    '</nav>';
+    '</span><span class="hc-tab-label">Rewards</span></a>';
+
+  if (gamesTabEnabled) {
+    html +=
+      '<a href="#/games" class="hc-tab-link' +
+      gamesActive +
+      '">' +
+      '<span class="hc-tab-icon-wrap">' +
+      tabSvgInline(String(gamesSvg).replace(/#00C8FF/gi, 'currentColor')) +
+      '</span><span class="hc-tab-label">Games</span></a>';
+  }
+
+  html += '</nav>';
 
   return '<div class="hc-tab-bar-shell">' + html + '</div>';
 }
@@ -1483,6 +1509,7 @@ function render(route) {
   }
   var contentTabEnabled = isContentTabEnabled(user);
   var travelTabEnabled = isTravelTabEnabled(user);
+  var gamesTabEnabled = isGamesTabEnabled(user);
 
   if (!contentTabEnabled && (pathOnly === '/content' || /^\/content\/[^/]+$/.test(pathOnly))) {
     navigate('/rewards');
@@ -1492,6 +1519,13 @@ function render(route) {
   if (!travelTabEnabled && pathOnly === '/travel') {
     navigate('/home');
     return;
+  }
+
+  if (!gamesTabEnabled && (pathOnly === '/games' || /^\/games\//.test(pathOnly))) {
+    if (profileUserForTabs || !profileUserForTabsLoading) {
+      navigate('/home');
+      return;
+    }
   }
 
   // Full-bleed screen: renders straight into appEl so it carries no app header
@@ -1598,6 +1632,11 @@ function render(route) {
     renderCards(contentEl);
   } else if (pathOnly === '/content') {
     renderContent(contentEl);
+  } else if (pathOnly === '/games') {
+    renderGames(contentEl);
+  } else if (/^\/games\/[^/]+\/check-in$/.test(pathOnly)) {
+    var gameCheckInMatch = pathOnly.match(/^\/games\/([^/]+)\/check-in$/);
+    renderGameCheckIn(contentEl, decodeURIComponent(gameCheckInMatch[1]));
   } else if (pathOnly === '/profile') {
     renderProfile(contentEl);
   } else if (pathOnly === '/settings') {
@@ -1689,6 +1728,7 @@ function renderLayout(route) {
   var pathOnly = routePathOnly(route);
   var contentTabEnabled = isContentTabEnabled(user);
   var travelTabEnabled = isTravelTabEnabled(user);
+  var gamesTabEnabled = isGamesTabEnabled(user);
   var isRewardDetailPage =
     /^\/rewards\/[^/]+$/.test(pathOnly) ||
     /^\/rewards\/[^/]+\/confirm$/.test(pathOnly) ||
@@ -1704,6 +1744,8 @@ function renderLayout(route) {
   var isContentDetailPage = /^\/content\/[^/]+$/.test(pathOnly);
   var isPreviewPage = pathOnly === '/preview';
   var isTravelPage = pathOnly === '/travel';
+  var isGamesPage = pathOnly === '/games';
+  var isGameCheckInPage = /^\/games\/[^/]+\/check-in$/.test(pathOnly);
   var isHomePage = pathOnly === '/home';
   var isOffersPage =
     pathOnly === '/offers' || pathOnly === '/offers/all-shops' || pathOnly === '/offers/map';
@@ -1746,6 +1788,8 @@ function renderLayout(route) {
     isSupportPage ||
     isProfileDetailsPage ||
     isTravelPage ||
+    isGamesPage ||
+    isGameCheckInPage ||
     isHomePage ||
     isOffersPage ||
     isOfferDetailPage ||
@@ -1770,7 +1814,8 @@ function renderLayout(route) {
     isSafariOnPage ||
     // Focused full-screen flow with its own exit ("Maybe later"); the tab bar
     // would otherwise sit over the actions pinned to the bottom.
-    isCardDrawPage;
+    isCardDrawPage ||
+    isGameCheckInPage;
   var flushTopContentClass =
     pathOnly === '/invite-friend' ||
     pathOnly === '/support' ||
@@ -1782,6 +1827,8 @@ function renderLayout(route) {
     pathOnly === '/cards/link-intro' ||
     pathOnly === '/browser-extension' ||
     isTravelPage ||
+    isGamesPage ||
+    isGameCheckInPage ||
     isHomePage ||
     isOffersPage ||
     isOfferDetailPage ||
@@ -1795,7 +1842,7 @@ function renderLayout(route) {
       ? ' hc-content--flush-top'
       : '';
 
-  var tabBarHtml = hideTabBar ? '' : buildBottomTabBarHtml(pathOnly, contentTabEnabled, travelTabEnabled);
+  var tabBarHtml = hideTabBar ? '' : buildBottomTabBarHtml(pathOnly, contentTabEnabled, travelTabEnabled, gamesTabEnabled);
   var embedClassName = 'hc-embed' + (isPreviewPage ? ' hc-embed--email-selection' : '');
   var brandLockupHtml = hideBrandLockup ? '' : renderBrandLockup();
   appEl.innerHTML =
@@ -1808,6 +1855,7 @@ function renderLayout(route) {
     (isMarketplacePage || isStoresMapPage || isOfferDetailPage ? ' hc-content--marketplace' : '') +
     (isOfferDetailPage ? ' hc-content--shop-detail' : '') +
     (isStoresMapPage ? ' hc-content--stores-map' : '') +
+    (isGameCheckInPage ? ' hc-content--game-checkin' : '') +
     (isSafariOnPage ? ' hc-content--safari-on' : '') +
     (hideTabBar ? '' : ' hc-content--with-tab-bar') +
     flushTopContentClass +

@@ -946,6 +946,54 @@ export async function createCheckIn(payload) {
   });
 }
 
+function asList(data) {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.results)) return data.results;
+  return [];
+}
+
+export async function getSportSchedules(schoolId) {
+  var query = schoolId ? '?school=' + encodeURIComponent(String(schoolId)) : '';
+  return asList(await request('/api/school/sport-schedules/' + query));
+}
+
+export async function getScheduleEvents(scheduleId) {
+  var query = scheduleId ? '?schedule=' + encodeURIComponent(String(scheduleId)) : '';
+  return asList(await request('/api/school/schedule-events/' + query));
+}
+
+export async function createScheduleEventCheckIn(eventId, payload) {
+  return request(
+    '/api/school/schedule-events/' + encodeURIComponent(String(eventId)) + '/check-in/',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        latitude: payload && payload.latitude,
+        longitude: payload && payload.longitude,
+      }),
+    }
+  );
+}
+
+export async function createScheduleEventPrediction(eventId, payload) {
+  return request(
+    '/api/school/schedule-events/' + encodeURIComponent(String(eventId)) + '/predict/',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        home_score: payload && payload.home_score,
+        away_score: payload && payload.away_score,
+      }),
+    }
+  );
+}
+
+export async function getScheduleEventPredictions(eventId) {
+  return request(
+    '/api/school/schedule-events/' + encodeURIComponent(String(eventId)) + '/predictions/'
+  );
+}
+
 export async function getContent(options) {
   options = options || {};
   var params = [];
