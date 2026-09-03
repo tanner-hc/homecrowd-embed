@@ -424,24 +424,18 @@ function buildAcceptedCardCarriersHtml(offer) {
   var items = pickAcceptedCardCarriers(offer);
   if (!items.length) return '';
   var cards = items
-    .map(function (text, idx) {
+    .map(function (text) {
       var v = String(text || '').toLowerCase();
       var src = v === 'visa' ? visaLogoUrl : mastercardLogoUrl;
       var alt = v === 'visa' ? 'Visa' : 'Mastercard';
-      var iconLi =
+      return (
         '<li>' +
         '<img data-hc-ph="none" src="' +
         escapeAttr(src) +
         '" alt="' +
         escapeHtml(alt) +
         '" class="hc-shop-detail-accepted-cards-img" />' +
-        '</li>';
-      if (idx === 0) return iconLi;
-      return (
-        '<li class="hc-shop-detail-accepted-cards-sep" aria-hidden="true">' +
-        '&#8226;' +
-        '</li>' +
-        iconLi
+        '</li>'
       );
     })
     .join('');
