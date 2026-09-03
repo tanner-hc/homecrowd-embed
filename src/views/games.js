@@ -10,6 +10,7 @@ import plusSvg from '../assets/icons/stepper-plus.svg?raw';
 import lockSvg from '../assets/icons/settings/lock.svg?raw';
 import checkSvg from '../assets/icons/check.svg?raw';
 import { openPredictScoreSheet } from './predict-score.js';
+import { openBottomSheet } from '../base-components/BottomSheetModal.js';
 
 function pad2(n) {
   return n < 10 ? '0' + n : String(n);
@@ -155,6 +156,56 @@ function canCheckIn(event, nowMs) {
   );
 }
 
+function formatWindowTime(ms) {
+  if (ms == null) return '';
+  var date = new Date(ms);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('en-US', {
+    timeZone: 'UTC',
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
+function openCheckInUnavailableModal(event) {
+  var opensMs = checkInOpensMs(event);
+  var closesMs = checkInClosesMs(event);
+  var tooEarly = opensMs != null && Date.now() < opensMs;
+  var title = tooEarly ? "Check-in isn't open yet" : 'Check-in is closed';
+  var text = tooEarly
+    ? 'You can check in starting 15 minutes before kickoff. Come back during the window below.'
+    : 'The check-in window for this game has ended.';
+  var opens = formatWindowTime(opensMs) || 'TBD';
+  var closes = formatWindowTime(closesMs) || 'TBD';
+
+  openBottomSheet({
+    title: 'Check in',
+    subtitle: title,
+    bodyHtml:
+      '<div class="hc-game-checkin-window">' +
+      '<p class="hc-game-checkin-window-text">' +
+      escapeHtml(text) +
+      '</p>' +
+      '<div class="hc-game-checkin-window-times">' +
+      '<div class="hc-game-checkin-window-row">' +
+      '<span>Opens</span><strong>' +
+      escapeHtml(opens) +
+      '</strong></div>' +
+      '<div class="hc-game-checkin-window-row">' +
+      '<span>Closes</span><strong>' +
+      escapeHtml(closes) +
+      '</strong></div>' +
+      '</div></div>',
+    primaryButton: {
+      label: 'Back to games',
+    },
+  });
+}
+
 function toScore(value) {
   if (value == null || value === '') return null;
   var n = Number(value);
@@ -212,7 +263,7 @@ function cardHtml(event, expanded, checkInOpen) {
       ? 'Your prediction'
       : 'Predict the score';
   var showPredict = scored || hasPrediction || isPredictionOpen(event);
-  var showCheckIn = !!checkInOpen;
+  var showCheckIn = true;
   var actions = '';
   if (showPredict || showCheckIn) {
     actions =
@@ -363,7 +414,27 @@ function bind(container, state) {
       var event = (state.events || []).find(function (row) {
         return String(row.id) === String(id);
       });
-      if (!event || !canCheckIn(event)) return;
+      if (!event) return;
+      if (event.already_checked_in) {
+        try {
+          sessionStorage.setItem('hc_game_checkin', JSON.stringify(event));
+        } catch (e) {}
+        navigate('/games/' + encodeURIComponent(id) + '/check-in');
+        return;
+      }
+      if (!event.check_in_enabled) {
+        openBottomSheet({
+          title: 'Check in',
+          subtitle: 'Check-in is disabled for this game',
+          bodyHtml: '<p style="margin:0; font-family: \'Baikal-Book\', var(--hc-font); color:#888888;">This game does not have check-in enabled.</p>',
+          primaryButton: { label: 'Back to games' },
+        });
+        return;
+      }
+      if (!canCheckIn(event)) {
+        openCheckInUnavailableModal(event);
+        return;
+      }
       try {
         sessionStorage.setItem('hc_game_checkin', JSON.stringify(event));
       } catch (e) {}
@@ -420,6 +491,10 @@ function flattenEvents(schedules, eventsBySchedule, user) {
         opponent_logo: event.logo_url || event.opponent_logo_url || '',
         home_name: homeName,
         home_logo: homeLogo,
+        starts_at: event.starts_at || '',
+        prediction_locks_at: event.prediction_locks_at || '',
+        check_in_opens_at: event.check_in_opens_at || '',
+        check_in_closes_at: event.check_in_closes_at || '',
       });
     });
   });

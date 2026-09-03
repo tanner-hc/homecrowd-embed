@@ -10,6 +10,9 @@ import LinkedCardNotice from '../base-components/LinkedCardNotice.js';
 import storeFilledSvg from '../assets/icons/store-filled.svg?raw';
 import locationSvg from '../assets/icon-location.svg?raw';
 import crossIconUrl from '../assets/icons/cross.png';
+import checkmarkIconUrl from '../assets/icons/checkmark.svg';
+import visaLogoUrl from '../assets/visa-logo.png';
+import mastercardLogoUrl from '../assets/mastercard-logo.png';
 
 var PREFERRED_CARD_KEY = 'hc_preferred_card_id';
 
@@ -375,6 +378,84 @@ function buildExclusionsHtml(offer) {
   return buildExclusionsListHtml('Exclusions', exclusions);
 }
 
+function pickAcceptedCardCarriers(offer) {
+  if (!offer) return [];
+  var schemes = [];
+
+  function addSchemes(maybeSchemes) {
+    if (!Array.isArray(maybeSchemes)) return;
+    maybeSchemes.forEach(function (s) {
+      schemes.push(s);
+    });
+  }
+
+  addSchemes(offer.supportedSchemes || offer.supported_schemes);
+
+  if (Array.isArray(offer.stores)) {
+    offer.stores.forEach(function (store) {
+      if (!store) return;
+      addSchemes(store.supportedSchemes || store.supported_schemes);
+    });
+  }
+
+  addSchemes(offer.store && (offer.store.supportedSchemes || offer.store.supported_schemes));
+  addSchemes(
+    offer.merchant && (offer.merchant.supportedSchemes || offer.merchant.supported_schemes)
+  );
+
+  if (!schemes.length) return [];
+
+  var hasVisa = false;
+  var hasMastercard = false;
+
+  schemes.forEach(function (s) {
+    var v = String(s || '').toLowerCase();
+    if (v === 'visa') hasVisa = true;
+    if (v === 'mastercard' || v === 'master' || v === 'mc') hasMastercard = true;
+  });
+
+  var out = [];
+  if (hasVisa) out.push('Visa');
+  if (hasMastercard) out.push('Mastercard');
+  return out;
+}
+
+function buildAcceptedCardCarriersHtml(offer) {
+  var items = pickAcceptedCardCarriers(offer);
+  if (!items.length) return '';
+  var cards = items
+    .map(function (text) {
+      var v = String(text || '').toLowerCase();
+      var src = v === 'visa' ? visaLogoUrl : mastercardLogoUrl;
+      var alt = v === 'visa' ? 'Visa' : 'Mastercard';
+      return (
+        '<li>' +
+        '<img data-hc-ph="none" src="' +
+        escapeAttr(src) +
+        '" alt="' +
+        escapeHtml(alt) +
+        '" class="hc-shop-detail-accepted-cards-img" />' +
+        '</li>'
+      );
+    })
+    .join('');
+  return (
+    '<div class="hc-shop-detail-tip hc-shop-detail-tip--accepted-cards">' +
+    '<span class="hc-shop-detail-tip-icon" aria-hidden="true">' +
+    '<img data-hc-ph="none" src="' +
+    escapeAttr(checkmarkIconUrl) +
+    '" alt="" class="hc-shop-detail-tip-icon-img" />' +
+    '</span>' +
+    '<div class="hc-shop-detail-tip-copy">' +
+    '<div class="hc-shop-detail-tip-title">Accepted cards</div>' +
+    '<ul class="hc-shop-detail-accepted-cards">' +
+    cards +
+    '</ul>' +
+    '</div>' +
+    '</div>'
+  );
+}
+
 function truncateDescription(text, maxLen) {
   var full = String(text || '').trim();
   if (!full) return { short: '', full: '', needsExpand: false };
@@ -452,6 +533,7 @@ function buildShopDetailHtml(offer, card) {
         '</div></div>'
       : '') +
     buildExclusionsHtml(offer) +
+    buildAcceptedCardCarriersHtml(offer) +
     buildAddressHtml(offer) +
     '</div>' +
     '</div>' +
