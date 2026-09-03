@@ -116,6 +116,39 @@ function isCheckInWindowOpen(event) {
   return now >= opensMs && now < closesMs;
 }
 
+function formatWindowTime(ms) {
+  if (ms == null) return '';
+  var date = new Date(ms);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('en-US', {
+    timeZone: 'UTC',
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
+function bindCheckInBack() {
+  var back = document.getElementById('hc-game-checkin-back');
+  if (back) {
+    back.addEventListener('click', function () {
+      navigate('/games');
+    });
+  }
+}
+
+function watchCheckInRoute(session) {
+  session.onRoute = function () {
+    if (!/^\/games\/[^/]+\/check-in$/.test(getRoute())) {
+      teardown();
+    }
+  };
+  window.addEventListener('hashchange', session.onRoute);
+}
+
 function readCachedEvent(eventId) {
   try {
     var raw = sessionStorage.getItem('hc_game_checkin');
@@ -474,12 +507,52 @@ function paintError(container, message) {
     '<div class="hc-alert-error">' +
     escapeHtml(message) +
     '</div></div>';
-  var back = document.getElementById('hc-game-checkin-back');
-  if (back) {
-    back.addEventListener('click', function () {
+  bindCheckInBack();
+}
+
+function paintUnavailable(container, event) {
+  var opensMs = checkInOpensMs(event);
+  var closesMs = checkInClosesMs(event);
+  var tooEarly = opensMs != null && Date.now() < opensMs;
+  var opens = formatWindowTime(opensMs) || 'TBD';
+  var closes = formatWindowTime(closesMs) || 'TBD';
+  var title = tooEarly ? "Check-in isn't open yet" : 'Check-in is closed';
+  var text = tooEarly
+    ? 'You can check in starting 15 minutes before kickoff. Come back during the window below.'
+    : 'The check-in window for this game has ended.';
+  container.innerHTML =
+    '<div class="hc-game-checkin hc-game-checkin--window">' +
+    PageHeader({ title: 'Check in', backButtonId: 'hc-game-checkin-back' }) +
+    '<div class="hc-game-checkin-window">' +
+    '<h2 class="hc-game-checkin-window-title">' +
+    escapeHtml(title) +
+    '</h2>' +
+    '<p class="hc-game-checkin-window-text">' +
+    escapeHtml(text) +
+    '</p>' +
+    '<div class="hc-game-checkin-window-times">' +
+    '<div class="hc-game-checkin-window-row">' +
+    '<span>Opens</span><strong>' +
+    escapeHtml(opens) +
+    '</strong></div>' +
+    '<div class="hc-game-checkin-window-row">' +
+    '<span>Closes</span><strong>' +
+    escapeHtml(closes) +
+    '</strong></div>' +
+    '</div></div>' +
+    '<div class="hc-game-checkin-footer">' +
+    MainButton({ id: 'hc-game-checkin-done', text: 'Back to games' }) +
+    '</div></div>';
+  bindCheckInBack();
+  var done = document.getElementById('hc-game-checkin-done');
+  if (done) {
+    done.addEventListener('click', function () {
       navigate('/games');
     });
   }
+  var session = { onRoute: null };
+  active = session;
+  watchCheckInRoute(session);
 }
 
 function paintScreen(container, event) {
@@ -496,12 +569,7 @@ function paintScreen(container, event) {
     }) +
     '</div></div>';
 
-  var back = document.getElementById('hc-game-checkin-back');
-  if (back) {
-    back.addEventListener('click', function () {
-      navigate('/games');
-    });
-  }
+  bindCheckInBack();
 
   var mount = document.getElementById('hc-game-checkin-map');
   var session = {
@@ -521,12 +589,7 @@ function paintScreen(container, event) {
     bindCheckIn(container, session);
   }
 
-  session.onRoute = function () {
-    if (!/^\/games\/[^/]+\/check-in$/.test(getRoute())) {
-      teardown();
-    }
-  };
-  window.addEventListener('hashchange', session.onRoute);
+  watchCheckInRoute(session);
 
   ensureMapLibreLoaded()
     .then(function (maplibregl) {
@@ -581,6 +644,14 @@ export function renderGameCheckIn(container, eventId) {
     .then(function (event) {
       if (!event) {
         paintError(container, 'This game could not be found.');
+        return;
+      }
+      if (event.already_checked_in) {
+        paintScreen(container, event);
+        return;
+      }
+      if (!isCheckInWindowOpen(event)) {
+        paintUnavailable(container, event);
         return;
       }
       paintScreen(container, event);

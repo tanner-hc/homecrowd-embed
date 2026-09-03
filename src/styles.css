@@ -25299,6 +25299,67 @@ img.hc-games-team-logo.hc-img-ph {
   width: 100%;
 }
 
+.hc-game-checkin--window {
+  background: #ffffff;
+}
+
+.hc-game-checkin-window {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24px 22px;
+  text-align: center;
+}
+
+.hc-game-checkin-window-title {
+  margin: 0 0 10px;
+  font-family: 'Baikal-ExtraCondensedBold', 'Baikal', var(--hc-font);
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: 0;
+  color: #000000;
+}
+
+.hc-game-checkin-window-text {
+  margin: 0 0 24px;
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.3;
+  color: #888888;
+}
+
+.hc-game-checkin-window-times {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  background: #f8f8f8;
+  border-radius: 16px;
+  padding: 18px 16px;
+  text-align: left;
+}
+
+.hc-game-checkin-window-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: 'Baikal-Medium', var(--hc-font);
+  font-size: 15px;
+  font-weight: 500;
+  color: #000000;
+}
+
+.hc-game-checkin-window-row span {
+  color: #888888;
+  font-family: 'Baikal-Book', var(--hc-font);
+  font-weight: 400;
+}
+
 .hc-predict-sheet-root .hc-bs-sheet,
 .hc-bs-sheet.hc-predict-sheet {
   position: relative;
