@@ -11,6 +11,8 @@ import storeFilledSvg from '../assets/icons/store-filled.svg?raw';
 import locationSvg from '../assets/icon-location.svg?raw';
 import crossIconUrl from '../assets/icons/cross.png';
 import checkmarkIconUrl from '../assets/icons/checkmark.svg';
+import visaLogoUrl from '../assets/visa-logo.png';
+import mastercardLogoUrl from '../assets/mastercard-logo.png';
 
 var PREFERRED_CARD_KEY = 'hc_preferred_card_id';
 
@@ -421,6 +423,28 @@ function pickAcceptedCardCarriers(offer) {
 function buildAcceptedCardCarriersHtml(offer) {
   var items = pickAcceptedCardCarriers(offer);
   if (!items.length) return '';
+  var cards = items
+    .map(function (text, idx) {
+      var v = String(text || '').toLowerCase();
+      var src = v === 'visa' ? visaLogoUrl : mastercardLogoUrl;
+      var alt = v === 'visa' ? 'Visa' : 'Mastercard';
+      var iconLi =
+        '<li>' +
+        '<img data-hc-ph="none" src="' +
+        escapeAttr(src) +
+        '" alt="' +
+        escapeHtml(alt) +
+        '" class="hc-shop-detail-accepted-cards-img" />' +
+        '</li>';
+      if (idx === 0) return iconLi;
+      return (
+        '<li class="hc-shop-detail-accepted-cards-sep" aria-hidden="true">' +
+        '&#8226;' +
+        '</li>' +
+        iconLi
+      );
+    })
+    .join('');
   return (
     '<div class="hc-shop-detail-tip hc-shop-detail-tip--accepted-cards">' +
     '<span class="hc-shop-detail-tip-icon" aria-hidden="true">' +
@@ -430,12 +454,8 @@ function buildAcceptedCardCarriersHtml(offer) {
     '</span>' +
     '<div class="hc-shop-detail-tip-copy">' +
     '<div class="hc-shop-detail-tip-title">Accepted cards</div>' +
-    '<ul class="hc-shop-detail-exclusions">' +
-    items
-      .map(function (text) {
-        return '<li>' + escapeHtml(text) + '</li>';
-      })
-      .join('') +
+    '<ul class="hc-shop-detail-accepted-cards">' +
+    cards +
     '</ul>' +
     '</div>' +
     '</div>'
